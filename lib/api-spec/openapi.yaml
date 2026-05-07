@@ -1,22 +1,38 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Algorithmic Trading Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: portfolio
+    description: Portfolio management
+  - name: trades
+    description: Trade management and logs
+  - name: strategies
+    description: Trading strategy management
+  - name: risk
+    description: Risk engine and controls
+  - name: market
+    description: Market data
+  - name: backtest
+    description: Backtesting engine
+  - name: sentiment
+    description: Sentiment analysis
+  - name: notifications
+    description: Alert and notification settings
+  - name: analytics
+    description: Performance analytics
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,623 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /portfolio/summary:
+    get:
+      operationId: getPortfolioSummary
+      tags: [portfolio]
+      summary: Get portfolio summary
+      responses:
+        "200":
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioSummary"
+
+  /portfolio/equity-curve:
+    get:
+      operationId: getEquityCurve
+      tags: [portfolio]
+      summary: Get equity curve history
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [1d, 1w, 1m, 3m, 6m, 1y, all]
+            default: 1m
+      responses:
+        "200":
+          description: Equity curve data points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquityPoint"
+
+  /portfolio/drawdown:
+    get:
+      operationId: getDrawdown
+      tags: [portfolio]
+      summary: Get drawdown history
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [1d, 1w, 1m, 3m, 6m, 1y, all]
+            default: 1m
+      responses:
+        "200":
+          description: Drawdown data points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DrawdownPoint"
+
+  /portfolio/positions:
+    get:
+      operationId: getPositions
+      tags: [portfolio]
+      summary: Get current open positions
+      responses:
+        "200":
+          description: List of positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Position"
+
+  /portfolio/allocation:
+    get:
+      operationId: getAllocation
+      tags: [portfolio]
+      summary: Get capital allocation breakdown
+      responses:
+        "200":
+          description: Allocation breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AllocationItem"
+
+  /portfolio/correlation:
+    get:
+      operationId: getCorrelation
+      tags: [portfolio]
+      summary: Get correlation heatmap data
+      responses:
+        "200":
+          description: Correlation matrix
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrelationMatrix"
+
+  /trades:
+    get:
+      operationId: getTrades
+      tags: [trades]
+      summary: Get trade log
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: strategy
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: [open, closed, cancelled, null]
+      responses:
+        "200":
+          description: Trade list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeListResponse"
+
+  /trades/{id}:
+    get:
+      operationId: getTrade
+      tags: [trades]
+      summary: Get single trade
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trade details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trade"
+        "404":
+          description: Not found
+
+  /trades/{id}/notes:
+    patch:
+      operationId: updateTradeNotes
+      tags: [trades]
+      summary: Update trade notes and tags
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTradeNotesBody"
+      responses:
+        "200":
+          description: Updated trade
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trade"
+        "404":
+          description: Not found
+
+  /trades/calendar:
+    get:
+      operationId: getTradeCalendar
+      tags: [trades]
+      summary: Get daily trade summary for calendar view
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: month
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Calendar data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarDay"
+
+  /analytics/performance:
+    get:
+      operationId: getPerformanceMetrics
+      tags: [analytics]
+      summary: Get performance metrics (Sharpe, Sortino, win rate, etc.)
+      responses:
+        "200":
+          description: Performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PerformanceMetrics"
+
+  /analytics/time-breakdown:
+    get:
+      operationId: getTimeBreakdown
+      tags: [analytics]
+      summary: Get PnL breakdown by time period
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+            default: monthly
+      responses:
+        "200":
+          description: Time breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimePeriodPnl"
+
+  /analytics/strategy-breakdown:
+    get:
+      operationId: getStrategyBreakdown
+      tags: [analytics]
+      summary: Get performance breakdown by strategy
+      responses:
+        "200":
+          description: Strategy breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StrategyMetrics"
+
+  /strategies:
+    get:
+      operationId: getStrategies
+      tags: [strategies]
+      summary: Get all strategies
+      responses:
+        "200":
+          description: Strategy list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Strategy"
+
+  /strategies/{id}:
+    get:
+      operationId: getStrategy
+      tags: [strategies]
+      summary: Get strategy details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Strategy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateStrategy
+      tags: [strategies]
+      summary: Update strategy parameters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStrategyBody"
+      responses:
+        "200":
+          description: Updated strategy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+
+  /strategies/{id}/toggle:
+    post:
+      operationId: toggleStrategy
+      tags: [strategies]
+      summary: Toggle strategy active state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated strategy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+
+  /risk/state:
+    get:
+      operationId: getRiskState
+      tags: [risk]
+      summary: Get current risk engine state
+      responses:
+        "200":
+          description: Risk state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskState"
+
+  /risk/settings:
+    get:
+      operationId: getRiskSettings
+      tags: [risk]
+      summary: Get risk settings
+      responses:
+        "200":
+          description: Risk settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskSettings"
+
+    patch:
+      operationId: updateRiskSettings
+      tags: [risk]
+      summary: Update risk settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRiskSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskSettings"
+
+  /risk/kill-switch:
+    post:
+      operationId: triggerKillSwitch
+      tags: [risk]
+      summary: Emergency kill switch — closes all positions
+      responses:
+        "200":
+          description: Kill switch result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KillSwitchResult"
+
+  /market/data:
+    get:
+      operationId: getMarketData
+      tags: [market]
+      summary: Get latest OHLCV market data
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            enum: [1m, 5m, 15m, 1h, 4h, 1d]
+            default: 1h
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: OHLCV data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OhlcvBar"
+
+  /market/symbols:
+    get:
+      operationId: getSymbols
+      tags: [market]
+      summary: Get available trading symbols
+      responses:
+        "200":
+          description: Symbol list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Symbol"
+
+  /market/ticker:
+    get:
+      operationId: getTicker
+      tags: [market]
+      summary: Get current price tickers
+      responses:
+        "200":
+          description: Ticker data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticker"
+
+  /backtest/run:
+    post:
+      operationId: runBacktest
+      tags: [backtest]
+      summary: Run a backtest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BacktestRequest"
+      responses:
+        "200":
+          description: Backtest results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestResult"
+
+  /backtest/results:
+    get:
+      operationId: getBacktestResults
+      tags: [backtest]
+      summary: Get saved backtest results
+      responses:
+        "200":
+          description: Backtest result list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BacktestSummary"
+
+  /sentiment/state:
+    get:
+      operationId: getSentimentState
+      tags: [sentiment]
+      summary: Get current sentiment scores
+      responses:
+        "200":
+          description: Sentiment state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SentimentState"
+
+  /sentiment/settings:
+    get:
+      operationId: getSentimentSettings
+      tags: [sentiment]
+      summary: Get sentiment settings
+      responses:
+        "200":
+          description: Sentiment settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SentimentSettings"
+
+    patch:
+      operationId: updateSentimentSettings
+      tags: [sentiment]
+      summary: Update sentiment settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSentimentSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SentimentSettings"
+
+  /notifications/alerts:
+    get:
+      operationId: getAlerts
+      tags: [notifications]
+      summary: Get notification alerts history
+      responses:
+        "200":
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+
+  /notifications/settings:
+    get:
+      operationId: getNotificationSettings
+      tags: [notifications]
+      summary: Get notification settings
+      responses:
+        "200":
+          description: Notification settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationSettings"
+
+    patch:
+      operationId: updateNotificationSettings
+      tags: [notifications]
+      summary: Update notification settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationSettings"
+
+  /engine/start:
+    post:
+      operationId: startEngine
+      tags: [portfolio]
+      summary: Start the trading engine
+      responses:
+        "200":
+          description: Engine status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EngineStatus"
+
+  /engine/stop:
+    post:
+      operationId: stopEngine
+      tags: [portfolio]
+      summary: Stop the trading engine
+      responses:
+        "200":
+          description: Engine status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EngineStatus"
+
+  /engine/status:
+    get:
+      operationId: getEngineStatus
+      tags: [portfolio]
+      summary: Get engine running status
+      responses:
+        "200":
+          description: Engine status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EngineStatus"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +664,877 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    PortfolioSummary:
+      type: object
+      properties:
+        equity:
+          type: number
+        cash:
+          type: number
+        totalPnl:
+          type: number
+        dailyPnl:
+          type: number
+        dailyPnlPct:
+          type: number
+        totalPnlPct:
+          type: number
+        openPositions:
+          type: integer
+        winRate:
+          type: number
+        profitFactor:
+          type: number
+        sharpeRatio:
+          type: number
+        sortinoRatio:
+          type: number
+        maxDrawdown:
+          type: number
+        currentDrawdown:
+          type: number
+        totalTrades:
+          type: integer
+        exposure:
+          type: number
+        riskScore:
+          type: number
+      required:
+        - equity
+        - cash
+        - totalPnl
+        - dailyPnl
+        - dailyPnlPct
+        - totalPnlPct
+        - openPositions
+        - winRate
+        - profitFactor
+        - sharpeRatio
+        - sortinoRatio
+        - maxDrawdown
+        - currentDrawdown
+        - totalTrades
+        - exposure
+        - riskScore
+
+    EquityPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        equity:
+          type: number
+        benchmark:
+          type: number
+      required: [timestamp, equity, benchmark]
+
+    DrawdownPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        drawdown:
+          type: number
+      required: [timestamp, drawdown]
+
+    Position:
+      type: object
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [long, short]
+        entryPrice:
+          type: number
+        currentPrice:
+          type: number
+        quantity:
+          type: number
+        pnl:
+          type: number
+        pnlPct:
+          type: number
+        strategy:
+          type: string
+        openedAt:
+          type: string
+        stopLoss:
+          type: ["number", "null"]
+        takeProfit:
+          type: ["number", "null"]
+        mae:
+          type: number
+        mfe:
+          type: number
+        exposure:
+          type: number
+      required:
+        - id
+        - symbol
+        - side
+        - entryPrice
+        - currentPrice
+        - quantity
+        - pnl
+        - pnlPct
+        - strategy
+        - openedAt
+        - stopLoss
+        - takeProfit
+        - mae
+        - mfe
+        - exposure
+
+    AllocationItem:
+      type: object
+      properties:
+        symbol:
+          type: string
+        value:
+          type: number
+        pct:
+          type: number
+        side:
+          type: string
+        strategy:
+          type: string
+      required: [symbol, value, pct, side, strategy]
+
+    CorrelationMatrix:
+      type: object
+      properties:
+        symbols:
+          type: array
+          items:
+            type: string
+        matrix:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+      required: [symbols, matrix]
+
+    Trade:
+      type: object
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [long, short]
+        status:
+          type: string
+          enum: [open, closed, cancelled]
+        strategy:
+          type: string
+        entryPrice:
+          type: number
+        exitPrice:
+          type: ["number", "null"]
+        quantity:
+          type: number
+        pnl:
+          type: ["number", "null"]
+        pnlPct:
+          type: ["number", "null"]
+        fees:
+          type: number
+        slippage:
+          type: number
+        mae:
+          type: ["number", "null"]
+        mfe:
+          type: ["number", "null"]
+        openedAt:
+          type: string
+        closedAt:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        stopLoss:
+          type: ["number", "null"]
+        takeProfit:
+          type: ["number", "null"]
+        orderType:
+          type: string
+          enum: [market, limit]
+        zScore:
+          type: ["number", "null"]
+        sentimentMultiplier:
+          type: ["number", "null"]
+      required:
+        - id
+        - symbol
+        - side
+        - status
+        - strategy
+        - entryPrice
+        - exitPrice
+        - quantity
+        - pnl
+        - pnlPct
+        - fees
+        - slippage
+        - mae
+        - mfe
+        - openedAt
+        - closedAt
+        - notes
+        - tags
+        - stopLoss
+        - takeProfit
+        - orderType
+        - zScore
+        - sentimentMultiplier
+
+    TradeListResponse:
+      type: object
+      properties:
+        trades:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trade"
+        total:
+          type: integer
+      required: [trades, total]
+
+    UpdateTradeNotesBody:
+      type: object
+      properties:
+        notes:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+
+    CalendarDay:
+      type: object
+      properties:
+        date:
+          type: string
+        pnl:
+          type: number
+        trades:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        winRate:
+          type: number
+      required: [date, pnl, trades, wins, losses, winRate]
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        sharpeRatio:
+          type: number
+        sortinoRatio:
+          type: number
+        calmarRatio:
+          type: number
+        winRate:
+          type: number
+        profitFactor:
+          type: number
+        avgWin:
+          type: number
+        avgLoss:
+          type: number
+        avgRR:
+          type: number
+        maxConsecWins:
+          type: integer
+        maxConsecLosses:
+          type: integer
+        expectancy:
+          type: number
+        totalReturn:
+          type: number
+        annualizedReturn:
+          type: number
+        volatility:
+          type: number
+        maxDrawdown:
+          type: number
+        recoveryFactor:
+          type: number
+        totalTrades:
+          type: integer
+        avgTradeDuration:
+          type: number
+      required:
+        - sharpeRatio
+        - sortinoRatio
+        - calmarRatio
+        - winRate
+        - profitFactor
+        - avgWin
+        - avgLoss
+        - avgRR
+        - maxConsecWins
+        - maxConsecLosses
+        - expectancy
+        - totalReturn
+        - annualizedReturn
+        - volatility
+        - maxDrawdown
+        - recoveryFactor
+        - totalTrades
+        - avgTradeDuration
+
+    TimePeriodPnl:
+      type: object
+      properties:
+        period:
+          type: string
+        pnl:
+          type: number
+        pnlPct:
+          type: number
+        trades:
+          type: integer
+        winRate:
+          type: number
+      required: [period, pnl, pnlPct, trades, winRate]
+
+    StrategyMetrics:
+      type: object
+      properties:
+        strategy:
+          type: string
+        totalTrades:
+          type: integer
+        winRate:
+          type: number
+        pnl:
+          type: number
+        profitFactor:
+          type: number
+        avgPnl:
+          type: number
+        sharpe:
+          type: number
+      required: [strategy, totalTrades, winRate, pnl, profitFactor, avgPnl, sharpe]
+
+    Strategy:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [mean_reversion, momentum, statistical]
+        active:
+          type: boolean
+        symbols:
+          type: array
+          items:
+            type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        riskPct:
+          type: number
+        description:
+          type: string
+        winRate:
+          type: number
+        totalTrades:
+          type: integer
+        pnl:
+          type: number
+      required:
+        - id
+        - name
+        - type
+        - active
+        - symbols
+        - parameters
+        - riskPct
+        - description
+        - winRate
+        - totalTrades
+        - pnl
+
+    UpdateStrategyBody:
+      type: object
+      properties:
+        active:
+          type: boolean
+        riskPct:
+          type: number
+        parameters:
+          type: object
+          additionalProperties: true
+        symbols:
+          type: array
+          items:
+            type: string
+
+    RiskState:
+      type: object
+      properties:
+        dailyPnl:
+          type: number
+        dailyLossLimit:
+          type: number
+        currentDrawdown:
+          type: number
+        maxDrawdownLimit:
+          type: number
+        exposure:
+          type: number
+        exposureCap:
+          type: number
+        killSwitchActive:
+          type: boolean
+        dailyLossBreached:
+          type: boolean
+        drawdownBreached:
+          type: boolean
+        exposureBreached:
+          type: boolean
+        riskScore:
+          type: number
+      required:
+        - dailyPnl
+        - dailyLossLimit
+        - currentDrawdown
+        - maxDrawdownLimit
+        - exposure
+        - exposureCap
+        - killSwitchActive
+        - dailyLossBreached
+        - drawdownBreached
+        - exposureBreached
+        - riskScore
+
+    RiskSettings:
+      type: object
+      properties:
+        maxDailyLossPct:
+          type: number
+        maxDrawdownPct:
+          type: number
+        maxExposurePct:
+          type: number
+        riskPerTradePct:
+          type: number
+        maxOpenPositions:
+          type: integer
+        correlationThreshold:
+          type: number
+        slippagePct:
+          type: number
+        feesPct:
+          type: number
+      required:
+        - maxDailyLossPct
+        - maxDrawdownPct
+        - maxExposurePct
+        - riskPerTradePct
+        - maxOpenPositions
+        - correlationThreshold
+        - slippagePct
+        - feesPct
+
+    UpdateRiskSettingsBody:
+      type: object
+      properties:
+        maxDailyLossPct:
+          type: number
+        maxDrawdownPct:
+          type: number
+        maxExposurePct:
+          type: number
+        riskPerTradePct:
+          type: number
+        maxOpenPositions:
+          type: integer
+        correlationThreshold:
+          type: number
+        slippagePct:
+          type: number
+        feesPct:
+          type: number
+
+    KillSwitchResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        closedPositions:
+          type: integer
+        message:
+          type: string
+      required: [success, closedPositions, message]
+
+    OhlcvBar:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        close:
+          type: number
+        volume:
+          type: number
+      required: [timestamp, open, high, low, close, volume]
+
+    Symbol:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        sector:
+          type: string
+        currentPrice:
+          type: number
+        change24h:
+          type: number
+        change24hPct:
+          type: number
+        volume:
+          type: number
+      required: [symbol, name, sector, currentPrice, change24h, change24hPct, volume]
+
+    Ticker:
+      type: object
+      properties:
+        symbol:
+          type: string
+        price:
+          type: number
+        change:
+          type: number
+        changePct:
+          type: number
+        volume:
+          type: number
+        timestamp:
+          type: string
+      required: [symbol, price, change, changePct, volume, timestamp]
+
+    BacktestRequest:
+      type: object
+      properties:
+        strategyType:
+          type: string
+          enum: [mean_reversion, momentum, statistical]
+        symbol:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        initialCapital:
+          type: number
+        parameters:
+          type: object
+          additionalProperties: true
+        walkForward:
+          type: boolean
+        monteCarlo:
+          type: boolean
+        monteCarloRuns:
+          type: integer
+      required: [strategyType, symbol, startDate, endDate, initialCapital]
+
+    BacktestResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        strategyType:
+          type: string
+        symbol:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        initialCapital:
+          type: number
+        finalCapital:
+          type: number
+        totalReturn:
+          type: number
+        sharpeRatio:
+          type: number
+        sortinoRatio:
+          type: number
+        maxDrawdown:
+          type: number
+        winRate:
+          type: number
+        profitFactor:
+          type: number
+        totalTrades:
+          type: integer
+        equityCurve:
+          type: array
+          items:
+            $ref: "#/components/schemas/EquityPoint"
+        trades:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trade"
+        monteCarloPaths:
+          type: ["array", "null"]
+          items:
+            type: array
+            items:
+              type: number
+        walkForwardResults:
+          type: ["object", "null"]
+          additionalProperties: true
+        parameterSensitivity:
+          type: ["object", "null"]
+          additionalProperties: true
+        overfitScore:
+          type: ["number", "null"]
+        parameters:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - strategyType
+        - symbol
+        - startDate
+        - endDate
+        - initialCapital
+        - finalCapital
+        - totalReturn
+        - sharpeRatio
+        - sortinoRatio
+        - maxDrawdown
+        - winRate
+        - profitFactor
+        - totalTrades
+        - equityCurve
+        - trades
+        - monteCarloPaths
+        - walkForwardResults
+        - parameterSensitivity
+        - overfitScore
+        - parameters
+        - createdAt
+
+    BacktestSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        strategyType:
+          type: string
+        symbol:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        totalReturn:
+          type: number
+        sharpeRatio:
+          type: number
+        maxDrawdown:
+          type: number
+        winRate:
+          type: number
+        totalTrades:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - strategyType
+        - symbol
+        - startDate
+        - endDate
+        - totalReturn
+        - sharpeRatio
+        - maxDrawdown
+        - winRate
+        - totalTrades
+        - createdAt
+
+    SentimentState:
+      type: object
+      properties:
+        institutional:
+          type: number
+        retail:
+          type: number
+        momentum:
+          type: number
+        composite:
+          type: number
+        mode:
+          type: string
+          enum: [clean, hype, custom]
+        divergence:
+          type: number
+        modelSentiment:
+          type: number
+        trend:
+          type: string
+          enum: [bullish, bearish, neutral]
+        updatedAt:
+          type: string
+      required:
+        - institutional
+        - retail
+        - momentum
+        - composite
+        - mode
+        - divergence
+        - modelSentiment
+        - trend
+        - updatedAt
+
+    SentimentSettings:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [clean, hype, custom]
+        institutionalWeight:
+          type: number
+        retailWeight:
+          type: number
+        momentumWeight:
+          type: number
+        enabled:
+          type: boolean
+        maxMultiplier:
+          type: number
+        minMultiplier:
+          type: number
+      required:
+        - mode
+        - institutionalWeight
+        - retailWeight
+        - momentumWeight
+        - enabled
+        - maxMultiplier
+        - minMultiplier
+
+    UpdateSentimentSettingsBody:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [clean, hype, custom]
+        institutionalWeight:
+          type: number
+        retailWeight:
+          type: number
+        momentumWeight:
+          type: number
+        enabled:
+          type: boolean
+        maxMultiplier:
+          type: number
+        minMultiplier:
+          type: number
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [profit_threshold, loss_threshold, margin_risk, kill_switch, strategy_signal, drawdown_warning]
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        acknowledged:
+          type: boolean
+        createdAt:
+          type: string
+        symbol:
+          type: ["string", "null"]
+      required: [id, type, message, severity, acknowledged, createdAt, symbol]
+
+    NotificationSettings:
+      type: object
+      properties:
+        profitThresholdPct:
+          type: number
+        lossThresholdPct:
+          type: number
+        marginRiskPct:
+          type: number
+        drawdownWarningPct:
+          type: number
+        emailEnabled:
+          type: boolean
+        dashboardEnabled:
+          type: boolean
+      required:
+        - profitThresholdPct
+        - lossThresholdPct
+        - marginRiskPct
+        - drawdownWarningPct
+        - emailEnabled
+        - dashboardEnabled
+
+    UpdateNotificationSettingsBody:
+      type: object
+      properties:
+        profitThresholdPct:
+          type: number
+        lossThresholdPct:
+          type: number
+        marginRiskPct:
+          type: number
+        drawdownWarningPct:
+          type: number
+        emailEnabled:
+          type: boolean
+        dashboardEnabled:
+          type: boolean
+
+    EngineStatus:
+      type: object
+      properties:
+        running:
+          type: boolean
+        uptime:
+          type: integer
+        lastTick:
+          type: ["string", "null"]
+        activeStrategies:
+          type: integer
+        mode:
+          type: string
+          enum: [live, paper, backtest]
+      required: [running, uptime, lastTick, activeStrategies, mode]
