@@ -87,7 +87,7 @@ function TrendBadge({ trend }: { trend: "bullish" | "bearish" | "neutral" }) {
 
 export default function Sentiment() {
   const qc = useQueryClient();
-  const { data: state, isLoading: stateLoading } = useGetSentimentState({ query: { refetchInterval: 5000 } });
+  const { data: state, isLoading: stateLoading } = useGetSentimentState({ query: { queryKey: getGetSentimentStateQueryKey(), refetchInterval: 5000 } });
   const { data: settings, isLoading: settingsLoading } = useGetSentimentSettings();
   const updateSettings = useUpdateSentimentSettings();
 
@@ -110,7 +110,7 @@ export default function Sentiment() {
   };
 
   const handleSave = async () => {
-    await updateSettings.mutateAsync({ data: eff });
+    await updateSettings.mutateAsync({ data: eff as any });
     qc.invalidateQueries({ queryKey: getGetSentimentSettingsQueryKey() });
     qc.invalidateQueries({ queryKey: getGetSentimentStateQueryKey() });
   };

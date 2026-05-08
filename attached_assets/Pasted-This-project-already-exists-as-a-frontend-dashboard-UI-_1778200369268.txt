@@ -1,0 +1,290 @@
+This project already exists as a frontend dashboard/UI only.
+
+DO NOT rebuild the dashboard from scratch.
+
+The current project already has:
+
+- a polished trading dashboard UI
+- charts and frontend visuals
+- trading analytics pages/components
+
+However:
+
+- backend systems are incomplete or missing
+- authentication is incomplete or missing
+- there is currently NO real Python trading bot implemented in this Replit project
+- live synchronization and execution systems are incomplete
+
+Your task is to transform the current dashboard into a COMPLETE production-grade AI trading platform while preserving and improving the current UI.
+
+==================================================
+CORE SYSTEM ARCHITECTURE
+
+The system must contain 3 synchronized layers:
+
+1. FRONTEND DASHBOARD
+
+- React frontend
+- Main control center/UI
+- Displays charts, analytics, trades, settings, risk, sentiment, and bot controls
+
+2. BACKEND SERVER
+
+- Node.js/Express backend
+- REST APIs
+- WebSocket server
+- Handles synchronization, integrations, storage, notifications, and communication
+
+3. PYTHON TRADING BOT
+
+- Separate Python trading engine
+- Connects to MetaTrader 5
+- Executes trades
+- Sends live updates to backend
+- Receives live configuration updates from backend/dashboard
+
+IMPORTANT:
+THE PYTHON BOT DOES NOT CURRENTLY EXIST INSIDE THIS REPLIT PROJECT.
+YOU MUST CREATE IT AND CONNECT IT TO THE EXISTING DASHBOARD.
+
+==================================================
+IMPORTANT IMPLEMENTATION RULE
+
+If any dashboard feature exists but the backend or trading bot does not support it internally:
+
+- automatically extend the backend and trading bot architecture to support it.
+
+All systems must stay synchronized.
+
+Frontend → Backend → Trading Bot
+
+==================================================
+NEW FEATURES / IMPROVEMENTS
+
+1. AUTHENTICATION + PROFILE SYSTEM
+   Add:
+
+- Login page
+- Sign-up page
+- Session management
+- User profiles
+- Profile sidebar
+- Banner/profile image
+- Username
+- Bio
+
+Password validation:
+
+- uppercase requirement
+- number requirement
+- special character requirement
+- live validation indicators
+
+==================================================
+
+2. STRATEGY / SETTINGS IMPORT-EXPORT SYSTEM
+
+Users must be able to:
+
+- Save current configuration
+- Export presets/configurations
+- Import configurations
+- Rename presets
+- Duplicate presets
+- Delete presets
+- Instantly apply presets
+
+Each preset should save:
+
+- Strategy settings
+- Risk settings
+- Sentiment settings
+- Source settings
+- Bot toggles
+- Theme settings
+- Asset restrictions
+
+Persist presets in backend/database storage.
+
+==================================================
+
+3. ADVANCED BOT CONTROL
+
+Users must be able to:
+
+- Start bot
+- Stop bot
+- Activate kill switch
+- Resume after kill switch
+- Pause trading per symbol
+- Resume trading per symbol
+- Restrict selected assets
+- Force-close positions manually
+- Toggle long-term trading
+- Toggle limit-order-only mode
+- Toggle wait-for-price-entry mode
+- Toggle adaptive sentiment learning
+- Toggle news halt mode
+
+Dashboard changes must instantly update backend and bot behavior.
+
+==================================================
+
+4. SENTIMENT ANALYSIS SYSTEM (IMPORTANT)
+
+The project may already contain emotional/sentiment-related visuals or concepts.
+
+DO NOT confuse this with UI emotions or cosmetic emotional indicators.
+
+This sentiment system is specifically for MARKET SENTIMENT ANALYSIS used by the trading bot.
+
+The purpose is to analyze:
+
+- financial news
+- social media
+- public opinion
+- market fear/hype
+- bullish vs bearish sentiment
+- institutional vs retail sentiment
+
+This data should influence trading decisions, risk adjustment, confidence levels, and trade filtering.
+
+Add support for:
+
+- Financial news APIs
+- X (Twitter) API
+- Reddit API
+- Optional news sources such as financial newspapers or websites (example: Le Monde or similar news providers)
+
+Users must be able to:
+
+- enable/disable sentiment sources individually
+- add/remove approved sources
+- view sentiment scores
+- switch between:
+  - Controlled Mode (approved sources only)
+  - Open Discovery Mode (broader internet/news scanning)
+
+The dashboard should clearly display:
+
+- bullish vs bearish market mood
+- fear vs hype levels
+- source weighting
+- confidence scores
+- active sentiment sources
+
+==================================================
+
+5. CONNECTION HUB
+
+Add a dedicated integration panel where users can:
+
+- Connect MetaTrader 5
+- Configure APIs
+- Configure webhooks
+- Configure polling APIs
+- Monitor connection health
+- Reconnect integrations
+- View sync status
+- View last update/sync time
+
+==================================================
+
+6. EDUCATION / HELP SYSTEM
+
+Add a dedicated section that explains:
+
+- how the bot works
+- how trading works
+- what each dashboard feature means
+- what trading terms mean
+- what risk metrics mean
+- what sentiment metrics mean
+
+Assume the user may know nothing about trading.
+
+Examples:
+
+- P&L
+- Sharpe Ratio
+- Drawdown
+- Exposure
+- Win Rate
+- Long vs Short
+- Volatility
+- Sentiment score
+- Risk %
+- Limit order vs market order
+
+Every important feature or metric should include:
+
+- tooltip
+- hover explanation
+- help modal
+- or educational panel
+
+==================================================
+
+7. NOTIFICATIONS SYSTEM
+
+Support:
+
+- multiple emails
+- multiple phone numbers
+- ON/OFF toggles
+- trade alerts
+- drawdown alerts
+- daily summaries
+- kill switch alerts
+
+==================================================
+
+8. SETTINGS + STORAGE
+
+Persist:
+
+- user settings
+- presets
+- themes
+- risk settings
+- sentiment settings
+- source settings
+- notification settings
+- bot settings
+
+==================================================
+
+9. TECH STACK REQUIREMENTS
+
+Frontend:
+
+- React
+- Zustand
+- Tailwind
+- Chart.js
+
+Backend:
+
+- Node.js
+- Express
+- WebSocket support
+
+Bot:
+
+- Python
+- MetaTrader5 library
+
+==================================================
+
+10. CRITICAL REQUIREMENTS
+
+- Do NOT remove the current UI
+- Improve the existing dashboard only
+- Create missing backend systems
+- Create the Python trading bot
+- Connect everything together correctly
+- Maintain real-time synchronization
+- Ensure dashboard controls affect the live bot
+- No fake systems
+- No placeholder trading behavior
+- Production-grade modular architecture only

@@ -3,6 +3,7 @@ import {
   useGetNotificationSettings,
   useUpdateNotificationSettings,
   getGetNotificationSettingsQueryKey,
+  getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -98,7 +99,7 @@ function SettingField({
 
 export default function Notifications() {
   const qc = useQueryClient();
-  const { data: alerts, isLoading: alertsLoading } = useGetAlerts({ query: { refetchInterval: 10000 } });
+  const { data: alerts, isLoading: alertsLoading } = useGetAlerts({ query: { queryKey: getGetAlertsQueryKey(), refetchInterval: 10000 } });
   const { data: settings } = useGetNotificationSettings();
   const updateSettings = useUpdateNotificationSettings();
 

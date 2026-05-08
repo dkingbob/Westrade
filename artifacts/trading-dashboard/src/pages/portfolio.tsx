@@ -9,6 +9,7 @@ import {
   getGetPortfolioSummaryQueryKey,
   getGetEquityCurveQueryKey,
   getGetDrawdownQueryKey,
+  getGetPositionsQueryKey,
 } from "@workspace/api-client-react";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,14 +49,14 @@ function StatRow({ label, value, highlight }: { label: string; value: string; hi
 
 export default function Portfolio() {
   const [period, setPeriod] = useState("1m");
-  const { data: summary, isLoading } = useGetPortfolioSummary({ query: { refetchInterval: 5000 } });
-  const { data: equity } = useGetEquityCurve({ period }, {
-    query: { queryKey: getGetEquityCurveQueryKey({ period }), refetchInterval: 30000 }
+  const { data: summary, isLoading } = useGetPortfolioSummary({ query: { queryKey: getGetPortfolioSummaryQueryKey(), refetchInterval: 5000 } });
+  const { data: equity } = useGetEquityCurve({ period: period as any }, {
+    query: { queryKey: getGetEquityCurveQueryKey({ period: period as any }), refetchInterval: 30000 }
   });
-  const { data: drawdown } = useGetDrawdown({ period }, {
-    query: { queryKey: getGetDrawdownQueryKey({ period }), refetchInterval: 30000 }
+  const { data: drawdown } = useGetDrawdown({ period: period as any }, {
+    query: { queryKey: getGetDrawdownQueryKey({ period: period as any }), refetchInterval: 30000 }
   });
-  const { data: positions } = useGetPositions({ query: { refetchInterval: 5000 } });
+  const { data: positions } = useGetPositions({ query: { queryKey: getGetPositionsQueryKey(), refetchInterval: 5000 } });
   const { data: allocation } = useGetAllocation();
   const { data: correlation } = useGetCorrelation();
 

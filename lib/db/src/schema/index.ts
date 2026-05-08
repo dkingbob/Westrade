@@ -6,3 +6,8 @@ export * from "./notification_settings";
 export * from "./alerts";
 export * from "./portfolio_snapshots";
 export * from "./backtest_results";
+export * from "./auth";
+export * from "./presets";
+export * from "./bot_config";
+export * from "./sentiment_sources";
+export * from "./user_profiles";

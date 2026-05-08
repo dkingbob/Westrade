@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import authRouter from "./auth";
 import portfolioRouter from "./portfolio";
 import tradesRouter from "./trades";
 import analyticsRouter from "./analytics";
@@ -10,10 +11,16 @@ import backtestRouter from "./backtest";
 import sentimentRouter from "./sentiment";
 import notificationsRouter from "./notifications";
 import engineRouter from "./engine";
+import presetsRouter from "./presets";
+import connectionsRouter from "./connections";
+import botConfigRouter from "./bot-config";
+import userProfileRouter from "./user-profile";
+import sentimentSourcesRouter from "./sentiment-sources";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
 router.use(portfolioRouter);
 router.use(tradesRouter);
 router.use(analyticsRouter);
@@ -24,5 +31,10 @@ router.use(backtestRouter);
 router.use(sentimentRouter);
 router.use(notificationsRouter);
 router.use(engineRouter);
+router.use(presetsRouter);
+router.use(connectionsRouter);
+router.use(botConfigRouter);
+router.use(userProfileRouter);
+router.use(sentimentSourcesRouter);
 
 export default router;

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { useGetEngineStatus, useGetTicker } from "@workspace/api-client-react";
+import { useGetEngineStatus, useGetTicker, getGetEngineStatusQueryKey, getGetTickerQueryKey } from "@workspace/api-client-react";
+import { UserProfileWidget } from "@/components/UserProfile";
 import {
   LayoutDashboard,
   BookOpen,
@@ -18,7 +19,15 @@ import {
   ChevronRight,
   TrendingUp,
   TrendingDown,
+  Plug,
+  HelpCircle,
+  Layers,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -32,8 +41,14 @@ const navItems = [
   { path: "/notifications", label: "Alerts", icon: Bell },
 ];
 
+const bottomNavItems = [
+  { path: "/presets", label: "Presets", icon: Layers },
+  { path: "/connections", label: "Connections", icon: Plug },
+  { path: "/help", label: "Help & Glossary", icon: HelpCircle },
+];
+
 function TickerMarquee() {
-  const { data: tickers } = useGetTicker({ query: { refetchInterval: 3000 } });
+  const { data: tickers } = useGetTicker({ query: { queryKey: getGetTickerQueryKey(), refetchInterval: 3000 } });
 
   if (!tickers || tickers.length === 0) return null;
 
@@ -67,12 +82,56 @@ function TickerMarquee() {
   );
 }
 
+function NavItem({
+  path,
+  label,
+  icon: Icon,
+  collapsed,
+  location,
+}: {
+  path: string;
+  label: string;
+  icon: React.ElementType;
+  collapsed: boolean;
+  location: string;
+}) {
+  const active = path === "/" ? location === "/" : location.startsWith(path);
+
+  const inner = (
+    <Link key={path} href={path}>
+      <div
+        data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
+        className={cn(
+          "flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors text-xs font-mono",
+          collapsed && "justify-center",
+          active
+            ? "bg-primary/10 text-primary border-r-2 border-primary"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
+        )}
+      >
+        <Icon size={13} className="shrink-0" />
+        {!collapsed && <span>{label}</span>}
+      </div>
+    </Link>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>{inner}</TooltipTrigger>
+        <TooltipContent side="right" className="text-[10px] font-mono">{label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+  return inner;
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   useWebSocket();
 
-  const { data: engineStatus } = useGetEngineStatus({ query: { refetchInterval: 5000 } });
+  const { data: engineStatus } = useGetEngineStatus({ query: { queryKey: getGetEngineStatusQueryKey(), refetchInterval: 5000 } });
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -110,29 +169,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Nav */}
+        {/* Main Nav */}
         <nav className="flex-1 py-2 overflow-y-auto">
-          {navItems.map(({ path, label, icon: Icon }) => {
-            const active = path === "/" ? location === "/" : location.startsWith(path);
-            return (
-              <Link key={path} href={path}>
-                <div
-                  data-testid={`nav-${label.toLowerCase().replace(/\s/g, "-")}`}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors text-xs font-mono",
-                    collapsed && "justify-center",
-                    active
-                      ? "bg-primary/10 text-primary border-r-2 border-primary"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
-                  )}
-                >
-                  <Icon size={13} className="shrink-0" />
-                  {!collapsed && <span>{label}</span>}
-                </div>
-              </Link>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavItem key={item.path} {...item} collapsed={collapsed} location={location} />
+          ))}
+
+          {/* Divider */}
+          <div className="my-1 mx-3 border-t border-sidebar-border/50" />
+
+          {/* Bottom nav items */}
+          {bottomNavItems.map((item) => (
+            <NavItem key={item.path} {...item} collapsed={collapsed} location={location} />
+          ))}
         </nav>
+
+        {/* User Profile */}
+        <UserProfileWidget collapsed={collapsed} />
 
         {/* Collapse button */}
         <button

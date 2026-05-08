@@ -65,7 +65,7 @@ export default function Backtest() {
 
     const res = await runBacktest.mutateAsync({
       data: {
-        strategyType,
+        strategyType: strategyType as any,
         symbol,
         startDate,
         endDate,

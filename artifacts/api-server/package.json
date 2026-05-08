@@ -16,6 +16,8 @@
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
+    "openid-client": "^6.8.4",
+    "zod": "catalog:",
     "pino": "^9",
     "pino-http": "^10",
     "ws": "^8.20.0"

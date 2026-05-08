@@ -105,7 +105,7 @@ function SettingField({
 
 export default function Risk() {
   const qc = useQueryClient();
-  const { data: riskState, isLoading: stateLoading } = useGetRiskState({ query: { refetchInterval: 3000 } });
+  const { data: riskState, isLoading: stateLoading } = useGetRiskState({ query: { queryKey: getGetRiskStateQueryKey(), refetchInterval: 3000 } });
   const { data: settings, isLoading: settingsLoading } = useGetRiskSettings();
   const updateSettings = useUpdateRiskSettings();
   const killSwitch = useTriggerKillSwitch();
@@ -137,7 +137,7 @@ export default function Risk() {
   };
 
   const handleKillSwitch = async () => {
-    await killSwitch.mutateAsync({});
+    await killSwitch.mutateAsync();
     qc.invalidateQueries({ queryKey: getGetRiskStateQueryKey() });
   };
 

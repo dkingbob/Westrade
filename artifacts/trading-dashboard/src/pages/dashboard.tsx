@@ -8,6 +8,8 @@ import {
   useStopEngine,
   getGetPortfolioSummaryQueryKey,
   getGetEngineStatusQueryKey,
+  getGetPositionsQueryKey,
+  getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2 } from "lucide-react";
@@ -93,10 +95,10 @@ function AlertRow({ alert }: { alert: any }) {
 }
 
 export default function Dashboard() {
-  const { data: summary, isLoading: summaryLoading } = useGetPortfolioSummary({ query: { refetchInterval: 5000 } });
-  const { data: positions, isLoading: posLoading } = useGetPositions({ query: { refetchInterval: 5000 } });
-  const { data: alerts } = useGetAlerts();
-  const { data: engineStatus } = useGetEngineStatus({ query: { refetchInterval: 5000 } });
+  const { data: summary, isLoading: summaryLoading } = useGetPortfolioSummary({ query: { queryKey: getGetPortfolioSummaryQueryKey(), refetchInterval: 5000 } });
+  const { data: positions, isLoading: posLoading } = useGetPositions({ query: { queryKey: getGetPositionsQueryKey(), refetchInterval: 5000 } });
+  const { data: alerts } = useGetAlerts({ query: { queryKey: getGetAlertsQueryKey() } });
+  const { data: engineStatus } = useGetEngineStatus({ query: { queryKey: getGetEngineStatusQueryKey(), refetchInterval: 5000 } });
 
   const qc = useQueryClient();
   const startEngine = useStartEngine();
@@ -104,9 +106,9 @@ export default function Dashboard() {
 
   const toggleEngine = async () => {
     if (engineStatus?.running) {
-      await stopEngine.mutateAsync({});
+      await stopEngine.mutateAsync();
     } else {
-      await startEngine.mutateAsync({});
+      await startEngine.mutateAsync();
     }
     qc.invalidateQueries({ queryKey: getGetEngineStatusQueryKey() });
     qc.invalidateQueries({ queryKey: getGetPortfolioSummaryQueryKey() });

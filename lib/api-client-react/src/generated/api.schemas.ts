@@ -517,6 +517,43 @@ export interface EngineStatus {
   mode: EngineStatusMode;
 }
 
+export interface AuthUser {
+  id: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  firstName: string | null;
+  /** @nullable */
+  lastName: string | null;
+  /** @nullable */
+  profileImageUrl: string | null;
+}
+
+export interface AuthUserEnvelope {
+  user: AuthUser | null;
+}
+
+export interface ExchangeMobileAuthorizationCodeBody {
+  /** @minLength 1 */
+  code: string;
+  /** @minLength 1 */
+  code_verifier: string;
+  /** @minLength 1 */
+  redirect_uri: string;
+  /** @minLength 1 */
+  state: string;
+  /** @minLength 1 */
+  nonce?: string;
+}
+
+export interface ExchangeMobileAuthorizationCodeResponse {
+  token: string;
+}
+
+export interface LogoutMobileSessionResponse {
+  success: boolean;
+}
+
 export type GetEquityCurveParams = {
   period?: GetEquityCurvePeriod;
 };
