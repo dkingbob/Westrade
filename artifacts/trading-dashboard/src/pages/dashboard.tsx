@@ -122,9 +122,13 @@ function PositionRow({ pos }: { pos: any }) {
   );
 }
 
-function AlertRow({ alert }: { alert: any }) {
+function AlertRow({ alert, darkMode }: { alert: any; darkMode: boolean }) {
   const icons: Record<string, typeof Info> = { critical: AlertCircle, warning: AlertTriangle, info: Info };
-  const colors: Record<string, string> = { critical: "text-red-400", warning: "text-yellow-400", info: "text-blue-400" };
+  const colors: Record<string, string> = {
+    critical: "text-red-400",
+    warning: darkMode ? "text-yellow-400" : "text-amber-700",
+    info: darkMode ? "text-blue-400" : "text-blue-600",
+  };
   const Icon = icons[alert.severity] ?? Info;
   return (
     <div className="flex items-start gap-2 py-1.5 border-b border-border/50 last:border-0" data-testid={`alert-row-${alert.id}`}>
@@ -284,7 +288,7 @@ export default function Dashboard() {
               {!botOnline && positions && positions.length > 0 && (
                 <div className="mx-4 mt-3 mb-2 p-2 rounded border border-amber-500/30 bg-amber-500/5 flex items-center gap-2">
                   <AlertTriangle size={11} className="text-amber-400 shrink-0" />
-                  <p className="text-[10px] font-mono text-amber-300">Bot offline — positions shown may be stale. Start the bot to sync.</p>
+                  <p className={cn("text-[10px] font-mono", mode === "dark" ? "text-amber-300" : "text-amber-700")}>Bot offline — positions shown may be stale. Start the bot to sync.</p>
                 </div>
               )}
               <div className="p-3 pt-0">
@@ -332,7 +336,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-3">
               {unreviewedAlerts.length > 0 ? (
-                unreviewedAlerts.slice(0, 6).map((alert) => <AlertRow key={alert.id} alert={alert} />)
+                unreviewedAlerts.slice(0, 6).map((alert) => <AlertRow key={alert.id} alert={alert} darkMode={mode === "dark"} />)
               ) : (
                 <div className="flex items-center justify-center h-16 text-[11px] font-mono text-muted-foreground">
                   No active alerts
