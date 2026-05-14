@@ -190,7 +190,11 @@ export default function Portfolio() {
                     <Pie data={allocation} dataKey="value" nameKey="symbol" cx="50%" cy="50%" innerRadius={35} outerRadius={60} strokeWidth={1} stroke="rgba(0,0,0,0.3)">
                       {allocation.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={ttStyle} />
+                    <Tooltip
+                      contentStyle={ttStyle}
+                      itemStyle={{ color: mode === "light" ? "#111827" : "#e5e7eb" }}
+                      labelStyle={{ color: mode === "light" ? "#374151" : "#9ca3af" }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-1">
