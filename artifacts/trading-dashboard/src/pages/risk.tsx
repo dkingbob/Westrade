@@ -303,7 +303,6 @@ export default function Risk() {
                     <span className="text-[10px] font-mono text-muted-foreground">USD — caps each trade's position size</span>
                   </div>
                 </div>
-                </div>
 
                 <Button
                   onClick={handleSave}
