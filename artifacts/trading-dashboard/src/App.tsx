@@ -1,9 +1,11 @@
 import { useEffect } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@workspace/replit-auth-web";
 import NotFound from "@/pages/not-found";
+import LoginPage from "@/pages/login";
 import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/dashboard";
 import Trades from "@/pages/trades";
@@ -27,7 +29,21 @@ const queryClient = new QueryClient({
   },
 });
 
-function Router() {
+function ProtectedRouter() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
   return (
     <Layout>
       <Switch>
@@ -46,6 +62,15 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
     </Layout>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/login" component={LoginPage} />
+      <Route component={ProtectedRouter} />
+    </Switch>
   );
 }
 

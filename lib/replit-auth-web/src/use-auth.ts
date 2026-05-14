@@ -42,12 +42,13 @@ export function useAuth(): AuthState {
   }, []);
 
   const login = useCallback(() => {
-    const base = (document.querySelector("base")?.getAttribute("href") ?? (window.location.pathname.split("/").slice(0, 2).join("/") || "/"));
-    window.location.href = `/api/login?returnTo=${encodeURIComponent(base)}`;
+    window.location.href = "/login";
   }, []);
 
   const logout = useCallback(() => {
-    window.location.href = "/api/logout";
+    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).finally(() => {
+      window.location.href = "/login";
+    });
   }, []);
 
   return {

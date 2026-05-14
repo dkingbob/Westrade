@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import {
   useGetRiskState,
   useGetRiskSettings,
@@ -105,10 +107,17 @@ function SettingField({
 
 export default function Risk() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   const { data: riskState, isLoading: stateLoading } = useGetRiskState({ query: { queryKey: getGetRiskStateQueryKey(), refetchInterval: 3000 } });
   const { data: settings, isLoading: settingsLoading } = useGetRiskSettings();
   const updateSettings = useUpdateRiskSettings();
   const killSwitch = useTriggerKillSwitch();
+
+  const resetData = useMutation({
+    mutationFn: () => fetch("/api/trades/reset", { method: "DELETE", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => { toast({ title: "Trading data cleared" }); qc.invalidateQueries(); },
+    onError: () => toast({ title: "Reset failed", variant: "destructive" }),
+  });
 
   const [maxDailyLossPct, setMaxDailyLossPct] = useState<number | null>(null);
   const [maxDrawdownPct, setMaxDrawdownPct] = useState<number | null>(null);
@@ -259,6 +268,40 @@ export default function Risk() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Reset Paper Trading Data */}
+      <Card className="bg-card border-yellow-500/30">
+        <CardContent className="p-4 flex items-center justify-between gap-4">
+          <div>
+            <span className="text-sm font-mono font-bold text-yellow-400 uppercase tracking-wider">Reset Trading Data</span>
+            <p className="text-[11px] font-mono text-muted-foreground mt-1">
+              Delete all trades and portfolio history. Use this when switching from paper to live trading.
+            </p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 font-mono text-xs h-8 px-4 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10">
+                Reset Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-card font-mono">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-yellow-400">Reset All Trading Data?</AlertDialogTitle>
+                <AlertDialogDescription className="text-muted-foreground text-xs">
+                  This will permanently delete all trades and portfolio snapshots. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+                <AlertDialogAction className="bg-yellow-600 hover:bg-yellow-700 text-xs h-8" onClick={() => resetData.mutate()}>
+                  {resetData.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
+                  Confirm Reset
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
 
       {/* Kill Switch */}
       <Card className="bg-card border-red-500/30 border-card-border">

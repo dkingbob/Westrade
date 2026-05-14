@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { tradesTable } from "@workspace/db";
+import { tradesTable, portfolioSnapshotsTable } from "@workspace/db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import {
   GetTradeParams,
@@ -212,6 +212,16 @@ router.patch("/trades/:id/notes", async (req, res): Promise<void> => {
     zScore: trade.zScore ? parseFloat(trade.zScore as string) : null,
     sentimentMultiplier: trade.sentimentMultiplier ? parseFloat(trade.sentimentMultiplier as string) : null,
   });
+});
+
+router.delete("/trades/reset", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await db.delete(tradesTable);
+  await db.delete(portfolioSnapshotsTable);
+  res.json({ success: true });
 });
 
 export default router;
