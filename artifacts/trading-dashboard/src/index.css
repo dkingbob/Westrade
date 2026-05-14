@@ -169,7 +169,7 @@
 }
 
 /* ── Glass ── dark + translucent cards */
-.glass {
+.glass:not(.light) {
   color-scheme: dark;
   --background: 230 25% 8%;
   --foreground: 210 30% 95%;
@@ -247,7 +247,7 @@
 }
 
 /* ── Frosted ── Apple macOS-style heavy blur */
-.frosted {
+.frosted:not(.light) {
   color-scheme: dark;
   --radius: 0.625rem;
   --background: 222 22% 6%;
@@ -327,7 +327,7 @@
 }
 
 /* ── Terminal ── matrix green-on-black */
-.terminal {
+.terminal:not(.light) {
   color-scheme: dark;
   --radius: 0.125rem;
   --background: 0 0% 3%;
@@ -385,7 +385,7 @@
 }
 
 /* ── Midnight ── deep navy premium */
-.midnight {
+.midnight:not(.light) {
   color-scheme: dark;
   --background: 230 40% 5%;
   --foreground: 220 30% 90%;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,23 +42,35 @@ export default function Settings() {
   const [smtpPass, setSmtpPass] = useState("");
   const [emailEvents, setEmailEvents] = useState({ killSwitch: true, sessionLimit: true, profitTarget: true, newTrade: false });
 
+  const profileInitRef = useRef(false);
+  const emailInitRef = useRef(false);
+
   const { data: profile } = useQuery<any>({
     queryKey: ["user-profile"],
     queryFn: () => api("/api/user/profile").then(r => r.json()),
-    onSuccess: (d) => { setUsername(d.username ?? ""); setBio(d.bio ?? ""); },
   });
+
+  useEffect(() => {
+    if (!profile || profileInitRef.current) return;
+    profileInitRef.current = true;
+    setUsername(profile.username ?? "");
+    setBio(profile.bio ?? "");
+  }, [profile]);
 
   const { data: emailSettings } = useQuery<any>({
     queryKey: ["email-settings"],
     queryFn: () => api("/api/notifications/email-settings").then(r => r.json()),
-    onSuccess: (d) => {
-      if (d.emails?.length) setEmails(d.emails);
-      if (d.smtpHost) setSmtpHost(d.smtpHost);
-      if (d.smtpPort) setSmtpPort(String(d.smtpPort));
-      if (d.smtpUser) setSmtpUser(d.smtpUser);
-      if (d.events) setEmailEvents(d.events);
-    },
   });
+
+  useEffect(() => {
+    if (!emailSettings || emailInitRef.current) return;
+    emailInitRef.current = true;
+    if (emailSettings.emails?.length) setEmails(emailSettings.emails);
+    if (emailSettings.smtpHost) setSmtpHost(emailSettings.smtpHost);
+    if (emailSettings.smtpPort) setSmtpPort(String(emailSettings.smtpPort));
+    if (emailSettings.smtpUser) setSmtpUser(emailSettings.smtpUser);
+    if (emailSettings.events) setEmailEvents(emailSettings.events);
+  }, [emailSettings]);
 
   const updateProfile = useMutation({
     mutationFn: (body: object) => api("/api/user/profile", { method: "PUT", body: JSON.stringify(body) }).then(r => r.json()),
