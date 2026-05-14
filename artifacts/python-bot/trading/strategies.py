@@ -14,20 +14,35 @@ log = logging.getLogger("algodesk.strategies")
 
 # Simulated price store for paper mode
 _price_cache: Dict[str, List[float]] = {}
+_mt5 = None  # Set by engine when MT5 is connected
 
 BASE_PRICES = {
-    "AAPL": 170.0, "MSFT": 380.0, "GOOGL": 165.0, "NVDA": 550.0,
-    "TSLA": 200.0, "AMZN": 185.0, "SPY": 510.0, "QQQ": 430.0, "JPM": 195.0,
+    "EURUSD": 1.08, "GBPUSD": 1.27, "AUDUSD": 0.65, "USDJPY": 150.0,
+    "USDCAD": 1.36, "NZDUSD": 0.60, "EURJPY": 162.0, "GBPJPY": 190.0, "EURGBP": 0.85,
 }
 
 
+def set_mt5(mt5_module):
+    global _mt5
+    _mt5 = mt5_module
+
+
 async def fetch_price(symbol: str) -> float:
-    """
-    Fetch current price. In live mode this would call MT5 or a market data API.
-    In simulation mode we use GBM (Geometric Brownian Motion).
-    """
+    """Use real MT5 price when available, else GBM simulation."""
+    if _mt5 is not None:
+        tick = _mt5.symbol_info_tick(symbol)
+        if tick is not None:
+            price = (tick.ask + tick.bid) / 2
+            if symbol not in _price_cache:
+                _price_cache[symbol] = [price] * 50
+            else:
+                _price_cache[symbol].append(price)
+                if len(_price_cache[symbol]) > 200:
+                    _price_cache[symbol] = _price_cache[symbol][-200:]
+            return price
+
     if symbol not in _price_cache:
-        base = BASE_PRICES.get(symbol, 100.0)
+        base = BASE_PRICES.get(symbol, 1.0)
         _price_cache[symbol] = [base * (1 + random.gauss(0, 0.002)) for _ in range(50)]
 
     last = _price_cache[symbol][-1]

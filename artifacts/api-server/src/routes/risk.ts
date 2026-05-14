@@ -1,9 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { riskSettingsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { riskEngine } from "../engine/risk";
 import { tradingEngine } from "../engine/tradingEngine";
 import { UpdateRiskSettingsBody } from "@workspace/api-zod";
+import { wsServer } from "../ws/server";
 
 const router: IRouter = Router();
 
@@ -51,7 +53,7 @@ router.patch("/risk/settings", async (req, res): Promise<void> => {
     if (body.data.correlationThreshold !== undefined) updateData.correlationThreshold = body.data.correlationThreshold.toFixed(6);
     if (body.data.slippagePct !== undefined) updateData.slippagePct = body.data.slippagePct.toFixed(6);
     if (body.data.feesPct !== undefined) updateData.feesPct = body.data.feesPct.toFixed(6);
-    [updated] = await db.update(riskSettingsTable).set(updateData).where(undefined as any).returning();
+    [updated] = await db.update(riskSettingsTable).set(updateData).where(eq(riskSettingsTable.id, existing.id)).returning();
   } else {
     [updated] = await db.insert(riskSettingsTable).values({
       maxDailyLossPct: (body.data.maxDailyLossPct ?? 0.02).toFixed(6),
@@ -65,8 +67,7 @@ router.patch("/risk/settings", async (req, res): Promise<void> => {
     }).returning();
   }
 
-  // Apply to risk engine
-  riskEngine.updateConfig({
+  const riskConfig = {
     maxDailyLossPct: parseFloat(updated.maxDailyLossPct as string),
     maxDrawdownPct: parseFloat(updated.maxDrawdownPct as string),
     maxExposurePct: parseFloat(updated.maxExposurePct as string),
@@ -75,7 +76,13 @@ router.patch("/risk/settings", async (req, res): Promise<void> => {
     correlationThreshold: parseFloat(updated.correlationThreshold as string),
     slippagePct: parseFloat(updated.slippagePct as string),
     feesPct: parseFloat(updated.feesPct as string),
-  });
+  };
+
+  // Apply to risk engine
+  riskEngine.updateConfig(riskConfig);
+
+  // Broadcast to connected bots
+  wsServer.broadcast("config_update", { riskSettings: riskConfig });
 
   res.json({
     maxDailyLossPct: parseFloat(updated.maxDailyLossPct as string),
@@ -91,6 +98,7 @@ router.patch("/risk/settings", async (req, res): Promise<void> => {
 
 router.post("/risk/kill-switch", async (req, res): Promise<void> => {
   const result = await tradingEngine.emergencyKillSwitch();
+  wsServer.broadcast("kill_switch", { reason: "Risk engine kill switch activated" });
   res.json({
     success: true,
     closedPositions: result.closedPositions,

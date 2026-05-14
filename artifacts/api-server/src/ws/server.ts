@@ -3,6 +3,7 @@ import { IncomingMessage, Server } from "http";
 import { logger } from "../lib/logger";
 import { db } from "@workspace/db";
 import { tradesTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 class WsServer {
   private wss: WebSocketServer | null = null;
@@ -29,8 +30,9 @@ class WsServer {
               logger.warn({ err }, "Failed to save bot trade")
             );
           } else if (msg.type === "bot_positions") {
-            // broadcast live positions to dashboard clients
-            this.broadcast("bot_positions", msg.data);
+            this.handleBotPositions(msg.data).catch((err) =>
+              logger.warn({ err }, "Failed to sync bot positions")
+            );
           }
         } catch (err) {
           logger.warn({ err }, "Invalid WS message");
@@ -77,6 +79,43 @@ class WsServer {
       logger.info({ id: saved.id, symbol: saved.symbol }, "Bot trade saved to DB");
       this.broadcast("trade_opened", { trade: saved });
     }
+  }
+
+  private async handleBotPositions(positions: unknown) {
+    if (!Array.isArray(positions)) return;
+
+    // Update P&L for each open MT5 position in DB
+    for (const pos of positions) {
+      if (!pos.symbol) continue;
+      const openTrades = await db
+        .select()
+        .from(tradesTable)
+        .where(and(eq(tradesTable.symbol, pos.symbol), eq(tradesTable.status, "open")));
+
+      for (const trade of openTrades) {
+        await db.update(tradesTable).set({
+          pnl: pos.pnl != null ? String(pos.pnl) : trade.pnl,
+        }).where(eq(tradesTable.id, trade.id));
+      }
+    }
+
+    // Close any DB trades whose symbol is no longer in MT5 positions
+    const openDbTrades = await db
+      .select()
+      .from(tradesTable)
+      .where(eq(tradesTable.status, "open"));
+
+    const activeSymbols = new Set((positions as any[]).map((p) => p.symbol));
+    for (const trade of openDbTrades) {
+      if (!activeSymbols.has(trade.symbol)) {
+        await db.update(tradesTable).set({
+          status: "closed",
+          closedAt: new Date(),
+        }).where(eq(tradesTable.id, trade.id));
+      }
+    }
+
+    this.broadcast("bot_positions", positions);
   }
 
   broadcast(type: string, data: unknown) {

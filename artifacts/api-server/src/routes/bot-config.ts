@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { botConfigTable, tradesTable } from "@workspace/db";
 import { eq, isNull } from "drizzle-orm";
+import { wsServer } from "../ws/server";
 
 const router: IRouter = Router();
 
@@ -41,6 +42,18 @@ router.put("/bot/config", async (req, res): Promise<void> => {
       updatedAt: new Date(),
     })
     .returning();
+
+  // Broadcast config update to connected bots
+  wsServer.broadcast("config_update", {
+    pausedSymbols: updated.pausedSymbols ?? [],
+    restrictedAssets: updated.restrictedAssets ?? [],
+    killSwitchActive: updated.killSwitchActive,
+    limitOrderOnly: updated.limitOrderOnly,
+    adaptiveSentiment: updated.adaptiveSentiment,
+    newsHaltMode: updated.newsHaltMode,
+    longTermMode: updated.longTermMode,
+  });
+
   res.json(updated);
 });
 
@@ -51,6 +64,14 @@ router.post("/bot/kill-switch", async (req, res): Promise<void> => {
     .update(botConfigTable)
     .set({ killSwitchActive: active ?? true, updatedAt: new Date() })
     .returning();
+
+  // Broadcast to connected bots immediately
+  if (updated.killSwitchActive) {
+    wsServer.broadcast("kill_switch", { reason: "Dashboard kill switch activated" });
+  } else {
+    wsServer.broadcast("config_update", { killSwitchActive: false });
+  }
+
   res.json({ success: true, killSwitchActive: updated.killSwitchActive });
 });
 

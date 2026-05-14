@@ -3,10 +3,18 @@ import { db } from "@workspace/db";
 import {
   tradesTable,
   portfolioSnapshotsTable,
+  botConfigTable,
 } from "@workspace/db";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { riskEngine } from "../engine/risk";
 import { getCurrentPrice } from "../engine/marketData";
+
+async function getInitialEquity(): Promise<number> {
+  const [cfg] = await db.select().from(botConfigTable).limit(1);
+  const extra = cfg?.botExtra as Record<string, unknown> | null;
+  const equity = extra?.mt5Equity;
+  return typeof equity === "number" && equity > 0 ? equity : 100_000;
+}
 
 const router: IRouter = Router();
 
@@ -21,7 +29,7 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
     .from(tradesTable)
     .where(eq(tradesTable.status, "closed"));
 
-  const initialEquity = 100_000;
+  const initialEquity = await getInitialEquity();
   let totalPnl = 0;
   let totalExposure = 0;
 
