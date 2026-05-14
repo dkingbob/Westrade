@@ -40,6 +40,27 @@ class BackendWSClient:
         """Register a callback for kill switch activation."""
         self._kill_switch_handlers.append(handler)
 
+    async def send_heartbeat_once(self):
+        """Send a single heartbeat immediately (called on MT5 connect to sync equity right away)."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                payload = {
+                    "mt5Connected": self.mt5_connected,
+                    "mt5AccountId": self.mt5_account_id,
+                    "mt5Server": self.mt5_server,
+                    "mt5Equity": self.mt5_equity,
+                    "aiValidation": bool(os.getenv("GEMINI_API_KEY")),
+                    "sentimentApis": self.sentiment_api_status,
+                }
+                async with session.post(
+                    f"{self.api_url}/connections/bot/heartbeat",
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as resp:
+                    log.info(f"Equity synced to dashboard: ${self.mt5_equity} (status {resp.status})")
+        except Exception as e:
+            log.warning(f"Immediate equity sync failed: {e}")
+
     async def send_heartbeat(self):
         """POST heartbeat to backend REST API."""
         while True:

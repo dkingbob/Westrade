@@ -9,7 +9,7 @@ import { eq, desc, and, gte } from "drizzle-orm";
 import { riskEngine } from "../engine/risk";
 import { getCurrentPrice } from "../engine/marketData";
 
-async function getMt5Equity(): Promise<{ current: number; initial: number; botConnected: boolean }> {
+async function getMt5Equity(): Promise<{ current: number; initial: number; botConnected: boolean; hasRealEquity: boolean }> {
   const [cfg] = await db.select().from(botConfigTable).limit(1);
   const extra = cfg?.botExtra as Record<string, unknown> | null;
   const equity = extra?.mt5Equity;
@@ -18,8 +18,9 @@ async function getMt5Equity(): Promise<{ current: number; initial: number; botCo
     ? now - new Date(cfg.lastBotHeartbeat).getTime()
     : null;
   const botConnected = heartbeatAge !== null && heartbeatAge < 30_000;
-  const value = typeof equity === "number" && equity > 0 ? equity : 100_000;
-  return { current: value, initial: value, botConnected };
+  const hasRealEquity = typeof equity === "number" && equity > 0;
+  const value = hasRealEquity ? (equity as number) : 100_000;
+  return { current: value, initial: value, botConnected, hasRealEquity };
 }
 
 const router: IRouter = Router();
@@ -35,7 +36,7 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
     .from(tradesTable)
     .where(eq(tradesTable.status, "closed"));
 
-  const { current: mt5Equity, initial: initialEquity, botConnected } = await getMt5Equity();
+  const { current: mt5Equity, initial: initialEquity, botConnected, hasRealEquity } = await getMt5Equity();
   let totalPnl = 0;
   let totalExposure = 0;
 
@@ -51,8 +52,9 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
     totalExposure += (entryPrice * qty) / initialEquity;
   }
 
-  // When bot is live, MT5 equity already reflects real P&L — use it directly
-  const equity = botConnected ? mt5Equity : initialEquity + totalPnl;
+  // Use MT5 equity directly when bot is live or when we have a previously synced value.
+  // Only fall back to paper calculation if equity has never been synced from MT5.
+  const equity = (botConnected || hasRealEquity) ? mt5Equity : initialEquity + totalPnl;
   const riskState = riskEngine.getState();
 
   // Calculate performance metrics from closed trades

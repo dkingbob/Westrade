@@ -171,6 +171,8 @@ class TradingEngine:
             all_symbols = list({s for strat in self.strategies for s in strat.symbols})
             strategies_module.initialize_history(all_symbols)
             log.info(f"MT5 connected: account={account}, equity={self.equity:.2f}")
+            # Sync real equity to dashboard immediately (don't wait for next heartbeat interval)
+            asyncio.create_task(self.ws.send_heartbeat_once())
             return True
         except Exception as e:
             log.error(f"MT5 connection error: {e}")
