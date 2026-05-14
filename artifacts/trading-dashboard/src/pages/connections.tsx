@@ -20,6 +20,7 @@ interface ConnectionStatus {
   websocket: { connected: boolean; endpoint: string };
   database: { connected: boolean };
   sentimentApis: { twitter: boolean; reddit: boolean; newsApi: boolean };
+  aiValidation: boolean;
   updatedAt: string;
 }
 
@@ -106,12 +107,14 @@ export default function Connections() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-3">
-            <div className="p-3 rounded border border-amber-500/30 bg-amber-500/5 flex items-start gap-2">
-              <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
-              <p className="text-[10px] font-mono text-amber-300">
-                MT5 requires Windows + MetaTrader 5 terminal. The Python bot must be running on your local machine with MT5 installed and connected here via WebSocket.
-              </p>
-            </div>
+            {!status?.mt5.connected && (
+              <div className="p-3 rounded border border-amber-500/30 bg-amber-500/5 flex items-start gap-2">
+                <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                <p className="text-[10px] font-mono text-amber-300">
+                  Start the Python bot on your Windows machine with MT5 open to connect.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-[10px] font-mono text-muted-foreground uppercase">Account ID</Label>
               <Input
@@ -170,24 +173,37 @@ export default function Connections() {
               </div>
               <StatusBadge connected={status?.pythonBot.connected ?? false} label={status?.pythonBot.connected ? "ALIVE" : "OFFLINE"} />
             </div>
+
+            {/* Launch command */}
             <div className="p-3 rounded border border-border bg-muted/10 space-y-2">
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Setup Instructions</p>
-              <div className="space-y-1 text-[10px] font-mono text-muted-foreground">
-                <p>1. Navigate to <span className="text-primary">artifacts/python-bot/</span></p>
-                <p>2. Run: <span className="text-primary">pip install -r requirements.txt</span></p>
-                <p>3. Configure <span className="text-primary">.env</span> with MT5 credentials</p>
-                <p>4. Run: <span className="text-primary">python bot.py</span></p>
-                <p>5. Bot auto-connects to this dashboard via WebSocket</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Launch command (run on your PC)</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border truncate">
+                  cd artifacts/python-bot && python bot.py
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[10px] font-mono shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText("cd artifacts/python-bot && python bot.py");
+                    toast({ title: "Command copied!" });
+                  }}
+                >
+                  Copy
+                </Button>
               </div>
+              <p className="text-[9px] font-mono text-muted-foreground">Make sure your .env has ALGODESK_WS_URL and ALGODESK_API_URL set</p>
             </div>
+
             <div className="space-y-1">
               {[
                 { label: "Heartbeat", value: status?.pythonBot.heartbeatAge ? `${Math.floor(status.pythonBot.heartbeatAge / 1000)}s ago` : "—" },
-                { label: "Endpoint", value: "/api/connections/bot/heartbeat" },
+                { label: "AI Validation", value: status?.aiValidation ? "Gemini enabled" : "Not configured" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-[10px] font-mono text-muted-foreground">{label}</span>
-                  <span className="text-[10px] font-mono text-foreground">{value}</span>
+                  <span className={`text-[10px] font-mono ${label === "AI Validation" && status?.aiValidation ? "text-green-400" : "text-foreground"}`}>{value}</span>
                 </div>
               ))}
             </div>
@@ -203,9 +219,9 @@ export default function Connections() {
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-2">
             {[
-              { label: "Twitter / X API", key: "twitter" as const, ok: status?.sentimentApis.twitter ?? false, note: "Configure in Sentiment → Sources" },
-              { label: "Reddit API", key: "reddit" as const, ok: status?.sentimentApis.reddit ?? false, note: "Configure in Sentiment → Sources" },
-              { label: "NewsAPI", key: "newsApi" as const, ok: status?.sentimentApis.newsApi ?? false, note: "Configure in Sentiment → Sources" },
+              { label: "Twitter / X API", key: "twitter" as const, ok: status?.sentimentApis.twitter ?? false, note: "Set TWITTER_BEARER_TOKEN in bot .env" },
+              { label: "Reddit API", key: "reddit" as const, ok: status?.sentimentApis.reddit ?? false, note: "Set REDDIT_CLIENT_ID + SECRET in bot .env" },
+              { label: "NewsAPI", key: "newsApi" as const, ok: status?.sentimentApis.newsApi ?? false, note: "Set NEWS_API_KEY in bot .env" },
             ].map(({ label, ok, note }) => (
               <div key={label} className="flex items-center justify-between p-2 rounded border border-border">
                 <div>

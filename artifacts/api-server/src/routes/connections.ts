@@ -13,6 +13,8 @@ router.get("/connections/status", async (req, res): Promise<void> => {
     ? now - new Date(cfg.lastBotHeartbeat).getTime()
     : null;
   const botAlive = heartbeatAge !== null && heartbeatAge < 30_000;
+  const extra = (cfg?.botExtra as Record<string, unknown>) ?? {};
+  const sentimentApis = (extra.sentimentApis as Record<string, boolean>) ?? { twitter: false, reddit: false, newsApi: false };
 
   res.json({
     mt5: {
@@ -34,21 +36,23 @@ router.get("/connections/status", async (req, res): Promise<void> => {
       connected: true,
     },
     sentimentApis: {
-      twitter: false,
-      reddit: false,
-      newsApi: false,
+      twitter: sentimentApis.twitter ?? false,
+      reddit: sentimentApis.reddit ?? false,
+      newsApi: sentimentApis.newsApi ?? false,
     },
+    aiValidation: extra.aiValidation ?? false,
     updatedAt: new Date().toISOString(),
   });
 });
 
 router.post("/connections/bot/heartbeat", async (req, res): Promise<void> => {
-  const { mt5Connected, mt5AccountId, mt5Server, mt5Equity } = req.body;
+  const { mt5Connected, mt5AccountId, mt5Server, mt5Equity, aiValidation, sentimentApis } = req.body;
   const rows = await db.select().from(botConfigTable).limit(1);
   const existingExtra = (rows[0]?.botExtra as Record<string, unknown>) ?? {};
-  const newExtra = mt5Equity != null
-    ? { ...existingExtra, mt5Equity: parseFloat(mt5Equity) }
-    : existingExtra;
+  const newExtra: Record<string, unknown> = { ...existingExtra };
+  if (mt5Equity != null) newExtra.mt5Equity = parseFloat(mt5Equity);
+  if (aiValidation !== undefined) newExtra.aiValidation = aiValidation;
+  if (sentimentApis != null) newExtra.sentimentApis = sentimentApis;
 
   if (rows.length === 0) {
     await db.insert(botConfigTable).values({

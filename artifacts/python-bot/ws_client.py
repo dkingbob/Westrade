@@ -6,6 +6,7 @@ Sends heartbeats, receives config updates, and emits trade events.
 import asyncio
 import json
 import logging
+import os
 import time
 from datetime import datetime
 
@@ -29,6 +30,7 @@ class BackendWSClient:
         self.mt5_account_id = None
         self.mt5_server = None
         self.mt5_equity = None
+        self.sentiment_api_status: dict = {"twitter": False, "reddit": False, "newsApi": False}
 
     def on_config_update(self, handler):
         """Register a callback for config updates from dashboard."""
@@ -48,6 +50,8 @@ class BackendWSClient:
                         "mt5AccountId": self.mt5_account_id,
                         "mt5Server": self.mt5_server,
                         "mt5Equity": self.mt5_equity,
+                        "aiValidation": bool(os.getenv("GEMINI_API_KEY")),
+                        "sentimentApis": self.sentiment_api_status,
                     }
                     async with session.post(
                         f"{self.api_url}/connections/bot/heartbeat",

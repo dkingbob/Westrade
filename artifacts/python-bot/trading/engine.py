@@ -43,9 +43,98 @@ class TradingEngine:
         self.warning_buffer_usd = None
         self.in_warning_zone = False
 
+        # AI validation counters
+        self.ai_validated = 0
+        self.ai_rejected = 0
+
+        # Push sentiment API status into ws_client so heartbeat reports it
+        self.ws.sentiment_api_status = self.sentiment.get_api_status()
+
         # Register handlers
         self.ws.on_kill_switch(self._handle_kill_switch)
         self.ws.on_config_update(self._handle_config_update)
+
+    async def _ai_validate_trade(self, trade: dict, signal: dict) -> bool:
+        """Ask Gemini AI whether the trade signal is worth executing. Returns True to allow, False to reject."""
+        import os
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return True
+
+        symbol = trade["symbol"]
+        side = trade["side"]
+        strategy = trade["strategy"]
+        price = trade["entry_price"]
+
+        # Build a details string from available signal fields
+        details_parts = []
+        if signal.get("z_score") is not None:
+            details_parts.append(f"z_score={signal['z_score']:.3f}")
+        if signal.get("rsi") is not None:
+            details_parts.append(f"rsi={signal['rsi']:.1f}")
+        details = ", ".join(details_parts) if details_parts else "no additional indicators"
+
+        prompt = (
+            f"You are a forex trading risk analyst. A trading bot wants to place the following order:\n"
+            f"- Symbol: {symbol}\n"
+            f"- Direction: {side} (buy=long, sell=short)\n"
+            f"- Strategy: {strategy}\n"
+            f"- Entry price: {price}\n"
+            f"- Signal details: {details}\n\n"
+            f"Based on typical forex market conditions and the signal details provided, is this a reasonable trade to execute? "
+            f"Respond with only YES or NO followed by one brief sentence reason."
+        )
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        body = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"maxOutputTokens": 100, "temperature": 0.1},
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json=body,
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as resp:
+                    if resp.status != 200:
+                        log.warning(f"[AI] Gemini API returned {resp.status} — allowing trade")
+                        return True
+                    data = await resp.json()
+                    text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+            # Parse decision and reason
+            upper = text.upper()
+            if upper.startswith("YES"):
+                decision = "YES"
+                reason = text[3:].lstrip(" .,—-").strip() or "signal looks reasonable"
+                self.ai_validated += 1
+                log.info(f"[AI] {symbol} {side}: {decision} — {reason}")
+                return True
+            elif upper.startswith("NO"):
+                decision = "NO"
+                reason = text[2:].lstrip(" .,—-").strip() or "signal rejected"
+                self.ai_rejected += 1
+                log.info(f"[AI] {symbol} {side}: {decision} — {reason}")
+                return False
+            else:
+                # Ambiguous response — scan for YES/NO anywhere
+                if "YES" in upper:
+                    self.ai_validated += 1
+                    log.info(f"[AI] {symbol} {side}: YES — {text}")
+                    return True
+                elif "NO" in upper:
+                    self.ai_rejected += 1
+                    log.info(f"[AI] {symbol} {side}: NO — {text}")
+                    return False
+                # Truly ambiguous — fail-open
+                log.info(f"[AI] {symbol} {side}: ambiguous response, allowing trade — {text}")
+                return True
+
+        except Exception as e:
+            log.warning(f"[AI] Gemini validation error ({symbol} {side}): {e} — allowing trade")
+            return True
 
     async def connect_mt5(self, account: int, password: str, server: str):
         """Initialize MT5 connection (Windows only, live mode)."""
@@ -311,6 +400,17 @@ class TradingEngine:
             return
         if symbol in self.paused_symbols or symbol in self.restricted_assets:
             log.info(f"Symbol {symbol} is paused/restricted — skipping")
+            return
+
+        # AI trade validation — build a minimal trade dict for context
+        _pre_trade = {
+            "symbol": symbol,
+            "side": signal["side"],
+            "strategy": signal["strategy"],
+            "entry_price": signal["price"],
+        }
+        if not await self._ai_validate_trade(_pre_trade, signal):
+            log.info(f"[AI] Trade rejected by Gemini AI — skipping {symbol} {signal['side']}")
             return
 
         # Don't open another position in same symbol
