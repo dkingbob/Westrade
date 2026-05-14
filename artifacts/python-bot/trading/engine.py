@@ -138,10 +138,18 @@ class TradingEngine:
             order_type = mt5.ORDER_TYPE_BUY if trade["side"] == "long" else mt5.ORDER_TYPE_SELL
             price = tick.ask if trade["side"] == "long" else tick.bid
 
-            # Enforce minimum volume for the symbol
+            # Convert units to lots and clamp to broker limits
+            # trade["quantity"] is in currency units; 1 lot = 100,000 units
             info = mt5.symbol_info(symbol)
-            volume = max(float(trade["quantity"]), info.volume_min if info else 0.01)
-            volume = round(volume, 2)
+            vol_min = info.volume_min if info else 0.01
+            vol_max = info.volume_max if info else 10.0
+            vol_step = info.volume_step if info else 0.01
+            raw_lots = float(trade["quantity"]) / 100_000
+            # Round to nearest lot step, then clamp
+            volume = round(round(raw_lots / vol_step) * vol_step, 2)
+            volume = max(vol_min, min(vol_max, volume))
+            if volume < vol_min:
+                volume = vol_min
 
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
