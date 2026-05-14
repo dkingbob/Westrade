@@ -300,7 +300,7 @@ export default function Settings() {
       {/* Bot Setup tab */}
       {tab === "setup" && (() => {
         const oneliner = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; python bot.py`;
-        const onelinerAi = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; $env:GEMINI_API_KEY="your-gemini-key-here"; python bot.py`;
+        const onelinerAi = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; $env:GEMINI_API_KEY="AIzaSyAZnOZfJ3cvmDzX3GCaVHy3CPHX2HBbW1s"; python bot.py`;
         const install = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; pip install -r requirements.txt`;
         return (
           <div className="space-y-3">
