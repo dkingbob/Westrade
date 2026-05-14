@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { tradesTable } from "@workspace/db";
+import { tradesTable, portfolioSnapshotsTable } from "@workspace/db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import {
   GetTradeParams,
@@ -21,7 +21,6 @@ router.get("/trades", async (req, res): Promise<void> => {
 
   const { limit, offset, strategy, status } = parsed.data;
 
-  let query = db.select().from(tradesTable);
   const conditions: any[] = [];
 
   if (strategy) conditions.push(eq(tradesTable.strategy, strategy));
@@ -86,7 +85,6 @@ router.get("/trades/calendar", async (req, res): Promise<void> => {
     .from(tradesTable)
     .where(eq(tradesTable.status, "closed"));
 
-  // Group by date
   const dayMap: Record<string, { pnl: number; wins: number; losses: number; trades: number }> = {};
 
   for (const trade of closedTrades) {
@@ -113,6 +111,16 @@ router.get("/trades/calendar", async (req, res): Promise<void> => {
   }));
 
   res.json(calendarData);
+});
+
+router.delete("/trades/reset", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await db.delete(tradesTable);
+  await db.delete(portfolioSnapshotsTable);
+  res.json({ success: true });
 });
 
 router.get("/trades/:id", async (req, res): Promise<void> => {
