@@ -13,6 +13,7 @@ import {
   notificationSettingsTable,
   riskSettingsTable,
   sentimentSettingsTable,
+  botConfigTable,
 } from "@workspace/db";
 import { eq, and, isNull } from "drizzle-orm";
 import { wsServer } from "../ws/server";
@@ -22,6 +23,7 @@ class TradingEngine {
   private startTime: Date | null = null;
   private tickInterval: NodeJS.Timeout | null = null;
   private snapshotInterval: NodeJS.Timeout | null = null;
+  private equityRefreshInterval: NodeJS.Timeout | null = null;
   private initialEquity = 100_000;
   private mode: "live" | "paper" | "backtest" = "paper";
 
@@ -40,6 +42,9 @@ class TradingEngine {
     // Snapshot every 30 seconds
     this.snapshotInterval = setInterval(() => this.takeSnapshot(), 30_000);
 
+    // Refresh equity from bot heartbeat every 60 seconds
+    this.equityRefreshInterval = setInterval(() => this.refreshEquityFromBot(), 60_000);
+
     // Immediately take first snapshot
     setTimeout(() => this.takeSnapshot(), 1000);
   }
@@ -49,8 +54,10 @@ class TradingEngine {
     this.running = false;
     if (this.tickInterval) clearInterval(this.tickInterval);
     if (this.snapshotInterval) clearInterval(this.snapshotInterval);
+    if (this.equityRefreshInterval) clearInterval(this.equityRefreshInterval);
     this.tickInterval = null;
     this.snapshotInterval = null;
+    this.equityRefreshInterval = null;
     logger.info("Trading engine stopped");
   }
 
@@ -71,8 +78,34 @@ class TradingEngine {
     };
   }
 
+  private async refreshEquityFromBot() {
+    try {
+      const [cfg] = await db.select().from(botConfigTable).limit(1);
+      if (!cfg) return;
+      const extra = cfg.botExtra as Record<string, unknown> | null;
+      const equity = extra?.mt5Equity;
+      if (typeof equity === "number" && equity > 0) {
+        this.initialEquity = equity;
+        logger.debug({ equity }, "Updated initialEquity from bot heartbeat");
+      }
+    } catch (err) {
+      logger.warn({ err }, "Could not refresh equity from bot config");
+    }
+  }
+
   private async loadSettings() {
     try {
+      // Load MT5 equity from last bot heartbeat
+      const [cfg] = await db.select().from(botConfigTable).limit(1);
+      if (cfg) {
+        const extra = cfg.botExtra as Record<string, unknown> | null;
+        const equity = extra?.mt5Equity;
+        if (typeof equity === "number" && equity > 0) {
+          this.initialEquity = equity;
+          logger.info({ equity }, "Loaded initialEquity from bot config");
+        }
+      }
+
       const [riskRow] = await db.select().from(riskSettingsTable).limit(1);
       if (riskRow) {
         riskEngine.updateConfig({

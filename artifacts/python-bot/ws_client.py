@@ -28,6 +28,7 @@ class BackendWSClient:
         self.mt5_connected = False
         self.mt5_account_id = None
         self.mt5_server = None
+        self.mt5_equity = None
 
     def on_config_update(self, handler):
         """Register a callback for config updates from dashboard."""
@@ -46,6 +47,7 @@ class BackendWSClient:
                         "mt5Connected": self.mt5_connected,
                         "mt5AccountId": self.mt5_account_id,
                         "mt5Server": self.mt5_server,
+                        "mt5Equity": self.mt5_equity,
                     }
                     async with session.post(
                         f"{self.api_url}/connections/bot/heartbeat",

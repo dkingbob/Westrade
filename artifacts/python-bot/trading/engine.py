@@ -46,6 +46,7 @@ class TradingEngine:
             self.ws.mt5_connected = True
             self.ws.mt5_account_id = str(account)
             self.ws.mt5_server = server
+            self.ws.mt5_equity = self.equity
             log.info(f"MT5 connected: account={account}, equity={self.equity:.2f}")
             return True
         except Exception as e:
