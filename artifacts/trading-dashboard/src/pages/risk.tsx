@@ -369,26 +369,26 @@ export default function Risk() {
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Max Loss / Session ($)</label>
               <Input type="number" value={dailyLossLimitUsd ?? ""} step={5} min={0} placeholder="e.g. 30"
                 className="h-7 text-xs font-mono bg-background border-border"
-                onChange={(e) => setDailyLossLimitUsd(parseFloat(e.target.value) || 0)} />
+                onChange={(e) => setDailyLossLimitUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
             </div>
             <div className="space-y-0.5">
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Profit Target / Session ($)</label>
               <Input type="number" value={dailyProfitTargetUsd ?? ""} step={5} min={0} placeholder="e.g. 50"
                 className="h-7 text-xs font-mono bg-background border-border"
-                onChange={(e) => setDailyProfitTargetUsd(parseFloat(e.target.value) || 0)} />
+                onChange={(e) => setDailyProfitTargetUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
             </div>
             <div className="space-y-0.5">
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Warning Buffer ($)</label>
               <Input type="number" value={warningBufferUsd ?? ""} step={1} min={0} placeholder="e.g. 5"
                 className="h-7 text-xs font-mono bg-background border-border"
-                onChange={(e) => setWarningBufferUsd(parseFloat(e.target.value) || 0)} />
+                onChange={(e) => setWarningBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
               <p className="text-[9px] font-mono text-muted-foreground">Stops new trades this $ before the loss limit</p>
             </div>
             <div className="space-y-0.5">
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Session Duration (hours)</label>
               <Input type="number" value={sessionHours ?? ""} step={1} min={1} placeholder="24"
                 className="h-7 text-xs font-mono bg-background border-border"
-                onChange={(e) => setSessionHours(parseFloat(e.target.value) || 24)} />
+                onChange={(e) => setSessionHours(e.target.value === "" ? null : parseFloat(e.target.value))} />
               <p className="text-[9px] font-mono text-muted-foreground">Session resets and limits refresh after this time</p>
             </div>
           </div>

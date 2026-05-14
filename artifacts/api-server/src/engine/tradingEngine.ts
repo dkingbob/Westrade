@@ -36,6 +36,9 @@ class TradingEngine {
     // Load settings from DB
     await this.loadSettings();
 
+    // Reset kill switch on startup so it doesn't stay stuck from previous session
+    await db.update(botConfigTable).set({ killSwitchActive: false, updatedAt: new Date() });
+
     // Seed strategies if none exist
     await this.seedStrategies();
 
