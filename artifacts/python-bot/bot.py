@@ -66,9 +66,9 @@ async def main():
     ws_client = BackendWSClient(WS_URL, API_URL, HEARTBEAT_INTERVAL)
 
     strategies = [
-        MeanReversionStrategy(symbols=["AAPL", "MSFT", "GOOGL"], risk_pct=0.01, lookback=20, z_threshold=2.0),
-        MomentumStrategy(symbols=["NVDA", "TSLA", "AMZN"], risk_pct=0.012, rsi_period=14),
-        StatArbStrategy(symbols=["SPY", "QQQ", "JPM"], risk_pct=0.008),
+        MeanReversionStrategy(symbols=["EURUSD", "GBPUSD", "AUDUSD"], risk_pct=0.01, lookback=20, z_threshold=2.0),
+        MomentumStrategy(symbols=["USDJPY", "USDCAD", "NZDUSD"], risk_pct=0.012, rsi_period=14),
+        StatArbStrategy(symbols=["EURJPY", "GBPJPY", "EURGBP"], risk_pct=0.008),
     ]
 
     engine = TradingEngine(

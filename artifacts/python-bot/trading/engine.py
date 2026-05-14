@@ -123,13 +123,32 @@ class TradingEngine:
         """Send a real order to MetaTrader 5."""
         try:
             import MetaTrader5 as mt5
+            symbol = trade["symbol"]
+
+            # Ensure symbol is in Market Watch
+            if not mt5.symbol_select(symbol, True):
+                log.warning(f"Symbol {symbol} not available on this broker — skipping")
+                return
+
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                log.warning(f"No tick data for {symbol} — skipping")
+                return
+
             order_type = mt5.ORDER_TYPE_BUY if trade["side"] == "long" else mt5.ORDER_TYPE_SELL
+            price = tick.ask if trade["side"] == "long" else tick.bid
+
+            # Enforce minimum volume for the symbol
+            info = mt5.symbol_info(symbol)
+            volume = max(float(trade["quantity"]), info.volume_min if info else 0.01)
+            volume = round(volume, 2)
+
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
-                "symbol": trade["symbol"],
-                "volume": float(trade["quantity"]),
+                "symbol": symbol,
+                "volume": volume,
                 "type": order_type,
-                "price": mt5.symbol_info_tick(trade["symbol"]).ask,
+                "price": price,
                 "deviation": 10,
                 "magic": 202500,
                 "comment": f"AlgoDesk/{trade['strategy']}",
@@ -140,7 +159,7 @@ class TradingEngine:
             if result.retcode != mt5.TRADE_RETCODE_DONE:
                 log.error(f"MT5 order failed: {result.comment}")
             else:
-                log.info(f"MT5 order placed: #{result.order} {trade['symbol']} {trade['side']}")
+                log.info(f"MT5 order placed: #{result.order} {symbol} {trade['side']} {volume} lots @ {price}")
         except Exception as e:
             log.error(f"MT5 order error: {e}")
 
