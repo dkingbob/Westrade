@@ -145,7 +145,8 @@ export default function Risk() {
   const [maxPositionUsd, setMaxPositionUsd] = useState<number | null>(null);
   const [dailyLossLimitUsd, setDailyLossLimitUsd] = useState<number | null>(null);
   const [dailyProfitTargetUsd, setDailyProfitTargetUsd] = useState<number | null>(null);
-  const [warningBufferUsd, setWarningBufferUsd] = useState<number | null>(null);
+  const [lossBufferUsd, setLossBufferUsd] = useState<number | null>(null);
+  const [winBufferUsd, setWinBufferUsd] = useState<number | null>(null);
   const [sessionHours, setSessionHours] = useState<number | null>(null);
 
   const eff = {
@@ -165,7 +166,8 @@ export default function Risk() {
     if (maxPositionUsd !== null) extra.maxPositionUsd = maxPositionUsd <= 0 ? null : maxPositionUsd;
     if (dailyLossLimitUsd !== null) extra.dailyLossLimitUsd = dailyLossLimitUsd <= 0 ? null : dailyLossLimitUsd;
     if (dailyProfitTargetUsd !== null) extra.dailyProfitTargetUsd = dailyProfitTargetUsd <= 0 ? null : dailyProfitTargetUsd;
-    if (warningBufferUsd !== null) extra.warningBufferUsd = warningBufferUsd <= 0 ? null : warningBufferUsd;
+    if (lossBufferUsd !== null) extra.lossBufferUsd = lossBufferUsd <= 0 ? null : lossBufferUsd;
+    if (winBufferUsd !== null) extra.winBufferUsd = winBufferUsd <= 0 ? null : winBufferUsd;
     if (sessionHours !== null) extra.sessionHours = sessionHours <= 0 ? 24 : sessionHours;
     if (Object.keys(extra).length > 0) {
       await fetch("/api/bot/config", {
@@ -378,11 +380,18 @@ export default function Risk() {
                 onChange={(e) => setDailyProfitTargetUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
             </div>
             <div className="space-y-0.5">
-              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Warning Buffer ($)</label>
-              <Input type="number" value={warningBufferUsd ?? ""} step={1} min={0} placeholder="e.g. 5"
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Loss Buffer ($)</label>
+              <Input type="number" value={lossBufferUsd ?? ""} step={1} min={0} placeholder="e.g. 5"
                 className="h-7 text-xs font-mono bg-background border-border"
-                onChange={(e) => setWarningBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
-              <p className="text-[9px] font-mono text-muted-foreground">Stops new trades this $ before the loss limit</p>
+                onChange={(e) => setLossBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
+              <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before loss limit</p>
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Win Buffer ($)</label>
+              <Input type="number" value={winBufferUsd ?? ""} step={1} min={0} placeholder="e.g. 5"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setWinBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
+              <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before profit target</p>
             </div>
             <div className="space-y-0.5">
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Session Duration (hours)</label>

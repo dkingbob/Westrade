@@ -23,7 +23,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     limitOrderOnly, waitForPriceEntry, adaptiveSentiment,
     newsHaltMode, longTermMode, pausedSymbols, restrictedAssets,
     mt5AccountId, mt5Server, maxPositionUsd,
-    dailyLossLimitUsd, dailyProfitTargetUsd, warningBufferUsd, sessionHours,
+    dailyLossLimitUsd, dailyProfitTargetUsd, lossBufferUsd, winBufferUsd, sessionHours,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
@@ -33,7 +33,8 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     ...(maxPositionUsd !== undefined && { maxPositionUsd: maxPositionUsd === null ? null : parseFloat(maxPositionUsd) }),
     ...(dailyLossLimitUsd !== undefined && { dailyLossLimitUsd: dailyLossLimitUsd === null ? null : parseFloat(dailyLossLimitUsd) }),
     ...(dailyProfitTargetUsd !== undefined && { dailyProfitTargetUsd: dailyProfitTargetUsd === null ? null : parseFloat(dailyProfitTargetUsd) }),
-    ...(warningBufferUsd !== undefined && { warningBufferUsd: warningBufferUsd === null ? null : parseFloat(warningBufferUsd) }),
+    ...(lossBufferUsd !== undefined && { lossBufferUsd: lossBufferUsd === null ? null : parseFloat(lossBufferUsd) }),
+    ...(winBufferUsd !== undefined && { winBufferUsd: winBufferUsd === null ? null : parseFloat(winBufferUsd) }),
     ...(sessionHours !== undefined && { sessionHours: sessionHours === null ? 24 : parseFloat(sessionHours) }),
   };
 
@@ -68,7 +69,8 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     maxPositionUsd: extra.maxPositionUsd ?? null,
     dailyLossLimitUsd: extra.dailyLossLimitUsd ?? null,
     dailyProfitTargetUsd: extra.dailyProfitTargetUsd ?? null,
-    warningBufferUsd: extra.warningBufferUsd ?? null,
+    lossBufferUsd: extra.lossBufferUsd ?? null,
+    winBufferUsd: extra.winBufferUsd ?? null,
     sessionHours: extra.sessionHours ?? 24,
   });
 

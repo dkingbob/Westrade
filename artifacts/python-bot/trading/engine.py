@@ -40,7 +40,8 @@ class TradingEngine:
         self.session_hours = 24
         self.daily_loss_limit_usd = None
         self.daily_profit_target_usd = None
-        self.warning_buffer_usd = None
+        self.loss_buffer_usd = None   # stops new trades this $ before loss limit
+        self.win_buffer_usd = None    # stops new trades this $ before profit target
         self.in_warning_zone = False
 
         # AI validation counters
@@ -182,8 +183,10 @@ class TradingEngine:
                             self.daily_loss_limit_usd = float(extra["dailyLossLimitUsd"])
                         if extra.get("dailyProfitTargetUsd") is not None:
                             self.daily_profit_target_usd = float(extra["dailyProfitTargetUsd"])
-                        if extra.get("warningBufferUsd") is not None:
-                            self.warning_buffer_usd = float(extra["warningBufferUsd"])
+                        if extra.get("lossBufferUsd") is not None:
+                            self.loss_buffer_usd = float(extra["lossBufferUsd"])
+                        if extra.get("winBufferUsd") is not None:
+                            self.win_buffer_usd = float(extra["winBufferUsd"])
                         if extra.get("sessionHours") is not None:
                             self.session_hours = float(extra["sessionHours"])
                         log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}")
@@ -244,8 +247,10 @@ class TradingEngine:
             self.in_warning_zone = False  # reset on config change
         if "dailyProfitTargetUsd" in config:
             self.daily_profit_target_usd = config["dailyProfitTargetUsd"]
-        if "warningBufferUsd" in config:
-            self.warning_buffer_usd = config["warningBufferUsd"]
+        if "lossBufferUsd" in config:
+            self.loss_buffer_usd = config["lossBufferUsd"]
+        if "winBufferUsd" in config:
+            self.win_buffer_usd = config["winBufferUsd"]
         if "sessionHours" in config:
             self.session_hours = config["sessionHours"]
             self.session_start_time = datetime.utcnow()  # reset session timer
@@ -362,29 +367,39 @@ class TradingEngine:
         if self.daily_profit_target_usd is not None and session_pnl >= self.daily_profit_target_usd:
             if self.running:
                 self.running = False
-                log.info(f"Daily profit target ${self.daily_profit_target_usd} reached (P&L: ${session_pnl:.2f}) — stopping for session")
+                log.info(f"Profit target ${self.daily_profit_target_usd} reached (P&L: ${session_pnl:.2f}) — stopping for session")
                 await self.ws.emit_trade({"action": "session_stopped", "reason": "profit_target", "pnl": session_pnl})
             return
 
+        # Win buffer — within this $ of profit target, pause new trades to protect gains
+        if self.daily_profit_target_usd is not None and self.win_buffer_usd is not None:
+            win_threshold = self.daily_profit_target_usd - self.win_buffer_usd
+            if session_pnl >= win_threshold and not self.in_warning_zone:
+                self.in_warning_zone = True
+                log.info(f"Win buffer: P&L ${session_pnl:.2f} close to target ${self.daily_profit_target_usd} — pausing new trades")
+                await self.ws.emit_trade({"action": "session_warning", "type": "win_buffer", "pnl": session_pnl, "target": self.daily_profit_target_usd})
+            elif session_pnl < win_threshold and self.in_warning_zone:
+                self.in_warning_zone = False
+
         if self.daily_loss_limit_usd is not None:
             loss = -session_pnl  # positive = loss
-            warning_buffer = self.warning_buffer_usd or self.daily_loss_limit_usd * 0.15
+            loss_buffer = self.loss_buffer_usd or self.daily_loss_limit_usd * 0.15
 
             # Hard stop — max loss hit
             if loss >= self.daily_loss_limit_usd:
                 if self.running:
                     self.running = False
-                    log.warning(f"Daily loss limit ${self.daily_loss_limit_usd} hit (loss: ${loss:.2f}) — stopping for session")
+                    log.warning(f"Loss limit ${self.daily_loss_limit_usd} hit (loss: ${loss:.2f}) — stopping for session")
                     await self._close_all_mt5_positions()
                     await self.ws.emit_trade({"action": "session_stopped", "reason": "loss_limit", "pnl": session_pnl})
                 return
 
-            # Warning zone — within buffer of hard stop, no new trades
-            soft_threshold = self.daily_loss_limit_usd - warning_buffer
+            # Loss buffer — within this $ of hard stop, pause new trades
+            soft_threshold = self.daily_loss_limit_usd - loss_buffer
             if loss >= soft_threshold and not self.in_warning_zone:
                 self.in_warning_zone = True
-                log.warning(f"Entering warning zone: loss ${loss:.2f} (limit ${self.daily_loss_limit_usd})")
-                await self.ws.emit_trade({"action": "session_warning", "loss": loss, "limit": self.daily_loss_limit_usd})
+                log.warning(f"Loss buffer: loss ${loss:.2f} approaching limit ${self.daily_loss_limit_usd}")
+                await self.ws.emit_trade({"action": "session_warning", "type": "loss_buffer", "loss": loss, "limit": self.daily_loss_limit_usd})
             elif loss < soft_threshold and self.in_warning_zone:
                 self.in_warning_zone = False
                 log.info("Exited warning zone — new trades allowed again")
