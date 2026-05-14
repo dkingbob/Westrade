@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useTheme, type Theme } from "@/hooks/use-theme";
+import { useTheme, type ThemeStyle } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { User, Palette, Bell, LogOut, Check } from "lucide-react";
 
@@ -19,17 +19,18 @@ function api(path: string, opts?: RequestInit) {
   return fetch(path, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
 }
 
-const THEME_OPTIONS: { value: Theme; label: string; desc: string; preview: string }[] = [
-  { value: "dark", label: "Terminal Dark", desc: "Classic dark trading terminal", preview: "bg-zinc-900 border-zinc-700" },
-  { value: "light", label: "Clean Light", desc: "Light professional look", preview: "bg-white border-zinc-300" },
-  { value: "glass", label: "Frosted Glass", desc: "Blur + translucent cards", preview: "bg-gradient-to-br from-blue-900/60 to-purple-900/60 border-white/20 backdrop-blur" },
+const STYLE_OPTIONS: { value: ThemeStyle; label: string; desc: string; bg: string; accent: string }[] = [
+  { value: "glass",    label: "Glass",    desc: "Blue-tinted glass with subtle blur",       bg: "bg-gradient-to-br from-blue-950/80 to-slate-900/80",  accent: "bg-blue-400" },
+  { value: "frosted",  label: "Frosted",  desc: "Apple-style heavy blur, macOS feel",        bg: "bg-gradient-to-br from-slate-800/60 to-blue-900/60 backdrop-blur",  accent: "bg-sky-400" },
+  { value: "terminal", label: "Terminal", desc: "Matrix green-on-black hacker terminal",     bg: "bg-black",  accent: "bg-green-400" },
+  { value: "midnight", label: "Midnight", desc: "Deep navy, premium institutional look",     bg: "bg-gradient-to-br from-indigo-950 to-slate-900",  accent: "bg-indigo-400" },
 ];
 
 export default function Settings() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { theme, setTheme } = useTheme();
+  const { style, setStyle } = useTheme();
   const [tab, setTab] = useState<"profile" | "appearance" | "notifications">("profile");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
@@ -147,32 +148,32 @@ export default function Settings() {
         <Card className="bg-card border-card-border">
           <CardHeader className="py-2 px-4 border-b border-border">
             <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Palette size={11} /> Theme
+              <Palette size={11} /> Visual Style
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 grid grid-cols-3 gap-3">
-            {THEME_OPTIONS.map(({ value, label, desc, preview }) => (
+          <CardContent className="p-4 grid grid-cols-2 gap-3">
+            {STYLE_OPTIONS.map(({ value, label, desc, bg, accent }) => (
               <button
                 key={value}
-                onClick={() => setTheme(value)}
+                onClick={() => setStyle(value)}
                 className={cn(
                   "relative rounded border-2 p-3 text-left transition-all space-y-2",
-                  theme === value ? "border-primary" : "border-border hover:border-muted-foreground"
+                  style === value ? "border-primary" : "border-border hover:border-muted-foreground"
                 )}
               >
-                {/* Preview swatch */}
-                <div className={cn("h-14 rounded border flex items-center justify-center", preview)}>
-                  <div className="space-y-1 w-10">
-                    <div className={cn("h-1.5 rounded", value === "light" ? "bg-zinc-800" : "bg-white/70")} />
-                    <div className={cn("h-1 rounded w-3/4", value === "light" ? "bg-zinc-400" : "bg-white/40")} />
-                    <div className={cn("h-1 rounded w-1/2", value === "light" ? "bg-blue-500" : "bg-blue-400")} />
+                <div className={cn("h-14 rounded border border-white/10 flex items-end gap-1 p-2 overflow-hidden", bg)}>
+                  <div className="flex-1 space-y-1">
+                    <div className="h-1.5 rounded bg-white/60 w-full" />
+                    <div className="h-1 rounded bg-white/30 w-3/4" />
+                    <div className="h-1 rounded bg-white/20 w-1/2" />
                   </div>
+                  <div className={cn("w-1.5 h-8 rounded-sm", accent, "opacity-90")} />
                 </div>
                 <div>
                   <p className="text-[10px] font-mono font-semibold text-foreground">{label}</p>
                   <p className="text-[9px] font-mono text-muted-foreground">{desc}</p>
                 </div>
-                {theme === value && (
+                {style === value && (
                   <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
                     <Check size={10} className="text-white" />
                   </div>

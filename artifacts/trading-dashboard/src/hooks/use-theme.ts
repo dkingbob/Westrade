@@ -1,20 +1,24 @@
 import { useState, useEffect } from "react";
 
-export type Theme = "dark" | "light" | "glass";
-
-const THEMES: Theme[] = ["dark", "light", "glass"];
+export type ThemeMode = "dark" | "light";
+export type ThemeStyle = "glass" | "frosted" | "terminal" | "midnight";
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    return (localStorage.getItem("algodesk-theme") as Theme) ?? "dark";
-  });
+  const [mode, setMode] = useState<ThemeMode>(() =>
+    (localStorage.getItem("wt-mode") as ThemeMode) ?? "dark"
+  );
+  const [style, setStyle] = useState<ThemeStyle>(() =>
+    (localStorage.getItem("wt-style") as ThemeStyle) ?? "glass"
+  );
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("dark", "light", "glass");
-    root.classList.add(theme);
-    localStorage.setItem("algodesk-theme", theme);
-  }, [theme]);
+    root.classList.remove("dark", "light", "glass", "frosted", "terminal", "midnight");
+    if (mode === "light") root.classList.add("light");
+    root.classList.add(style);
+    localStorage.setItem("wt-mode", mode);
+    localStorage.setItem("wt-style", style);
+  }, [mode, style]);
 
-  return { theme, setTheme: setThemeState, themes: THEMES };
+  return { mode, style, setMode, setStyle };
 }

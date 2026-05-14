@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { useTheme } from "@/hooks/use-theme";
 import { useGetEngineStatus, useGetTicker, getGetEngineStatusQueryKey, getGetTickerQueryKey } from "@workspace/api-client-react";
 import { UserProfileWidget } from "@/components/UserProfile";
 import {
@@ -23,6 +24,8 @@ import {
   Layers,
   Settings2,
   Sparkles,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -131,6 +134,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   useWebSocket();
+  const { mode, setMode } = useTheme();
 
   const { data: engineStatus } = useGetEngineStatus({ query: { queryKey: getGetEngineStatusQueryKey(), refetchInterval: 5000 } });
 
@@ -148,7 +152,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Activity size={16} className="text-primary shrink-0" />
           {!collapsed && (
             <span className="text-xs font-mono font-bold text-foreground tracking-widest uppercase">
-              AlgoDesk
+              Westrade
             </span>
           )}
         </div>
@@ -184,6 +188,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <NavItem key={item.path} {...item} collapsed={collapsed} location={location} />
           ))}
         </nav>
+
+        {/* Light / Dark toggle */}
+        <div className={cn("flex items-center border-t border-sidebar-border px-3 py-2", collapsed && "justify-center")}>
+          <button
+            onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+            className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors w-full"
+            title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {mode === "dark" ? <Sun size={13} className="shrink-0" /> : <Moon size={13} className="shrink-0" />}
+            {!collapsed && <span>{mode === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+          </button>
+        </div>
 
         {/* User Profile */}
         <UserProfileWidget collapsed={collapsed} />

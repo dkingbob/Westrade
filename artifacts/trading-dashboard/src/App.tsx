@@ -78,10 +78,10 @@ function Router() {
 }
 
 function App() {
-  const { theme } = useTheme();
+  const { mode, style } = useTheme();
   useEffect(() => {
     // theme hook handles class application
-  }, [theme]);
+  }, [mode, style]);
 
   return (
     <QueryClientProvider client={queryClient}>
