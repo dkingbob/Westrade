@@ -4,6 +4,7 @@ import { logger } from "../lib/logger";
 import { db } from "@workspace/db";
 import { tradesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { sendAlertEmail } from "../routes/notifications";
 
 class WsServer {
   private wss: WebSocketServer | null = null;
@@ -78,6 +79,18 @@ class WsServer {
       }).returning();
       logger.info({ id: saved.id, symbol: saved.symbol }, "Bot trade saved to DB");
       this.broadcast("trade_opened", { trade: saved });
+      sendAlertEmail(
+        `New Trade: ${saved.side.toUpperCase()} ${saved.symbol}`,
+        `A new trade was opened by the bot.\n\nSymbol: ${saved.symbol}\nSide: ${saved.side}\nEntry: $${saved.entryPrice}\nStrategy: ${saved.strategy}\nTime: ${new Date().toUTCString()}`
+      ).catch(() => {});
+    } else if (action === "session_stopped") {
+      const reason = data?.reason as string;
+      const pnl = data?.pnl as number;
+      const subject = reason === "profit_target" ? "Profit Target Reached" : "Loss Limit Hit";
+      const msg = reason === "profit_target"
+        ? `Daily profit target reached!\n\nSession P&L: $${pnl?.toFixed(2)}\nBot has stopped trading for this session.`
+        : `Daily loss limit hit!\n\nSession P&L: $${pnl?.toFixed(2)}\nBot has stopped trading and closed all positions.`;
+      sendAlertEmail(subject, msg).catch(() => {});
     }
   }
 

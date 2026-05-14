@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { botConfigTable, tradesTable } from "@workspace/db";
 import { eq, isNull } from "drizzle-orm";
 import { wsServer } from "../ws/server";
+import { sendAlertEmail } from "./notifications";
 
 const router: IRouter = Router();
 
@@ -88,6 +89,7 @@ router.post("/bot/kill-switch", async (req, res): Promise<void> => {
   // Broadcast to connected bots immediately
   if (updated.killSwitchActive) {
     wsServer.broadcast("kill_switch", { reason: "Dashboard kill switch activated" });
+    sendAlertEmail("Kill Switch Activated", `The kill switch was manually activated from the dashboard.\n\nAll trading has been halted and open positions closed.\nTime: ${new Date().toUTCString()}`).catch(() => {});
   } else {
     wsServer.broadcast("config_update", { killSwitchActive: false });
   }

@@ -21,6 +21,7 @@ import {
   Plug,
   HelpCircle,
   Layers,
+  Settings2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -43,6 +44,7 @@ const bottomNavItems = [
   { path: "/presets", label: "Presets", icon: Layers },
   { path: "/connections", label: "Connections", icon: Plug },
   { path: "/help", label: "Help & Glossary", icon: HelpCircle },
+  { path: "/settings", label: "Settings", icon: Settings2 },
 ];
 
 function TickerMarquee() {

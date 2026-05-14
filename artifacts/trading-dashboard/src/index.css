@@ -140,6 +140,78 @@
   --radius: 0.25rem; /* tight 4px radius for precision instrument feel */
 }
 
+/* Light theme */
+.light {
+  color-scheme: light;
+  --background: 220 20% 97%;
+  --foreground: 220 15% 10%;
+  --border: 220 15% 85%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 15% 10%;
+  --card-border: 220 15% 88%;
+  --sidebar: 220 20% 94%;
+  --sidebar-foreground: 220 15% 30%;
+  --sidebar-border: 220 15% 85%;
+  --sidebar-accent: 220 20% 90%;
+  --sidebar-accent-foreground: 220 15% 10%;
+  --muted: 220 15% 92%;
+  --muted-foreground: 220 10% 45%;
+  --accent: 220 15% 92%;
+  --accent-foreground: 220 15% 10%;
+  --input: 220 15% 88%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 15% 10%;
+  --popover-border: 220 15% 85%;
+  --secondary: 220 15% 88%;
+  --secondary-foreground: 220 15% 10%;
+  --primary: 210 100% 45%;
+  --primary-foreground: 0 0% 100%;
+}
+
+/* Glass theme */
+.glass {
+  color-scheme: dark;
+  --background: 230 25% 8%;
+  --foreground: 210 30% 95%;
+  --border: 210 30% 30%;
+  --card: 210 25% 12%;
+  --card-foreground: 210 30% 95%;
+  --card-border: 210 30% 25%;
+  --sidebar: 230 25% 8%;
+  --sidebar-foreground: 210 20% 75%;
+  --sidebar-border: 210 25% 18%;
+  --sidebar-accent: 210 25% 18%;
+  --sidebar-accent-foreground: 210 30% 95%;
+  --muted: 210 20% 15%;
+  --muted-foreground: 210 15% 55%;
+  --accent: 210 25% 18%;
+  --accent-foreground: 210 30% 95%;
+  --input: 210 25% 20%;
+  --popover: 210 25% 12%;
+  --popover-foreground: 210 30% 95%;
+  --popover-border: 210 30% 25%;
+  --secondary: 210 25% 18%;
+  --secondary-foreground: 210 30% 95%;
+  --primary: 200 100% 55%;
+  --primary-foreground: 0 0% 100%;
+}
+
+/* Glass effect — cards get blur + translucency */
+.glass .bg-card,
+.glass [class*="bg-card"] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.glass .bg-sidebar,
+.glass aside {
+  background: rgba(10, 15, 30, 0.7) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
 @layer base {
   * {
     @apply border-border;

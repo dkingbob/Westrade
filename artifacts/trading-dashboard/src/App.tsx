@@ -18,6 +18,8 @@ import Notifications from "@/pages/notifications";
 import Connections from "@/pages/connections";
 import Help from "@/pages/help";
 import Presets from "@/pages/presets";
+import Settings from "@/pages/settings";
+import { useTheme } from "@/hooks/use-theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +59,7 @@ function ProtectedRouter() {
         <Route path="/connections" component={Connections} />
         <Route path="/help" component={Help} />
         <Route path="/presets" component={Presets} />
+        <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -73,9 +76,10 @@ function Router() {
 }
 
 function App() {
+  const { theme } = useTheme();
   useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
+    // theme hook handles class application
+  }, [theme]);
 
   return (
     <QueryClientProvider client={queryClient}>

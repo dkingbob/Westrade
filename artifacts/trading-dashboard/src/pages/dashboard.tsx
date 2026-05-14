@@ -11,7 +11,7 @@ import {
   getGetPositionsQueryKey,
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +100,13 @@ export default function Dashboard() {
   const { data: alerts } = useGetAlerts({ query: { queryKey: getGetAlertsQueryKey() } });
   const { data: engineStatus } = useGetEngineStatus({ query: { queryKey: getGetEngineStatusQueryKey(), refetchInterval: 5000 } });
 
+  const { data: fng } = useQuery({
+    queryKey: ["fear-greed"],
+    queryFn: () => fetch("https://api.alternative.me/fng/?limit=1").then(r => r.json()).then(d => d.data?.[0]),
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const qc = useQueryClient();
   const startEngine = useStartEngine();
   const stopEngine = useStopEngine();
@@ -146,7 +153,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
         <MetricCard
           label="Equity"
           value={fmtUsd(summary?.equity ?? 0)}
@@ -186,6 +193,24 @@ export default function Dashboard() {
           up={false}
           loading={summaryLoading}
         />
+        <Card className="bg-card border-card-border">
+          <CardContent className="p-3">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed</div>
+            {fng ? (
+              <>
+                <div className={cn("text-lg font-mono font-bold",
+                  Number(fng.value) <= 25 ? "text-red-400" :
+                  Number(fng.value) <= 45 ? "text-orange-400" :
+                  Number(fng.value) <= 55 ? "text-yellow-400" :
+                  Number(fng.value) <= 75 ? "text-lime-400" : "text-green-400"
+                )}>{fng.value}</div>
+                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">{fng.value_classification}</div>
+              </>
+            ) : (
+              <div className="text-xs font-mono text-muted-foreground">—</div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Open Positions & Alerts */}

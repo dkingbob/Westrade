@@ -194,6 +194,23 @@ export default function Connections() {
                 </Button>
               </div>
               <p className="text-[9px] font-mono text-muted-foreground">Make sure your .env has ALGODESK_WS_URL and ALGODESK_API_URL set</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider pt-1">Open .env config file (Windows)</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border truncate">
+                  notepad artifacts\python-bot\.env
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[10px] font-mono shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText("notepad artifacts\\python-bot\\.env");
+                    toast({ title: "Command copied!" });
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-1">
