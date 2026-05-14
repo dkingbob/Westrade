@@ -1,6 +1,8 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage, Server } from "http";
 import { logger } from "../lib/logger";
+import { db } from "@workspace/db";
+import { tradesTable } from "@workspace/db";
 
 class WsServer {
   private wss: WebSocketServer | null = null;
@@ -19,9 +21,16 @@ class WsServer {
         try {
           const msg = JSON.parse(data.toString());
           logger.debug({ msg }, "WS message received");
-          // Echo back for ping/pong
+
           if (msg.type === "ping") {
             ws.send(JSON.stringify({ type: "pong", timestamp: new Date().toISOString() }));
+          } else if (msg.type === "bot_trade") {
+            this.handleBotTrade(msg.data).catch((err) =>
+              logger.warn({ err }, "Failed to save bot trade")
+            );
+          } else if (msg.type === "bot_positions") {
+            // broadcast live positions to dashboard clients
+            this.broadcast("bot_positions", msg.data);
           }
         } catch (err) {
           logger.warn({ err }, "Invalid WS message");
@@ -40,6 +49,34 @@ class WsServer {
     });
 
     logger.info("WebSocket server attached at /api/ws");
+  }
+
+  private async handleBotTrade(data: Record<string, unknown>) {
+    const action = data?.action as string;
+    const trade = data?.trade as Record<string, unknown> | undefined;
+
+    if (action === "open" && trade) {
+      const [saved] = await db.insert(tradesTable).values({
+        symbol: String(trade.symbol ?? "UNKNOWN"),
+        side: String(trade.side ?? "long") as "long" | "short",
+        status: "open",
+        strategy: String(trade.strategy ?? "bot"),
+        orderType: "market",
+        entryPrice: String(trade.entry_price ?? "0"),
+        quantity: String(trade.quantity ?? "0"),
+        fees: "0",
+        slippage: "0",
+        mae: "0",
+        mfe: "0",
+        tags: ["bot", "mt5"],
+        sentimentMultiplier: trade.sentiment_multiplier
+          ? String(trade.sentiment_multiplier)
+          : null,
+        zScore: trade.z_score ? String(trade.z_score) : null,
+      }).returning();
+      logger.info({ id: saved.id, symbol: saved.symbol }, "Bot trade saved to DB");
+      this.broadcast("trade_opened", { trade: saved });
+    }
   }
 
   broadcast(type: string, data: unknown) {
