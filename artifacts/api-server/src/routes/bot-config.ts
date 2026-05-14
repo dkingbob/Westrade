@@ -23,13 +23,19 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     limitOrderOnly, waitForPriceEntry, adaptiveSentiment,
     newsHaltMode, longTermMode, pausedSymbols, restrictedAssets,
     mt5AccountId, mt5Server, maxPositionUsd,
+    dailyLossLimitUsd, dailyProfitTargetUsd, warningBufferUsd, sessionHours,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
   const existingExtra = (cfg.botExtra as Record<string, unknown>) ?? {};
-  const newExtra = maxPositionUsd !== undefined
-    ? { ...existingExtra, maxPositionUsd: maxPositionUsd === null ? null : parseFloat(maxPositionUsd) }
-    : existingExtra;
+  const newExtra = {
+    ...existingExtra,
+    ...(maxPositionUsd !== undefined && { maxPositionUsd: maxPositionUsd === null ? null : parseFloat(maxPositionUsd) }),
+    ...(dailyLossLimitUsd !== undefined && { dailyLossLimitUsd: dailyLossLimitUsd === null ? null : parseFloat(dailyLossLimitUsd) }),
+    ...(dailyProfitTargetUsd !== undefined && { dailyProfitTargetUsd: dailyProfitTargetUsd === null ? null : parseFloat(dailyProfitTargetUsd) }),
+    ...(warningBufferUsd !== undefined && { warningBufferUsd: warningBufferUsd === null ? null : parseFloat(warningBufferUsd) }),
+    ...(sessionHours !== undefined && { sessionHours: sessionHours === null ? 24 : parseFloat(sessionHours) }),
+  };
 
   const [updated] = await db
     .update(botConfigTable)
@@ -60,6 +66,10 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     newsHaltMode: updated.newsHaltMode,
     longTermMode: updated.longTermMode,
     maxPositionUsd: extra.maxPositionUsd ?? null,
+    dailyLossLimitUsd: extra.dailyLossLimitUsd ?? null,
+    dailyProfitTargetUsd: extra.dailyProfitTargetUsd ?? null,
+    warningBufferUsd: extra.warningBufferUsd ?? null,
+    sessionHours: extra.sessionHours ?? 24,
   });
 
   res.json(updated);

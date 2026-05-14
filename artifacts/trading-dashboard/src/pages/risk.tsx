@@ -26,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Shield, AlertTriangle, Zap, Loader2 } from "lucide-react";
+import { Shield, AlertTriangle, Zap, Loader2, Clock } from "lucide-react";
 
 function fmt(n: number, dec = 2) { return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 function fmtUsd(n: number) { return `$${fmt(n)}`; }
@@ -143,6 +143,10 @@ export default function Risk() {
   const [slippagePct, setSlippagePct] = useState<number | null>(null);
   const [feesPct, setFeesPct] = useState<number | null>(null);
   const [maxPositionUsd, setMaxPositionUsd] = useState<number | null>(null);
+  const [dailyLossLimitUsd, setDailyLossLimitUsd] = useState<number | null>(null);
+  const [dailyProfitTargetUsd, setDailyProfitTargetUsd] = useState<number | null>(null);
+  const [warningBufferUsd, setWarningBufferUsd] = useState<number | null>(null);
+  const [sessionHours, setSessionHours] = useState<number | null>(null);
 
   const eff = {
     maxDailyLossPct: maxDailyLossPct ?? settings?.maxDailyLossPct ?? 0.02,
@@ -157,12 +161,18 @@ export default function Risk() {
 
   const handleSave = async () => {
     await updateSettings.mutateAsync({ data: eff });
-    if (maxPositionUsd !== null) {
+    const extra: Record<string, unknown> = {};
+    if (maxPositionUsd !== null) extra.maxPositionUsd = maxPositionUsd <= 0 ? null : maxPositionUsd;
+    if (dailyLossLimitUsd !== null) extra.dailyLossLimitUsd = dailyLossLimitUsd <= 0 ? null : dailyLossLimitUsd;
+    if (dailyProfitTargetUsd !== null) extra.dailyProfitTargetUsd = dailyProfitTargetUsd <= 0 ? null : dailyProfitTargetUsd;
+    if (warningBufferUsd !== null) extra.warningBufferUsd = warningBufferUsd <= 0 ? null : warningBufferUsd;
+    if (sessionHours !== null) extra.sessionHours = sessionHours <= 0 ? 24 : sessionHours;
+    if (Object.keys(extra).length > 0) {
       await fetch("/api/bot/config", {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ maxPositionUsd: maxPositionUsd <= 0 ? null : maxPositionUsd }),
+        body: JSON.stringify(extra),
       });
     }
     qc.invalidateQueries({ queryKey: getGetRiskSettingsQueryKey() });
@@ -341,6 +351,49 @@ export default function Risk() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </CardContent>
+      </Card>
+
+      {/* Daily Session Limits */}
+      <Card className="bg-card border-card-border">
+        <CardHeader className="py-2 px-3 border-b border-border flex-row items-center gap-2">
+          <Clock size={13} className="text-blue-400" />
+          <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Daily Session Limits</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 space-y-3">
+          <p className="text-[10px] font-mono text-muted-foreground">
+            Set dollar limits for the session. Bot stops new trades in warning zone and fully halts at the loss limit.
+            Session resets after the configured hours.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Max Loss / Session ($)</label>
+              <Input type="number" value={dailyLossLimitUsd ?? ""} step={5} min={0} placeholder="e.g. 30"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setDailyLossLimitUsd(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Profit Target / Session ($)</label>
+              <Input type="number" value={dailyProfitTargetUsd ?? ""} step={5} min={0} placeholder="e.g. 50"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setDailyProfitTargetUsd(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Warning Buffer ($)</label>
+              <Input type="number" value={warningBufferUsd ?? ""} step={1} min={0} placeholder="e.g. 5"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setWarningBufferUsd(parseFloat(e.target.value) || 0)} />
+              <p className="text-[9px] font-mono text-muted-foreground">Stops new trades this $ before the loss limit</p>
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Session Duration (hours)</label>
+              <Input type="number" value={sessionHours ?? ""} step={1} min={1} placeholder="24"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setSessionHours(parseFloat(e.target.value) || 24)} />
+              <p className="text-[9px] font-mono text-muted-foreground">Session resets and limits refresh after this time</p>
+            </div>
+          </div>
+          <p className="text-[9px] font-mono text-muted-foreground">Set to 0 to disable a limit. Click Save Settings above to apply.</p>
         </CardContent>
       </Card>
 

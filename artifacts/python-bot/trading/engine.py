@@ -30,9 +30,18 @@ class TradingEngine:
         self.restricted_assets = set()
         self.open_positions = {}
         self.equity = 100_000.0
-        self.max_position_usd = None  # None = no cap
+        self.max_position_usd = None
         self.tick_count = 0
         self._mt5 = None
+
+        # Daily session limits
+        self.session_start_equity = None
+        self.session_start_time = None
+        self.session_hours = 24
+        self.daily_loss_limit_usd = None
+        self.daily_profit_target_usd = None
+        self.warning_buffer_usd = None
+        self.in_warning_zone = False
 
         # Register handlers
         self.ws.on_kill_switch(self._handle_kill_switch)
@@ -50,12 +59,13 @@ class TradingEngine:
                 return False
             info = mt5.account_info()
             self.equity = info.equity
+            self.session_start_equity = info.equity
+            self.session_start_time = datetime.utcnow()
             self._mt5 = mt5
             self.ws.mt5_connected = True
             self.ws.mt5_account_id = str(account)
             self.ws.mt5_server = server
             self.ws.mt5_equity = self.equity
-            # Wire real prices into strategies
             strategies_module.set_mt5(mt5)
             log.info(f"MT5 connected: account={account}, equity={self.equity:.2f}")
             return True
@@ -79,7 +89,15 @@ class TradingEngine:
                         extra = cfg.get("botExtra") or {}
                         if extra.get("maxPositionUsd"):
                             self.max_position_usd = float(extra["maxPositionUsd"])
-                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, paused={self.paused_symbols}")
+                        if extra.get("dailyLossLimitUsd") is not None:
+                            self.daily_loss_limit_usd = float(extra["dailyLossLimitUsd"])
+                        if extra.get("dailyProfitTargetUsd") is not None:
+                            self.daily_profit_target_usd = float(extra["dailyProfitTargetUsd"])
+                        if extra.get("warningBufferUsd") is not None:
+                            self.warning_buffer_usd = float(extra["warningBufferUsd"])
+                        if extra.get("sessionHours") is not None:
+                            self.session_hours = float(extra["sessionHours"])
+                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}")
         except Exception as e:
             log.warning(f"Could not load initial config: {e}")
 
@@ -132,7 +150,17 @@ class TradingEngine:
                 s.risk_pct = rpt
         if "maxPositionUsd" in config:
             self.max_position_usd = config["maxPositionUsd"]
-        log.info(f"Config updated from dashboard")
+        if "dailyLossLimitUsd" in config:
+            self.daily_loss_limit_usd = config["dailyLossLimitUsd"]
+            self.in_warning_zone = False  # reset on config change
+        if "dailyProfitTargetUsd" in config:
+            self.daily_profit_target_usd = config["dailyProfitTargetUsd"]
+        if "warningBufferUsd" in config:
+            self.warning_buffer_usd = config["warningBufferUsd"]
+        if "sessionHours" in config:
+            self.session_hours = config["sessionHours"]
+            self.session_start_time = datetime.utcnow()  # reset session timer
+        log.info("Config updated from dashboard")
 
     async def _close_all_mt5_positions(self):
         """Close all open MT5 positions (live mode kill switch)."""
@@ -209,14 +237,77 @@ class TradingEngine:
                     "strategy": pos.comment.replace("AlgoDesk/", "") if pos.comment else "bot",
                 })
             await self.ws.emit_position_update(pos_list)
+
+            # Check session limits after equity update
+            await self._check_session_limits()
         except Exception as e:
             log.warning(f"MT5 sync error: {e}")
+
+    async def _check_session_limits(self):
+        """Enforce daily loss limit, profit target, and session expiry."""
+        if self.session_start_equity is None:
+            return
+
+        session_pnl = self.equity - self.session_start_equity
+
+        # Session expired — reset for new session
+        if self.session_start_time is not None:
+            elapsed_hours = (datetime.utcnow() - self.session_start_time).total_seconds() / 3600
+            if elapsed_hours >= self.session_hours:
+                self.session_start_equity = self.equity
+                self.session_start_time = datetime.utcnow()
+                self.in_warning_zone = False
+                log.info(f"Session reset after {elapsed_hours:.1f}h")
+                await self.ws.emit_trade({"action": "session_reset", "newEquity": self.equity})
+                return
+
+        # Broadcast session P&L to dashboard
+        await self.ws.emit_trade({
+            "action": "session_update",
+            "sessionPnl": round(session_pnl, 2),
+            "sessionStartEquity": self.session_start_equity,
+            "equity": self.equity,
+        })
+
+        # Profit target hit — stop for the session
+        if self.daily_profit_target_usd is not None and session_pnl >= self.daily_profit_target_usd:
+            if self.running:
+                self.running = False
+                log.info(f"Daily profit target ${self.daily_profit_target_usd} reached (P&L: ${session_pnl:.2f}) — stopping for session")
+                await self.ws.emit_trade({"action": "session_stopped", "reason": "profit_target", "pnl": session_pnl})
+            return
+
+        if self.daily_loss_limit_usd is not None:
+            loss = -session_pnl  # positive = loss
+            warning_buffer = self.warning_buffer_usd or self.daily_loss_limit_usd * 0.15
+
+            # Hard stop — max loss hit
+            if loss >= self.daily_loss_limit_usd:
+                if self.running:
+                    self.running = False
+                    log.warning(f"Daily loss limit ${self.daily_loss_limit_usd} hit (loss: ${loss:.2f}) — stopping for session")
+                    await self._close_all_mt5_positions()
+                    await self.ws.emit_trade({"action": "session_stopped", "reason": "loss_limit", "pnl": session_pnl})
+                return
+
+            # Warning zone — within buffer of hard stop, no new trades
+            soft_threshold = self.daily_loss_limit_usd - warning_buffer
+            if loss >= soft_threshold and not self.in_warning_zone:
+                self.in_warning_zone = True
+                log.warning(f"Entering warning zone: loss ${loss:.2f} (limit ${self.daily_loss_limit_usd})")
+                await self.ws.emit_trade({"action": "session_warning", "loss": loss, "limit": self.daily_loss_limit_usd})
+            elif loss < soft_threshold and self.in_warning_zone:
+                self.in_warning_zone = False
+                log.info("Exited warning zone — new trades allowed again")
 
     async def _execute_trade(self, signal: dict):
         """Execute a trade signal (paper or live MT5)."""
         symbol = signal["symbol"]
 
-        if self.kill_switch_active:
+        if self.kill_switch_active or not self.running:
+            return
+        if self.in_warning_zone:
+            log.debug(f"In warning zone — no new trades")
             return
         if symbol in self.paused_symbols or symbol in self.restricted_assets:
             log.info(f"Symbol {symbol} is paused/restricted — skipping")
