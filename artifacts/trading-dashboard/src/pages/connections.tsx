@@ -106,12 +106,14 @@ export default function Connections() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-3">
-            <div className="p-3 rounded border border-amber-500/30 bg-amber-500/5 flex items-start gap-2">
-              <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
-              <p className="text-[10px] font-mono text-amber-300">
-                MT5 requires Windows + MetaTrader 5 terminal. The Python bot must be running on your local machine with MT5 installed and connected here via WebSocket.
-              </p>
-            </div>
+            {!status?.mt5.connected && (
+              <div className="p-3 rounded border border-amber-500/30 bg-amber-500/5 flex items-start gap-2">
+                <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                <p className="text-[10px] font-mono text-amber-300">
+                  MT5 requires Windows + MetaTrader 5 terminal. The Python bot must be running on your local machine with MT5 installed and connected here via WebSocket.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-[10px] font-mono text-muted-foreground uppercase">Account ID</Label>
               <Input
@@ -170,16 +172,18 @@ export default function Connections() {
               </div>
               <StatusBadge connected={status?.pythonBot.connected ?? false} label={status?.pythonBot.connected ? "ALIVE" : "OFFLINE"} />
             </div>
-            <div className="p-3 rounded border border-border bg-muted/10 space-y-2">
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Setup Instructions</p>
-              <div className="space-y-1 text-[10px] font-mono text-muted-foreground">
-                <p>1. Navigate to <span className="text-primary">artifacts/python-bot/</span></p>
-                <p>2. Run: <span className="text-primary">pip install -r requirements.txt</span></p>
-                <p>3. Configure <span className="text-primary">.env</span> with MT5 credentials</p>
-                <p>4. Run: <span className="text-primary">python bot.py</span></p>
-                <p>5. Bot auto-connects to this dashboard via WebSocket</p>
+            {!status?.pythonBot.connected && (
+              <div className="p-3 rounded border border-border bg-muted/10 space-y-2">
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Setup Instructions</p>
+                <div className="space-y-1 text-[10px] font-mono text-muted-foreground">
+                  <p>1. Navigate to <span className="text-primary">artifacts/python-bot/</span></p>
+                  <p>2. Run: <span className="text-primary">pip install -r requirements.txt</span></p>
+                  <p>3. Configure <span className="text-primary">.env</span> with MT5 credentials</p>
+                  <p>4. Run: <span className="text-primary">python bot.py</span></p>
+                  <p>5. Bot auto-connects to this dashboard via WebSocket</p>
+                </div>
               </div>
-            </div>
+            )}
             <div className="space-y-1">
               {[
                 { label: "Heartbeat", value: status?.pythonBot.heartbeatAge ? `${Math.floor(status.pythonBot.heartbeatAge / 1000)}s ago` : "—" },
@@ -231,7 +235,7 @@ export default function Connections() {
                 { label: "WS Endpoint", value: `${window.location.origin}/api/ws` },
                 { label: "REST Base", value: `${window.location.origin}/api` },
                 { label: "Status", value: "Connected", ok: true },
-                { label: "Auth", value: "Replit OIDC / Session cookie" },
+                { label: "Auth", value: "Session cookie" },
                 { label: "Reconnect", value: "Auto (3s backoff)" },
               ].map(({ label, value, ok }) => (
                 <div key={label} className="flex justify-between items-center">
