@@ -176,41 +176,24 @@ export default function Connections() {
 
             {/* Launch command */}
             <div className="p-3 rounded border border-border bg-muted/10 space-y-2">
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Launch command (run on your PC)</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Launch command (PowerShell)</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border truncate">
-                  cd artifacts/python-bot && python bot.py
+                  cd C:\Users\Ilyes\westrade\artifacts\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; python bot.py
                 </code>
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-7 px-2 text-[10px] font-mono shrink-0"
                   onClick={() => {
-                    navigator.clipboard.writeText("cd artifacts/python-bot && python bot.py");
+                    navigator.clipboard.writeText('cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; python bot.py');
                     toast({ title: "Command copied!" });
                   }}
                 >
                   Copy
                 </Button>
               </div>
-              <p className="text-[9px] font-mono text-muted-foreground">Make sure your .env has ALGODESK_WS_URL and ALGODESK_API_URL set</p>
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider pt-1">Open .env config file (Windows)</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border truncate">
-                  notepad artifacts\python-bot\.env
-                </code>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-[10px] font-mono shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText("notepad artifacts\\python-bot\\.env");
-                    toast({ title: "Command copied!" });
-                  }}
-                >
-                  Copy
-                </Button>
-              </div>
+              <p className="text-[9px] font-mono text-muted-foreground">See Settings → Bot Setup for full instructions and AI-enabled variant</p>
             </div>
 
             <div className="space-y-1">
