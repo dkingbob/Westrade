@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { botConfigTable } from "@workspace/db";
+import { tradingEngine } from "../engine/tradingEngine";
+import { wsServer } from "../ws/server";
 
 const router: IRouter = Router();
 
@@ -76,6 +78,12 @@ router.post("/connections/bot/heartbeat", async (req, res): Promise<void> => {
         updatedAt: new Date(),
       });
   }
+  // Auto-start engine on first bot heartbeat if not already running
+  if (!tradingEngine.getStatus().running) {
+    await tradingEngine.start();
+    wsServer.broadcast("config_update", { killSwitchActive: false });
+  }
+
   res.json({ success: true, timestamp: new Date().toISOString() });
 });
 
