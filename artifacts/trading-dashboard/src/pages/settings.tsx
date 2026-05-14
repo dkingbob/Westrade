@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme, type ThemeStyle } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
-import { User, Palette, Bell, LogOut, Check, Plus, X } from "lucide-react";
+import { User, Palette, Bell, LogOut, Check, Plus, X, Terminal, Copy, CheckCheck } from "lucide-react";
 
 function api(path: string, opts?: RequestInit) {
   return fetch(path, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
@@ -31,7 +31,14 @@ export default function Settings() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { style, setStyle } = useTheme();
-  const [tab, setTab] = useState<"profile" | "appearance" | "notifications">("profile");
+  const [tab, setTab] = useState<"profile" | "appearance" | "notifications" | "setup">("profile");
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+
+  const copyCmd = (text: string, idx: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 1500);
+  };
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [emails, setEmails] = useState<string[]>([]);
@@ -95,6 +102,7 @@ export default function Settings() {
     { key: "profile", label: "Profile", icon: User },
     { key: "appearance", label: "Appearance", icon: Palette },
     { key: "notifications", label: "Email Alerts", icon: Bell },
+    { key: "setup", label: "Bot Setup", icon: Terminal },
   ] as const;
 
   return (
@@ -289,6 +297,63 @@ export default function Settings() {
           </div>
         </div>
       )}
+      {/* Bot Setup tab */}
+      {tab === "setup" && (() => {
+        const steps: { label: string; cmd: string; note?: string }[] = [
+          { label: "1. Open PowerShell and go to the bot folder", cmd: "cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot" },
+          { label: "2. Install dependencies (first time only)", cmd: "pip install -r requirements.txt" },
+          { label: "3. Point bot at the live server", cmd: '$env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"' },
+          { label: "", cmd: '$env:ALGODESK_API_URL="https://westrade.onrender.com/api"' },
+          { label: "4. (Optional) Enable AI trade validation", cmd: '$env:GEMINI_API_KEY="your-gemini-key-here"', note: "Required for AI Activity page to show decisions" },
+          { label: "5. Start the bot", cmd: "python bot.py" },
+        ];
+        return (
+          <div className="space-y-3">
+            <Card className="bg-card border-card-border">
+              <CardHeader className="py-2 px-4 border-b border-border">
+                <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Terminal size={11} /> Windows PowerShell — Launch Commands
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3">
+                <p className="text-[10px] font-mono text-muted-foreground">Run these commands in order. MT5 must be open and logged in before step 5.</p>
+                {steps.map((s, i) => (
+                  <div key={i} className="space-y-1">
+                    {s.label && <p className="text-[10px] font-mono text-muted-foreground">{s.label}</p>}
+                    <div className="flex items-center gap-2 bg-black/40 rounded border border-border px-3 py-2">
+                      <code className="text-[11px] font-mono text-green-400 flex-1 break-all">{s.cmd}</code>
+                      <button
+                        onClick={() => copyCmd(s.cmd, i)}
+                        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {copiedIdx === i ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                    {s.note && <p className="text-[9px] font-mono text-muted-foreground italic pl-1">{s.note}</p>}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-card-border">
+              <CardContent className="p-4 space-y-2">
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Notes</p>
+                <ul className="space-y-1.5">
+                  {[
+                    "The env vars ($env:...) reset when you close PowerShell — re-run steps 3–4 each time",
+                    "MT5 must be running and logged in on the same PC as the bot",
+                    "The dashboard at westrade.onrender.com works from any browser, any device",
+                    "AI Activity only shows data when GEMINI_API_KEY is set and the bot is running",
+                  ].map((note, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-muted-foreground">
+                      <span className="text-primary mt-0.5">—</span> {note}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
     </div>
   );
 }
