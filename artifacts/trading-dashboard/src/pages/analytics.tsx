@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTheme } from "@/hooks/use-theme";
 import {
   useGetPerformanceMetrics,
   useGetTimeBreakdown,
@@ -35,6 +36,10 @@ function MetricBlock({ label, value, sub, highlight }: { label: string; value: s
 }
 
 export default function Analytics() {
+  const { mode } = useTheme();
+  const ttStyle = mode === "light"
+    ? { background: "#ffffff", border: "1px solid #e5e7eb", fontSize: 10, fontFamily: "monospace", color: "#111827" }
+    : { background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace", color: "#e5e7eb" };
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly" | "yearly">("monthly");
   const { data: metrics, isLoading } = useGetPerformanceMetrics();
   const { data: breakdown } = useGetTimeBreakdown({ period }, {
@@ -105,9 +110,7 @@ export default function Analytics() {
                 <XAxis dataKey="period" tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={document.documentElement.classList.contains("light")
-                    ? { background: "#ffffff", border: "1px solid #e5e7eb", fontSize: 10, fontFamily: "monospace", color: "#111827" }
-                    : { background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace", color: "#e5e7eb" }}
+                  contentStyle={ttStyle}
                   formatter={(v: any, name: string) => [name === "pnl" ? `$${fmt(v)}` : `${v}%`, name === "pnl" ? "P&L" : "Win Rate"]}
                 />
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="2 2" />

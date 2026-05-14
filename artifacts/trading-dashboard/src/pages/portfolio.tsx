@@ -1,4 +1,5 @@
 import React from "react";
+import { useTheme } from "@/hooks/use-theme";
 import {
   useGetPortfolioSummary,
   useGetEquityCurve,
@@ -48,6 +49,10 @@ function StatRow({ label, value, highlight }: { label: string; value: string; hi
 }
 
 export default function Portfolio() {
+  const { mode } = useTheme();
+  const ttStyle = mode === "light"
+    ? { background: "#ffffff", border: "1px solid #e5e7eb", fontSize: 10, fontFamily: "monospace", color: "#111827" }
+    : { background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace", color: "#e5e7eb" };
   const [period, setPeriod] = useState("1m");
   const { data: summary, isLoading } = useGetPortfolioSummary({ query: { queryKey: getGetPortfolioSummaryQueryKey(), refetchInterval: 5000 } });
   const { data: equity } = useGetEquityCurve({ period: period as any }, {
@@ -135,9 +140,7 @@ export default function Portfolio() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="t" tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                    <Tooltip contentStyle={document.documentElement.classList.contains("light")
-                      ? { background: "#ffffff", border: "1px solid #e5e7eb", fontSize: 10, fontFamily: "monospace", color: "#111827" }
-                      : { background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace", color: "#e5e7eb" }} formatter={(v: any) => [`$${fmt(v)}`, ""]} />
+                    <Tooltip contentStyle={ttStyle} formatter={(v: any) => [`$${fmt(v)}`, ""]} />
                     <Area type="monotone" dataKey="benchmark" stroke="#4b5563" fill="rgba(75,85,99,0.1)" dot={false} name="Benchmark" strokeWidth={1} />
                     <Area type="monotone" dataKey="equity" stroke="#3b82f6" fill="rgba(59,130,246,0.1)" dot={false} name="Portfolio" strokeWidth={1.5} />
                   </AreaChart>
@@ -160,9 +163,7 @@ export default function Portfolio() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="t" tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v.toFixed(1)}%`} />
-                    <Tooltip contentStyle={document.documentElement.classList.contains("light")
-                      ? { background: "#ffffff", border: "1px solid #e5e7eb", fontSize: 10, fontFamily: "monospace", color: "#111827" }
-                      : { background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace", color: "#e5e7eb" }} formatter={(v: any) => [`${fmt(v)}%`, "Drawdown"]} />
+                    <Tooltip contentStyle={ttStyle} formatter={(v: any) => [`${fmt(v)}%`, "Drawdown"]} />
                     <Area type="monotone" dataKey="drawdown" stroke="#ef4444" fill="rgba(239,68,68,0.15)" dot={false} strokeWidth={1} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -189,9 +190,7 @@ export default function Portfolio() {
                     <Pie data={allocation} dataKey="value" nameKey="symbol" cx="50%" cy="50%" innerRadius={35} outerRadius={60} strokeWidth={1} stroke="rgba(0,0,0,0.3)">
                       {allocation.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={document.documentElement.classList.contains("light")
-                      ? { background: "#ffffff", border: "1px solid #e5e7eb", fontSize: 10, fontFamily: "monospace", color: "#111827" }
-                      : { background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace", color: "#e5e7eb" }} />
+                    <Tooltip contentStyle={ttStyle} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-1">

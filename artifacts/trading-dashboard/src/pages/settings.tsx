@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme, type ThemeStyle } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
-import { User, Palette, Bell, LogOut, Check } from "lucide-react";
+import { User, Palette, Bell, LogOut, Check, Plus, X } from "lucide-react";
 
 function api(path: string, opts?: RequestInit) {
   return fetch(path, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
@@ -34,7 +34,8 @@ export default function Settings() {
   const [tab, setTab] = useState<"profile" | "appearance" | "notifications">("profile");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
-  const [emailAddr, setEmailAddr] = useState("");
+  const [emails, setEmails] = useState<string[]>([]);
+  const [newEmail, setNewEmail] = useState("");
   const [smtpHost, setSmtpHost] = useState("");
   const [smtpPort, setSmtpPort] = useState("587");
   const [smtpUser, setSmtpUser] = useState("");
@@ -51,7 +52,7 @@ export default function Settings() {
     queryKey: ["email-settings"],
     queryFn: () => api("/api/notifications/email-settings").then(r => r.json()),
     onSuccess: (d) => {
-      if (d.email) setEmailAddr(d.email);
+      if (d.emails?.length) setEmails(d.emails);
       if (d.smtpHost) setSmtpHost(d.smtpHost);
       if (d.smtpPort) setSmtpPort(String(d.smtpPort));
       if (d.smtpUser) setSmtpUser(d.smtpUser);
@@ -192,9 +193,30 @@ export default function Settings() {
               <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Email Destination</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <Label className="text-[10px] font-mono text-muted-foreground uppercase">Send alerts to</Label>
-                <Input className="h-7 text-xs font-mono bg-background" type="email" placeholder="you@example.com" value={emailAddr} onChange={e => setEmailAddr(e.target.value)} />
+                <p className="text-[9px] font-mono text-muted-foreground">These are the email addresses that receive alerts. Add as many as you want.</p>
+                {emails.map((addr, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input className="h-7 text-xs font-mono bg-background flex-1" value={addr}
+                      onChange={e => setEmails(prev => prev.map((v, j) => j === i ? e.target.value : v))} />
+                    <button onClick={() => setEmails(prev => prev.filter((_, j) => j !== i))}
+                      className="text-muted-foreground hover:text-red-400 transition-colors shrink-0">
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex items-center gap-2">
+                  <Input className="h-7 text-xs font-mono bg-background flex-1" type="email"
+                    placeholder="add email address..." value={newEmail}
+                    onChange={e => setNewEmail(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && newEmail.includes("@")) { setEmails(prev => [...prev, newEmail]); setNewEmail(""); } }} />
+                  <button
+                    onClick={() => { if (newEmail.includes("@")) { setEmails(prev => [...prev, newEmail]); setNewEmail(""); } }}
+                    className="h-7 px-2 rounded border border-border text-[10px] font-mono text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center gap-1 shrink-0">
+                    <Plus size={10} /> Add
+                  </button>
+                </div>
               </div>
               <Separator />
               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">SMTP Settings (Gmail recommended)</p>
@@ -246,7 +268,7 @@ export default function Settings() {
           </Card>
 
           <div className="flex gap-2">
-            <Button className="flex-1 h-8 text-xs font-mono" onClick={() => saveEmail.mutate({ email: emailAddr, smtpHost, smtpPort: parseInt(smtpPort), smtpUser, smtpPass, events: emailEvents })} disabled={saveEmail.isPending}>
+            <Button className="flex-1 h-8 text-xs font-mono" onClick={() => saveEmail.mutate({ emails, smtpHost, smtpPort: parseInt(smtpPort), smtpUser, smtpPass, events: emailEvents })} disabled={saveEmail.isPending}>
               Save Email Settings
             </Button>
             <Button variant="outline" className="h-8 text-xs font-mono" onClick={() => testEmail.mutate()} disabled={testEmail.isPending}>

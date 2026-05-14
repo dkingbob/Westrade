@@ -110,7 +110,10 @@ async function saveEmailSettings(data: Record<string, unknown>) {
 
 export async function sendAlertEmail(subject: string, body: string) {
   const s = await getEmailSettings() as any;
-  if (!s?.email || !s?.smtpHost || !s?.smtpUser || !s?.smtpPass) return;
+  if (!s?.smtpHost || !s?.smtpUser || !s?.smtpPass) return;
+  // Support both legacy single `email` and new `emails` array
+  const recipients: string[] = s.emails?.length ? s.emails : s.email ? [s.email] : [];
+  if (recipients.length === 0) return;
   try {
     const transporter = nodemailer.createTransport({
       host: s.smtpHost,
@@ -119,22 +122,23 @@ export async function sendAlertEmail(subject: string, body: string) {
       auth: { user: s.smtpUser, pass: s.smtpPass },
     });
     await transporter.sendMail({
-      from: `"AlgoDesk" <${s.smtpUser}>`,
-      to: s.email,
-      subject: `[AlgoDesk] ${subject}`,
+      from: `"Westrade" <${s.smtpUser}>`,
+      to: recipients.join(", "),
+      subject: `[Westrade] ${subject}`,
       text: body,
       html: `<pre style="font-family:monospace">${body}</pre>`,
     });
   } catch (err: any) {
-    // Non-fatal — log but don't crash
     console.warn("Email send failed:", err?.message);
   }
 }
 
 router.get("/notifications/email-settings", async (_req, res): Promise<void> => {
   const s = await getEmailSettings() as any;
+  // Normalise to emails array (backward compat with old single `email` field)
+  const emails: string[] = s.emails?.length ? s.emails : s.email ? [s.email] : [];
   res.json({
-    email: s.email ?? "",
+    emails,
     smtpHost: s.smtpHost ?? "smtp.gmail.com",
     smtpPort: s.smtpPort ?? 587,
     smtpUser: s.smtpUser ?? "",
@@ -143,15 +147,14 @@ router.get("/notifications/email-settings", async (_req, res): Promise<void> => 
 });
 
 router.put("/notifications/email-settings", async (req, res): Promise<void> => {
-  const { email, smtpHost, smtpPort, smtpUser, smtpPass, events } = req.body;
+  const { emails, smtpHost, smtpPort, smtpUser, smtpPass, events } = req.body;
   const existing = await getEmailSettings() as any;
   const updated: Record<string, unknown> = {
     ...existing,
-    ...(email !== undefined && { email }),
+    ...(emails !== undefined && { emails }),
     ...(smtpHost !== undefined && { smtpHost }),
     ...(smtpPort !== undefined && { smtpPort }),
     ...(smtpUser !== undefined && { smtpUser }),
-    // Only overwrite password if a new non-empty one is provided
     ...(smtpPass && { smtpPass }),
     ...(events !== undefined && { events }),
   };
@@ -161,7 +164,7 @@ router.put("/notifications/email-settings", async (req, res): Promise<void> => {
 
 router.post("/notifications/email-test", async (_req, res): Promise<void> => {
   try {
-    await sendAlertEmail("Test Alert", "This is a test email from your AlgoDesk trading dashboard.\n\nIf you received this, email alerts are working correctly.");
+    await sendAlertEmail("Test Alert", "This is a test email from your Westrade trading dashboard.\n\nIf you received this, email alerts are working correctly.");
     res.json({ success: true });
   } catch (err: any) {
     res.json({ success: false, error: err?.message });

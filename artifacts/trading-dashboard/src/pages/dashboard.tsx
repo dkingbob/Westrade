@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTheme } from "@/hooks/use-theme";
 import {
   useGetPortfolioSummary,
   useGetPositions,
@@ -29,8 +30,9 @@ function fmtPct(n: number) {
   return `${(n * 100).toFixed(2)}%`;
 }
 
-function FearGreedGauge({ value, label }: { value: number; label: string }) {
+function FearGreedGauge({ value, label, darkMode }: { value: number; label: string; darkMode: boolean }) {
   const cx = 60, cy = 65, r = 50;
+  const needleColor = darkMode ? "white" : "#1e293b";
   const color = value <= 25 ? "#ef4444" : value <= 45 ? "#f97316" : value <= 55 ? "#eab308" : value <= 75 ? "#84cc16" : "#22c55e";
 
   const zones = [
@@ -69,8 +71,8 @@ function FearGreedGauge({ value, label }: { value: number; label: string }) {
             />
           );
         })}
-        <line x1={cx} y1={cy} x2={nx.toFixed(2)} y2={ny.toFixed(2)} stroke="white" strokeWidth="2" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r="3" fill="white" />
+        <line x1={cx} y1={cy} x2={nx.toFixed(2)} y2={ny.toFixed(2)} stroke={needleColor} strokeWidth="2" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="3" fill={needleColor} />
         <text x={cx} y={cy + 10} textAnchor="middle" fontSize="12" fontWeight="bold" fill={color} fontFamily="monospace">{value}</text>
       </svg>
       <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider -mt-1">{label}</p>
@@ -144,6 +146,7 @@ function AlertRow({ alert }: { alert: any }) {
 }
 
 export default function Dashboard() {
+  const { mode } = useTheme();
   const { data: summary, isLoading: summaryLoading } = useGetPortfolioSummary({ query: { queryKey: getGetPortfolioSummaryQueryKey(), refetchInterval: 5000 } });
   const { data: positions, isLoading: posLoading } = useGetPositions({ query: { queryKey: getGetPositionsQueryKey(), refetchInterval: 5000 } });
   const { data: alerts } = useGetAlerts({ query: { queryKey: getGetAlertsQueryKey() } });
@@ -254,7 +257,7 @@ export default function Dashboard() {
             {fng ? (
               <>
                 <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed</div>
-                <FearGreedGauge value={Number(fng.value)} label={fng.value_classification} />
+                <FearGreedGauge value={Number(fng.value)} label={fng.value_classification} darkMode={mode === "dark"} />
               </>
             ) : (
               <>

@@ -212,6 +212,7 @@
   --background: 210 40% 96%;
   --foreground: 220 20% 10%;
   --card: 0 0% 100%;
+  --card-foreground: 220 20% 10%;
   --card-border: 210 30% 80%;
   --border: 210 30% 80%;
   --muted: 210 30% 92%;
@@ -221,6 +222,10 @@
   --sidebar-border: 210 30% 83%;
   --sidebar-accent: 210 30% 86%;
   --sidebar-accent-foreground: 220 20% 10%;
+  --secondary: 210 30% 88%;
+  --secondary-foreground: 220 20% 10%;
+  --accent: 210 30% 90%;
+  --accent-foreground: 220 20% 10%;
   --primary: 200 100% 42%;
   --primary-foreground: 0 0% 100%;
   --input: 210 30% 88%;
