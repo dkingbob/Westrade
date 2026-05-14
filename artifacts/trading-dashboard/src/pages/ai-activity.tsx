@@ -70,10 +70,9 @@ export default function AiActivity() {
         <Card className="bg-card border-card-border">
           <CardContent className="p-8 flex flex-col items-center gap-3 text-center">
             <Brain size={28} className="text-muted-foreground/40" />
-            <p className="text-xs font-mono text-muted-foreground">No AI decisions yet.</p>
+            <p className="text-xs font-mono text-muted-foreground">No decisions yet this session.</p>
             <p className="text-[10px] font-mono text-muted-foreground">
-              Set <span className="text-primary">GEMINI_API_KEY</span> in your bot's .env and start the bot.
-              Every trade signal Gemini evaluates will appear here in real-time.
+              Decisions appear live as the bot evaluates signals. Start the bot with <span className="text-primary">GEMINI_API_KEY</span> set — each trade Gemini approves or rejects will stream here in real-time.
             </p>
           </CardContent>
         </Card>

@@ -39,7 +39,6 @@ const navItems = [
   { path: "/risk", label: "Risk Engine", icon: Shield },
   { path: "/sentiment", label: "Sentiment", icon: Brain },
   { path: "/ai-activity", label: "AI Activity", icon: Sparkles },
-  { path: "/notifications", label: "Alerts", icon: Bell },
 ];
 
 const bottomNavItems = [

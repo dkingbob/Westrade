@@ -30,10 +30,8 @@ function fmtPct(n: number) {
 }
 
 function FearGreedGauge({ value, label }: { value: number; label: string }) {
-  const angle = (value / 100) * 180 - 90; // -90 to +90 degrees
+  const cx = 60, cy = 65, r = 50;
   const color = value <= 25 ? "#ef4444" : value <= 45 ? "#f97316" : value <= 55 ? "#eab308" : value <= 75 ? "#84cc16" : "#22c55e";
-
-  const cx = 60, cy = 60, r = 45;
 
   const zones = [
     { start: 0, end: 36, color: "#ef4444" },
@@ -43,46 +41,37 @@ function FearGreedGauge({ value, label }: { value: number; label: string }) {
     { start: 144, end: 180, color: "#22c55e" },
   ];
 
-  // Needle tip position
-  const needleRad = angle * Math.PI / 180;
-  const nx = cx + (r - 8) * Math.sin(needleRad);
-  const ny = cy - (r - 8) * Math.cos(needleRad);
+  // 0=left, 90=top, 180=right  (gauge sweeps left→top→right)
+  const toXY = (deg: number, radius: number) => ({
+    x: cx - radius * Math.cos(deg * Math.PI / 180),
+    y: cy - radius * Math.sin(deg * Math.PI / 180),
+  });
+
+  // Needle: value 0→left, 100→right (angle relative to vertical)
+  const needleRad = ((value / 100) * 180 - 90) * Math.PI / 180;
+  const nx = cx + (r - 10) * Math.sin(needleRad);
+  const ny = cy - (r - 10) * Math.cos(needleRad);
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 120 75" className="w-full max-w-[140px]">
+      <svg viewBox="0 0 120 80" className="w-full max-w-[140px]">
         {zones.map(({ start, end, color: c }) => {
-          const startRad = (start - 90) * Math.PI / 180;
-          const endRad = (end - 90) * Math.PI / 180;
-          const sx = cx + r * Math.cos(startRad);
-          const sy = cy + r * Math.sin(startRad);
-          const ex = cx + r * Math.cos(endRad);
-          const ey = cy + r * Math.sin(endRad);
+          const s = toXY(start, r);
+          const e = toXY(end, r);
           return (
             <path
               key={start}
-              d={`M ${sx} ${sy} A ${r} ${r} 0 0 1 ${ex} ${ey}`}
+              d={`M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 0 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`}
               stroke={c}
-              strokeWidth="10"
+              strokeWidth="9"
               fill="none"
               strokeLinecap="butt"
             />
           );
         })}
-        {/* Needle */}
-        <line
-          x1={cx}
-          y1={cy}
-          x2={nx}
-          y2={ny}
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        {/* Center dot */}
+        <line x1={cx} y1={cy} x2={nx.toFixed(2)} y2={ny.toFixed(2)} stroke="white" strokeWidth="2" strokeLinecap="round" />
         <circle cx={cx} cy={cy} r="3" fill="white" />
-        {/* Value text */}
-        <text x={cx} y={cy + 14} textAnchor="middle" fontSize="14" fontWeight="bold" fill={color} fontFamily="monospace">{value}</text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fontSize="12" fontWeight="bold" fill={color} fontFamily="monospace">{value}</text>
       </svg>
       <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider -mt-1">{label}</p>
     </div>

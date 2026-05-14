@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   useGetRiskState,
@@ -110,6 +110,10 @@ export default function Risk() {
   const { toast } = useToast();
   const { data: riskState, isLoading: stateLoading } = useGetRiskState({ query: { queryKey: getGetRiskStateQueryKey(), refetchInterval: 3000 } });
   const { data: settings, isLoading: settingsLoading } = useGetRiskSettings();
+  const { data: botConfig } = useQuery({
+    queryKey: ["bot-config"],
+    queryFn: () => fetch("/api/bot/config", { credentials: "include" }).then(r => r.json()),
+  });
   const updateSettings = useUpdateRiskSettings();
   const killSwitch = useTriggerKillSwitch();
 
@@ -148,6 +152,19 @@ export default function Risk() {
   const [lossBufferUsd, setLossBufferUsd] = useState<number | null>(null);
   const [winBufferUsd, setWinBufferUsd] = useState<number | null>(null);
   const [sessionHours, setSessionHours] = useState<number | null>(null);
+
+  const sessionInitialized = useRef(false);
+  useEffect(() => {
+    if (sessionInitialized.current || !botConfig) return;
+    sessionInitialized.current = true;
+    const extra = (botConfig.botExtra as Record<string, unknown>) ?? {};
+    if (extra.maxPositionUsd != null) setMaxPositionUsd(Number(extra.maxPositionUsd));
+    if (extra.dailyLossLimitUsd != null) setDailyLossLimitUsd(Number(extra.dailyLossLimitUsd));
+    if (extra.dailyProfitTargetUsd != null) setDailyProfitTargetUsd(Number(extra.dailyProfitTargetUsd));
+    if (extra.lossBufferUsd != null) setLossBufferUsd(Number(extra.lossBufferUsd));
+    if (extra.winBufferUsd != null) setWinBufferUsd(Number(extra.winBufferUsd));
+    if (extra.sessionHours != null) setSessionHours(Number(extra.sessionHours));
+  }, [botConfig]);
 
   const eff = {
     maxDailyLossPct: maxDailyLossPct ?? settings?.maxDailyLossPct ?? 0.02,

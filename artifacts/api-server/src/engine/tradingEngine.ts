@@ -27,6 +27,13 @@ class TradingEngine {
   private initialEquity = 100_000;
   private mode: "live" | "paper" | "backtest" = "paper";
 
+  async init() {
+    // One-time startup: reset kill switch and seed strategies without starting engine
+    await db.update(botConfigTable).set({ killSwitchActive: false, updatedAt: new Date() });
+    await this.seedStrategies();
+    logger.info("Trading engine initialized (not started)");
+  }
+
   async start() {
     if (this.running) return;
     this.running = true;
@@ -35,12 +42,6 @@ class TradingEngine {
 
     // Load settings from DB
     await this.loadSettings();
-
-    // Reset kill switch on startup so it doesn't stay stuck from previous session
-    await db.update(botConfigTable).set({ killSwitchActive: false, updatedAt: new Date() });
-
-    // Seed strategies if none exist
-    await this.seedStrategies();
 
     // Tick every 2 seconds
     this.tickInterval = setInterval(() => this.tick(), 2000);

@@ -17,6 +17,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Cell,
 } from "recharts";
 
 function fmt(n: number, dec = 2) { return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
@@ -104,13 +105,13 @@ export default function Analytics() {
                 <XAxis dataKey="period" tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{ background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace" }}
+                  contentStyle={{ background: "#0d0f12", border: "1px solid #1f2937", fontSize: 10, fontFamily: "monospace", color: "#e5e7eb" }}
                   formatter={(v: any, name: string) => [name === "pnl" ? `$${fmt(v)}` : `${v}%`, name === "pnl" ? "P&L" : "Win Rate"]}
                 />
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="2 2" />
-                <Bar dataKey="pnl" name="P&L" radius={[2,2,0,0]}>
+                <Bar dataKey="pnl" name="P&L" radius={[2,2,0,0]} fill="#22c55e">
                   {breakdownData.map((entry, i) => (
-                    <rect key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} />
+                    <Cell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} />
                   ))}
                 </Bar>
               </BarChart>
