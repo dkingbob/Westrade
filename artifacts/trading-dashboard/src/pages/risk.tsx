@@ -113,6 +113,21 @@ export default function Risk() {
   const updateSettings = useUpdateRiskSettings();
   const killSwitch = useTriggerKillSwitch();
 
+  const deactivateKillSwitch = useMutation({
+    mutationFn: () =>
+      fetch("/api/bot/kill-switch", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: false }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      toast({ title: "Kill switch deactivated — bot can resume trading" });
+      qc.invalidateQueries({ queryKey: getGetRiskStateQueryKey() });
+    },
+    onError: () => toast({ title: "Failed to deactivate", variant: "destructive" }),
+  });
+
   const resetData = useMutation({
     mutationFn: () => fetch("/api/trades/reset", { method: "DELETE", credentials: "include" }).then(r => r.json()),
     onSuccess: () => { toast({ title: "Trading data cleared" }); qc.invalidateQueries(); },
@@ -304,55 +319,74 @@ export default function Risk() {
       </Card>
 
       {/* Kill Switch */}
-      <Card className="bg-card border-red-500/30 border-card-border">
+      <Card className={cn("bg-card border-card-border", riskState?.killSwitchActive ? "border-red-500/60" : "border-red-500/30")}>
         <CardContent className="p-4 flex items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <AlertTriangle size={14} className="text-red-400" />
               <span className="text-sm font-mono font-bold text-red-400 uppercase tracking-wider">Emergency Kill Switch</span>
+              {riskState?.killSwitchActive && (
+                <span className="text-[10px] font-mono text-red-400 animate-pulse font-bold">● ACTIVE</span>
+              )}
             </div>
             <p className="text-[11px] font-mono text-muted-foreground mt-1">
-              Immediately close all open positions and halt trading. Cannot be undone automatically.
+              {riskState?.killSwitchActive
+                ? "All trading halted. Click Deactivate to allow trading to resume."
+                : "Immediately close all open positions and halt trading."}
             </p>
           </div>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <div className="flex gap-2 shrink-0">
+            {riskState?.killSwitchActive ? (
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
-                className="shrink-0 font-mono text-xs h-8 px-4 font-bold"
-                data-testid="kill-switch-btn"
-                disabled={riskState?.killSwitchActive}
+                className="font-mono text-xs h-8 px-4 border-green-500/50 text-green-400 hover:bg-green-500/10"
+                onClick={() => deactivateKillSwitch.mutate()}
+                disabled={deactivateKillSwitch.isPending}
               >
-                <Zap size={12} className="mr-1" />
-                {riskState?.killSwitchActive ? "ACTIVE" : "KILL SWITCH"}
+                {deactivateKillSwitch.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : <Zap size={12} className="mr-1" />}
+                Deactivate
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-card border-red-500/50 font-mono">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-red-400 flex items-center gap-2">
-                  <AlertTriangle size={16} />
-                  Confirm Kill Switch
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground text-xs">
-                  This will immediately close ALL open positions at market price and halt the trading engine.
-                  All pending orders will be cancelled. This action takes effect instantly.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="text-xs h-8" data-testid="kill-switch-cancel">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700 text-xs h-8"
-                  onClick={handleKillSwitch}
-                  data-testid="kill-switch-confirm"
-                >
-                  {killSwitch.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
-                  Confirm Kill Switch
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="font-mono text-xs h-8 px-4 font-bold"
+                    data-testid="kill-switch-btn"
+                  >
+                    <Zap size={12} className="mr-1" />
+                    Kill Switch
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-card border-red-500/50 font-mono">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-red-400 flex items-center gap-2">
+                      <AlertTriangle size={16} />
+                      Confirm Kill Switch
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-muted-foreground text-xs">
+                      This will immediately close ALL open positions at market price and halt the trading bot.
+                      Click Deactivate afterwards to resume trading.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="text-xs h-8" data-testid="kill-switch-cancel">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700 text-xs h-8"
+                      onClick={handleKillSwitch}
+                      data-testid="kill-switch-confirm"
+                    >
+                      {killSwitch.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
+                      Confirm Kill Switch
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

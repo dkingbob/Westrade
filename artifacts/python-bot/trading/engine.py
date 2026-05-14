@@ -118,9 +118,10 @@ class TradingEngine:
         if "killSwitchActive" in config:
             if config["killSwitchActive"] and not self.kill_switch_active:
                 await self._handle_kill_switch()
-            elif not config["killSwitchActive"]:
+            elif not config["killSwitchActive"] and self.kill_switch_active:
                 self.kill_switch_active = False
-                log.info("Kill switch deactivated")
+                self.running = True
+                log.info("Kill switch deactivated — trading resumed")
         if "riskSettings" in config:
             rpt = config["riskSettings"].get("riskPerTradePct", 0.01)
             for s in self.strategies:
