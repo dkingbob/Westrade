@@ -22,6 +22,7 @@ import {
   HelpCircle,
   Layers,
   Settings2,
+  Sparkles,
 } from "lucide-react";
 import {
   Tooltip,
@@ -37,6 +38,7 @@ const navItems = [
   { path: "/strategies", label: "Strategies", icon: Cpu },
   { path: "/risk", label: "Risk Engine", icon: Shield },
   { path: "/sentiment", label: "Sentiment", icon: Brain },
+  { path: "/ai-activity", label: "AI Activity", icon: Sparkles },
   { path: "/notifications", label: "Alerts", icon: Bell },
 ];
 

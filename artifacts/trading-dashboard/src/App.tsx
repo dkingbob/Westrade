@@ -19,6 +19,7 @@ import Connections from "@/pages/connections";
 import Help from "@/pages/help";
 import Presets from "@/pages/presets";
 import Settings from "@/pages/settings";
+import AiActivity from "@/pages/ai-activity";
 import { useTheme } from "@/hooks/use-theme";
 
 const queryClient = new QueryClient({
@@ -60,6 +61,7 @@ function ProtectedRouter() {
         <Route path="/help" component={Help} />
         <Route path="/presets" component={Presets} />
         <Route path="/settings" component={Settings} />
+        <Route path="/ai-activity" component={AiActivity} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

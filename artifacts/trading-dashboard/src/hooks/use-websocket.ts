@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { 
+import {
   getGetPortfolioSummaryQueryKey,
   getGetPositionsQueryKey,
   getGetRiskStateQueryKey,
@@ -8,6 +8,7 @@ import {
   getGetEngineStatusQueryKey,
   getGetAlertsQueryKey
 } from "@workspace/api-client-react";
+import { ingestAiDecision } from "@/pages/ai-activity";
 
 export function useWebSocket() {
   const queryClient = useQueryClient();
@@ -50,6 +51,9 @@ export function useWebSocket() {
             case "kill_switch":
               queryClient.invalidateQueries({ queryKey: getGetRiskStateQueryKey() });
               queryClient.invalidateQueries({ queryKey: getGetEngineStatusQueryKey() });
+              break;
+            case "ai_decision":
+              ingestAiDecision(data.data);
               break;
           }
         } catch (e) {

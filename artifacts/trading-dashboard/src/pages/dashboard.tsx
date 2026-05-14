@@ -29,6 +29,66 @@ function fmtPct(n: number) {
   return `${(n * 100).toFixed(2)}%`;
 }
 
+function FearGreedGauge({ value, label }: { value: number; label: string }) {
+  const angle = (value / 100) * 180 - 90; // -90 to +90 degrees
+  const color = value <= 25 ? "#ef4444" : value <= 45 ? "#f97316" : value <= 55 ? "#eab308" : value <= 75 ? "#84cc16" : "#22c55e";
+
+  const cx = 60, cy = 60, r = 45;
+
+  const zones = [
+    { start: 0, end: 36, color: "#ef4444" },
+    { start: 36, end: 72, color: "#f97316" },
+    { start: 72, end: 108, color: "#eab308" },
+    { start: 108, end: 144, color: "#84cc16" },
+    { start: 144, end: 180, color: "#22c55e" },
+  ];
+
+  // Needle tip position
+  const needleRad = angle * Math.PI / 180;
+  const nx = cx + (r - 8) * Math.sin(needleRad);
+  const ny = cy - (r - 8) * Math.cos(needleRad);
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 120 75" className="w-full max-w-[140px]">
+        {zones.map(({ start, end, color: c }) => {
+          const startRad = (start - 90) * Math.PI / 180;
+          const endRad = (end - 90) * Math.PI / 180;
+          const sx = cx + r * Math.cos(startRad);
+          const sy = cy + r * Math.sin(startRad);
+          const ex = cx + r * Math.cos(endRad);
+          const ey = cy + r * Math.sin(endRad);
+          return (
+            <path
+              key={start}
+              d={`M ${sx} ${sy} A ${r} ${r} 0 0 1 ${ex} ${ey}`}
+              stroke={c}
+              strokeWidth="10"
+              fill="none"
+              strokeLinecap="butt"
+            />
+          );
+        })}
+        {/* Needle */}
+        <line
+          x1={cx}
+          y1={cy}
+          x2={nx}
+          y2={ny}
+          stroke="white"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        {/* Center dot */}
+        <circle cx={cx} cy={cy} r="3" fill="white" />
+        {/* Value text */}
+        <text x={cx} y={cy + 14} textAnchor="middle" fontSize="14" fontWeight="bold" fill={color} fontFamily="monospace">{value}</text>
+      </svg>
+      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider -mt-1">{label}</p>
+    </div>
+  );
+}
+
 function MetricCard({ label, value, sub, up, loading }: { label: string; value: string; sub?: string; up?: boolean; loading?: boolean }) {
   return (
     <Card className="bg-card border-card-border">
@@ -106,6 +166,13 @@ export default function Dashboard() {
     refetchInterval: 5 * 60 * 1000,
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: connStatus } = useQuery({
+    queryKey: ["connections-status"],
+    queryFn: () => fetch("/api/connections/status", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 15_000,
+  });
+  const botOnline = connStatus?.pythonBot?.connected ?? false;
 
   const qc = useQueryClient();
   const startEngine = useStartEngine();
@@ -195,19 +262,16 @@ export default function Dashboard() {
         />
         <Card className="bg-card border-card-border">
           <CardContent className="p-3">
-            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed</div>
             {fng ? (
               <>
-                <div className={cn("text-lg font-mono font-bold",
-                  Number(fng.value) <= 25 ? "text-red-400" :
-                  Number(fng.value) <= 45 ? "text-orange-400" :
-                  Number(fng.value) <= 55 ? "text-yellow-400" :
-                  Number(fng.value) <= 75 ? "text-lime-400" : "text-green-400"
-                )}>{fng.value}</div>
-                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">{fng.value_classification}</div>
+                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed</div>
+                <FearGreedGauge value={Number(fng.value)} label={fng.value_classification} />
               </>
             ) : (
-              <div className="text-xs font-mono text-muted-foreground">—</div>
+              <>
+                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed</div>
+                <div className="text-xs font-mono text-muted-foreground">Loading...</div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -224,13 +288,20 @@ export default function Dashboard() {
                 Open Positions ({positions?.length ?? 0})
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-0">
+              {!botOnline && positions && positions.length > 0 && (
+                <div className="mx-4 mt-3 mb-2 p-2 rounded border border-amber-500/30 bg-amber-500/5 flex items-center gap-2">
+                  <AlertTriangle size={11} className="text-amber-400 shrink-0" />
+                  <p className="text-[10px] font-mono text-amber-300">Bot offline — positions shown may be stale. Start the bot to sync.</p>
+                </div>
+              )}
+              <div className="p-3 pt-0">
               {posLoading ? (
-                <div className="space-y-1">
+                <div className="space-y-1 pt-3">
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-6 w-full" />)}
                 </div>
               ) : positions && positions.length > 0 ? (
-                <div>
+                <div className="pt-3">
                   <div className="flex items-center gap-3 pb-1 border-b border-border/30 text-[10px] font-mono text-muted-foreground">
                     <div className="w-16">SYMBOL</div>
                     <div className="w-10">SIDE</div>
@@ -248,6 +319,7 @@ export default function Dashboard() {
                   No open positions
                 </div>
               )}
+              </div>
             </CardContent>
           </Card>
         </div>

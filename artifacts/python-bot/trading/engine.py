@@ -112,12 +112,14 @@ class TradingEngine:
                 reason = text[3:].lstrip(" .,—-").strip() or "signal looks reasonable"
                 self.ai_validated += 1
                 log.info(f"[AI] {symbol} {side}: {decision} — {reason}")
+                await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": decision, "reason": reason, "price": price})
                 return True
             elif upper.startswith("NO"):
                 decision = "NO"
                 reason = text[2:].lstrip(" .,—-").strip() or "signal rejected"
                 self.ai_rejected += 1
                 log.info(f"[AI] {symbol} {side}: {decision} — {reason}")
+                await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": decision, "reason": reason, "price": price})
                 return False
             else:
                 # Ambiguous response — scan for YES/NO anywhere

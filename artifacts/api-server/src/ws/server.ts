@@ -58,6 +58,20 @@ class WsServer {
     const action = data?.action as string;
     const trade = data?.trade as Record<string, unknown> | undefined;
 
+    if (action === "ai_decision") {
+      // Broadcast AI thinking to all dashboard clients
+      this.broadcast("ai_decision", {
+        symbol: data.symbol,
+        side: data.side,
+        strategy: data.strategy,
+        decision: data.decision,
+        reason: data.reason,
+        price: data.price,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     if (action === "open" && trade) {
       const [saved] = await db.insert(tradesTable).values({
         symbol: String(trade.symbol ?? "UNKNOWN"),

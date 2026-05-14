@@ -300,7 +300,7 @@ export default function Risk() {
                       min={0}
                       placeholder="e.g. 500"
                       className="h-7 text-xs font-mono bg-background border-border w-32"
-                      onChange={(e) => setMaxPositionUsd(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setMaxPositionUsd(e.target.value === "" ? null : parseFloat(e.target.value))}
                     />
                     <span className="text-[10px] font-mono text-muted-foreground">USD — caps each trade's position size</span>
                   </div>
@@ -381,27 +381,48 @@ export default function Risk() {
             </div>
             <div className="space-y-0.5">
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Loss Buffer ($)</label>
-              <Input type="number" value={lossBufferUsd ?? ""} step={1} min={0} placeholder="e.g. 5"
-                className="h-7 text-xs font-mono bg-background border-border"
+              <Input type="number" value={lossBufferUsd ?? ""} step={1} min={0}
+                max={dailyLossLimitUsd ?? undefined}
+                placeholder="e.g. 5"
+                className={cn("h-7 text-xs font-mono bg-background border-border",
+                  lossBufferUsd != null && dailyLossLimitUsd != null && lossBufferUsd >= dailyLossLimitUsd && "border-red-500")}
                 onChange={(e) => setLossBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
-              <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before loss limit</p>
+              {lossBufferUsd != null && dailyLossLimitUsd != null && lossBufferUsd >= dailyLossLimitUsd
+                ? <p className="text-[9px] font-mono text-red-400">Buffer must be less than loss limit</p>
+                : <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before loss limit</p>}
             </div>
             <div className="space-y-0.5">
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Win Buffer ($)</label>
-              <Input type="number" value={winBufferUsd ?? ""} step={1} min={0} placeholder="e.g. 5"
-                className="h-7 text-xs font-mono bg-background border-border"
+              <Input type="number" value={winBufferUsd ?? ""} step={1} min={0}
+                max={dailyProfitTargetUsd ?? undefined}
+                placeholder="e.g. 5"
+                className={cn("h-7 text-xs font-mono bg-background border-border",
+                  winBufferUsd != null && dailyProfitTargetUsd != null && winBufferUsd >= dailyProfitTargetUsd && "border-red-500")}
                 onChange={(e) => setWinBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
-              <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before profit target</p>
+              {winBufferUsd != null && dailyProfitTargetUsd != null && winBufferUsd >= dailyProfitTargetUsd
+                ? <p className="text-[9px] font-mono text-red-400">Buffer must be less than profit target</p>
+                : <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before profit target</p>}
             </div>
             <div className="space-y-0.5">
               <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Session Duration (hours)</label>
-              <Input type="number" value={sessionHours ?? ""} step={1} min={1} placeholder="24"
+              <Input type="number" value={sessionHours ?? ""} step={1} min={1} max={168} placeholder="24"
                 className="h-7 text-xs font-mono bg-background border-border"
-                onChange={(e) => setSessionHours(e.target.value === "" ? null : parseFloat(e.target.value))} />
-              <p className="text-[9px] font-mono text-muted-foreground">Session resets and limits refresh after this time</p>
+                onChange={(e) => setSessionHours(e.target.value === "" ? null : Math.min(168, Math.max(1, parseFloat(e.target.value))))} />
+              <p className="text-[9px] font-mono text-muted-foreground">Session resets after this many hours (max 168 = 1 week)</p>
             </div>
           </div>
-          <p className="text-[9px] font-mono text-muted-foreground">Set to 0 to disable a limit. Click Save Settings above to apply.</p>
+          <Button
+            onClick={handleSave}
+            disabled={
+              updateSettings.isPending ||
+              (lossBufferUsd != null && dailyLossLimitUsd != null && lossBufferUsd >= dailyLossLimitUsd) ||
+              (winBufferUsd != null && dailyProfitTargetUsd != null && winBufferUsd >= dailyProfitTargetUsd)
+            }
+            className="w-full h-8 text-xs font-mono"
+          >
+            {updateSettings.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
+            Save Session Limits
+          </Button>
         </CardContent>
       </Card>
 
