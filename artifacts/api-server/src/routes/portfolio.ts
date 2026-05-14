@@ -9,11 +9,17 @@ import { eq, desc, and, gte } from "drizzle-orm";
 import { riskEngine } from "../engine/risk";
 import { getCurrentPrice } from "../engine/marketData";
 
-async function getInitialEquity(): Promise<number> {
+async function getMt5Equity(): Promise<{ current: number; initial: number; botConnected: boolean }> {
   const [cfg] = await db.select().from(botConfigTable).limit(1);
   const extra = cfg?.botExtra as Record<string, unknown> | null;
   const equity = extra?.mt5Equity;
-  return typeof equity === "number" && equity > 0 ? equity : 100_000;
+  const now = Date.now();
+  const heartbeatAge = cfg?.lastBotHeartbeat
+    ? now - new Date(cfg.lastBotHeartbeat).getTime()
+    : null;
+  const botConnected = heartbeatAge !== null && heartbeatAge < 30_000;
+  const value = typeof equity === "number" && equity > 0 ? equity : 100_000;
+  return { current: value, initial: value, botConnected };
 }
 
 const router: IRouter = Router();
@@ -29,7 +35,7 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
     .from(tradesTable)
     .where(eq(tradesTable.status, "closed"));
 
-  const initialEquity = await getInitialEquity();
+  const { current: mt5Equity, initial: initialEquity, botConnected } = await getMt5Equity();
   let totalPnl = 0;
   let totalExposure = 0;
 
@@ -45,7 +51,8 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
     totalExposure += (entryPrice * qty) / initialEquity;
   }
 
-  const equity = initialEquity + totalPnl;
+  // When bot is live, MT5 equity already reflects real P&L — use it directly
+  const equity = botConnected ? mt5Equity : initialEquity + totalPnl;
   const riskState = riskEngine.getState();
 
   // Calculate performance metrics from closed trades

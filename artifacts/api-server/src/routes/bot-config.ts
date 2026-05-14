@@ -22,11 +22,15 @@ router.put("/bot/config", async (req, res): Promise<void> => {
   const {
     limitOrderOnly, waitForPriceEntry, adaptiveSentiment,
     newsHaltMode, longTermMode, pausedSymbols, restrictedAssets,
-    mt5AccountId, mt5Server,
+    mt5AccountId, mt5Server, maxPositionUsd,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
-  void cfg;
+  const existingExtra = (cfg.botExtra as Record<string, unknown>) ?? {};
+  const newExtra = maxPositionUsd !== undefined
+    ? { ...existingExtra, maxPositionUsd: maxPositionUsd === null ? null : parseFloat(maxPositionUsd) }
+    : existingExtra;
+
   const [updated] = await db
     .update(botConfigTable)
     .set({
@@ -39,9 +43,12 @@ router.put("/bot/config", async (req, res): Promise<void> => {
       ...(restrictedAssets !== undefined && { restrictedAssets }),
       ...(mt5AccountId !== undefined && { mt5AccountId }),
       ...(mt5Server !== undefined && { mt5Server }),
+      botExtra: newExtra,
       updatedAt: new Date(),
     })
     .returning();
+
+  const extra = (updated.botExtra as Record<string, unknown>) ?? {};
 
   // Broadcast config update to connected bots
   wsServer.broadcast("config_update", {
@@ -52,6 +59,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     adaptiveSentiment: updated.adaptiveSentiment,
     newsHaltMode: updated.newsHaltMode,
     longTermMode: updated.longTermMode,
+    maxPositionUsd: extra.maxPositionUsd ?? null,
   });
 
   res.json(updated);

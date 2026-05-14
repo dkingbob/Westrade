@@ -13,7 +13,6 @@ import Portfolio from "@/pages/portfolio";
 import Analytics from "@/pages/analytics";
 import Strategies from "@/pages/strategies";
 import Risk from "@/pages/risk";
-import Backtest from "@/pages/backtest";
 import Sentiment from "@/pages/sentiment";
 import Notifications from "@/pages/notifications";
 import Connections from "@/pages/connections";
@@ -53,7 +52,6 @@ function ProtectedRouter() {
         <Route path="/analytics" component={Analytics} />
         <Route path="/strategies" component={Strategies} />
         <Route path="/risk" component={Risk} />
-        <Route path="/backtest" component={Backtest} />
         <Route path="/sentiment" component={Sentiment} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/connections" component={Connections} />

@@ -30,6 +30,7 @@ class TradingEngine:
         self.restricted_assets = set()
         self.open_positions = {}
         self.equity = 100_000.0
+        self.max_position_usd = None  # None = no cap
         self.tick_count = 0
         self._mt5 = None
 
@@ -75,6 +76,9 @@ class TradingEngine:
                         self.kill_switch_active = cfg.get("killSwitchActive", False)
                         self.paused_symbols = set(cfg.get("pausedSymbols") or [])
                         self.restricted_assets = set(cfg.get("restrictedAssets") or [])
+                        extra = cfg.get("botExtra") or {}
+                        if extra.get("maxPositionUsd"):
+                            self.max_position_usd = float(extra["maxPositionUsd"])
                         log.info(f"Loaded config: killSwitch={self.kill_switch_active}, paused={self.paused_symbols}")
         except Exception as e:
             log.warning(f"Could not load initial config: {e}")
@@ -126,6 +130,8 @@ class TradingEngine:
             rpt = config["riskSettings"].get("riskPerTradePct", 0.01)
             for s in self.strategies:
                 s.risk_pct = rpt
+        if "maxPositionUsd" in config:
+            self.max_position_usd = config["maxPositionUsd"]
         log.info(f"Config updated from dashboard")
 
     async def _close_all_mt5_positions(self):
@@ -227,6 +233,8 @@ class TradingEngine:
         sentiment_score = self.sentiment.get_score()
         sentiment_multiplier = max(0.5, min(1.5, sentiment_score / 50.0))
         position_size = self.equity * signal.get("risk_pct", 0.01) * sentiment_multiplier
+        if self.max_position_usd is not None:
+            position_size = min(position_size, self.max_position_usd)
 
         trade = {
             "symbol": symbol,
@@ -241,27 +249,30 @@ class TradingEngine:
         }
 
         if self.mode == "live" and self.mt5_available:
-            await self._execute_mt5_order(trade)
+            fill = await self._execute_mt5_order(trade)
+            if fill:
+                trade["entry_price"] = fill["price"]
+                trade["volume"] = fill["volume"]
+                await self.ws.emit_trade({"action": "open", "trade": trade})
         else:
             self.open_positions[symbol] = trade
             log.info(f"[PAPER] {trade['side'].upper()} {symbol} @ {trade['entry_price']:.4f} x {trade['quantity']}")
-
-        await self.ws.emit_trade({"action": "open", "trade": trade})
+            await self.ws.emit_trade({"action": "open", "trade": trade})
 
     async def _execute_mt5_order(self, trade: dict):
-        """Send a real order to MetaTrader 5."""
+        """Send a real order to MetaTrader 5. Returns fill info dict on success, None on failure."""
         try:
             mt5 = self._mt5
             symbol = trade["symbol"]
 
             if not mt5.symbol_select(symbol, True):
                 log.warning(f"Symbol {symbol} not available on this broker — skipping")
-                return
+                return None
 
             tick = mt5.symbol_info_tick(symbol)
             if tick is None:
                 log.warning(f"No tick data for {symbol} — skipping")
-                return
+                return None
 
             order_type = mt5.ORDER_TYPE_BUY if trade["side"] == "long" else mt5.ORDER_TYPE_SELL
             price = tick.ask if trade["side"] == "long" else tick.bid
@@ -289,10 +300,12 @@ class TradingEngine:
             result = mt5.order_send(request)
             if result.retcode != mt5.TRADE_RETCODE_DONE:
                 log.error(f"MT5 order failed: {result.comment}")
-            else:
-                log.info(f"MT5 order placed: #{result.order} {symbol} {trade['side']} {volume} lots @ {price}")
+                return None
+            log.info(f"MT5 order placed: #{result.order} {symbol} {trade['side']} {volume} lots @ {price}")
+            return {"price": price, "volume": volume, "ticket": result.order}
         except Exception as e:
             log.error(f"MT5 order error: {e}")
+            return None
 
     async def run(self):
         """Main engine loop — ticks strategies every TICK_INTERVAL seconds."""

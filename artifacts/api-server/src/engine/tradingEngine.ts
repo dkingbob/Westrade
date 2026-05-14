@@ -36,6 +36,9 @@ class TradingEngine {
     // Load settings from DB
     await this.loadSettings();
 
+    // Seed strategies if none exist
+    await this.seedStrategies();
+
     // Tick every 2 seconds
     this.tickInterval = setInterval(() => this.tick(), 2000);
 
@@ -76,6 +79,41 @@ class TradingEngine {
       activeStrategies: 3,
       mode: this.mode,
     };
+  }
+
+  private async seedStrategies() {
+    const existing = await db.select().from(strategiesTable).limit(1);
+    if (existing.length > 0) return;
+    await db.insert(strategiesTable).values([
+      {
+        name: "Mean Reversion",
+        type: "mean_reversion",
+        active: true,
+        symbols: ["EURUSD", "GBPUSD", "AUDUSD"],
+        parameters: { lookback: 20, zThreshold: 2.0 },
+        riskPct: "0.01",
+        description: "Fades price deviations using Z-score",
+      },
+      {
+        name: "Momentum",
+        type: "momentum",
+        active: true,
+        symbols: ["USDJPY", "USDCAD", "NZDUSD"],
+        parameters: { rsiPeriod: 14 },
+        riskPct: "0.012",
+        description: "RSI-based trend following",
+      },
+      {
+        name: "Statistical Arb",
+        type: "statistical",
+        active: true,
+        symbols: ["EURJPY", "GBPJPY", "EURGBP"],
+        parameters: { vwapThreshold: 0.005 },
+        riskPct: "0.008",
+        description: "VWAP deviation mean reversion",
+      },
+    ]);
+    logger.info("Seeded 3 default strategies");
   }
 
   private async refreshEquityFromBot() {

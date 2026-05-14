@@ -142,6 +142,7 @@ export default function Risk() {
   const [correlationThreshold, setCorrelationThreshold] = useState<number | null>(null);
   const [slippagePct, setSlippagePct] = useState<number | null>(null);
   const [feesPct, setFeesPct] = useState<number | null>(null);
+  const [maxPositionUsd, setMaxPositionUsd] = useState<number | null>(null);
 
   const eff = {
     maxDailyLossPct: maxDailyLossPct ?? settings?.maxDailyLossPct ?? 0.02,
@@ -156,6 +157,14 @@ export default function Risk() {
 
   const handleSave = async () => {
     await updateSettings.mutateAsync({ data: eff });
+    if (maxPositionUsd !== null) {
+      await fetch("/api/bot/config", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxPositionUsd: maxPositionUsd <= 0 ? null : maxPositionUsd }),
+      });
+    }
     qc.invalidateQueries({ queryKey: getGetRiskSettingsQueryKey() });
     qc.invalidateQueries({ queryKey: getGetRiskStateQueryKey() });
   };
@@ -267,6 +276,23 @@ export default function Risk() {
                   <SettingField label="Correlation Cap" value={eff.correlationThreshold} onChange={setCorrelationThreshold} />
                   <SettingField label="Slippage" value={eff.slippagePct} onChange={setSlippagePct} step={0.0001} />
                   <SettingField label="Fees" value={eff.feesPct} onChange={setFeesPct} step={0.0001} />
+                </div>
+
+                <div className="space-y-0.5 pt-1 border-t border-border/50">
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Max $ Per Trade (0 = no limit)</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={maxPositionUsd ?? ""}
+                      step={10}
+                      min={0}
+                      placeholder="e.g. 500"
+                      className="h-7 text-xs font-mono bg-background border-border w-32"
+                      onChange={(e) => setMaxPositionUsd(parseFloat(e.target.value) || 0)}
+                    />
+                    <span className="text-[10px] font-mono text-muted-foreground">USD — caps each trade's position size</span>
+                  </div>
+                </div>
                 </div>
 
                 <Button

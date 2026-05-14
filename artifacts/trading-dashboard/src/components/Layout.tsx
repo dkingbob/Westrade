@@ -11,7 +11,6 @@ import {
   BarChart2,
   Cpu,
   Shield,
-  FlaskConical,
   Brain,
   Bell,
   Activity,
@@ -36,7 +35,6 @@ const navItems = [
   { path: "/analytics", label: "Analytics", icon: BarChart2 },
   { path: "/strategies", label: "Strategies", icon: Cpu },
   { path: "/risk", label: "Risk Engine", icon: Shield },
-  { path: "/backtest", label: "Backtester", icon: FlaskConical },
   { path: "/sentiment", label: "Sentiment", icon: Brain },
   { path: "/notifications", label: "Alerts", icon: Bell },
 ];
