@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import {
   useGetRiskState,
   useGetRiskSettings,
@@ -105,10 +107,17 @@ function SettingField({
 
 export default function Risk() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   const { data: riskState, isLoading: stateLoading } = useGetRiskState({ query: { queryKey: getGetRiskStateQueryKey(), refetchInterval: 3000 } });
   const { data: settings, isLoading: settingsLoading } = useGetRiskSettings();
   const updateSettings = useUpdateRiskSettings();
   const killSwitch = useTriggerKillSwitch();
+
+  const resetData = useMutation({
+    mutationFn: () => fetch("/api/trades/reset", { method: "DELETE", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => { toast({ title: "Trading data cleared" }); qc.invalidateQueries(); },
+    onError: () => toast({ title: "Reset failed", variant: "destructive" }),
+  });
 
   const [maxDailyLossPct, setMaxDailyLossPct] = useState<number | null>(null);
   const [maxDrawdownPct, setMaxDrawdownPct] = useState<number | null>(null);
@@ -146,7 +155,6 @@ export default function Risk() {
       <h1 className="text-sm font-mono font-bold text-foreground uppercase tracking-widest">Risk Engine</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Live Risk State */}
         <Card className={cn("bg-card border-card-border", riskState?.killSwitchActive && "border-red-500/50")}>
           <CardHeader className="py-2 px-3 border-b border-border flex-row items-center gap-2">
             <Shield size={13} className={cn(riskState?.killSwitchActive ? "text-red-400" : "text-green-400")} />
@@ -163,32 +171,11 @@ export default function Risk() {
             ) : riskState ? (
               <>
                 <RiskScoreMeter score={riskState.riskScore} />
-
                 <div className="space-y-3 pt-1">
-                  <GaugeBar
-                    label="Daily Loss"
-                    value={Math.abs(Math.min(riskState.dailyPnl, 0))}
-                    max={riskState.dailyLossLimit}
-                    warn={0.6}
-                    danger={0.85}
-                  />
-                  <GaugeBar
-                    label="Drawdown"
-                    value={riskState.currentDrawdown}
-                    max={riskState.maxDrawdownLimit}
-                    warn={0.6}
-                    danger={0.85}
-                  />
-                  <GaugeBar
-                    label="Exposure"
-                    value={riskState.exposure}
-                    max={riskState.exposureCap}
-                    warn={0.7}
-                    danger={0.9}
-                  />
+                  <GaugeBar label="Daily Loss" value={Math.abs(Math.min(riskState.dailyPnl, 0))} max={riskState.dailyLossLimit} warn={0.6} danger={0.85} />
+                  <GaugeBar label="Drawdown" value={riskState.currentDrawdown} max={riskState.maxDrawdownLimit} warn={0.6} danger={0.85} />
+                  <GaugeBar label="Exposure" value={riskState.exposure} max={riskState.exposureCap} warn={0.7} danger={0.9} />
                 </div>
-
-                {/* Breach indicators */}
                 <div className="flex gap-2 flex-wrap">
                   {[
                     { label: "Daily Loss", breached: riskState.dailyLossBreached },
@@ -197,16 +184,12 @@ export default function Risk() {
                   ].map(({ label, breached }) => (
                     <div key={label} className={cn(
                       "text-[10px] font-mono px-2 py-0.5 rounded border",
-                      breached
-                        ? "border-red-400/50 text-red-400 bg-red-400/10"
-                        : "border-green-400/30 text-green-400 bg-green-400/5"
+                      breached ? "border-red-400/50 text-red-400 bg-red-400/10" : "border-green-400/30 text-green-400 bg-green-400/5"
                     )}>
                       {label}: {breached ? "BREACHED" : "OK"}
                     </div>
                   ))}
                 </div>
-
-                {/* P&L summary */}
                 <div className="border-t border-border/50 pt-2 grid grid-cols-2 gap-2 text-[11px] font-mono">
                   <div>
                     <span className="text-muted-foreground">Daily P&L: </span>
@@ -224,7 +207,6 @@ export default function Risk() {
           </CardContent>
         </Card>
 
-        {/* Settings */}
         <Card className="bg-card border-card-border">
           <CardHeader className="py-2 px-3 border-b border-border">
             <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Risk Settings</CardTitle>
@@ -244,13 +226,7 @@ export default function Risk() {
                   <SettingField label="Slippage" value={eff.slippagePct} onChange={setSlippagePct} step={0.0001} />
                   <SettingField label="Fees" value={eff.feesPct} onChange={setFeesPct} step={0.0001} />
                 </div>
-
-                <Button
-                  onClick={handleSave}
-                  disabled={updateSettings.isPending}
-                  className="w-full h-8 text-xs font-mono"
-                  data-testid="save-risk-settings"
-                >
+                <Button onClick={handleSave} disabled={updateSettings.isPending} className="w-full h-8 text-xs font-mono" data-testid="save-risk-settings">
                   {updateSettings.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
                   Save Settings
                 </Button>
@@ -260,7 +236,39 @@ export default function Risk() {
         </Card>
       </div>
 
-      {/* Kill Switch */}
+      <Card className="bg-card border-yellow-500/30">
+        <CardContent className="p-4 flex items-center justify-between gap-4">
+          <div>
+            <span className="text-sm font-mono font-bold text-yellow-400 uppercase tracking-wider">Reset Trading Data</span>
+            <p className="text-[11px] font-mono text-muted-foreground mt-1">
+              Delete all trades and portfolio history. Use this when switching from paper to live trading.
+            </p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 font-mono text-xs h-8 px-4 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10">
+                Reset Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-card font-mono">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-yellow-400">Reset All Trading Data?</AlertDialogTitle>
+                <AlertDialogDescription className="text-muted-foreground text-xs">
+                  This will permanently delete all trades and portfolio snapshots. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+                <AlertDialogAction className="bg-yellow-600 hover:bg-yellow-700 text-xs h-8" onClick={() => resetData.mutate()}>
+                  {resetData.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
+                  Confirm Reset
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
+
       <Card className="bg-card border-red-500/30 border-card-border">
         <CardContent className="p-4 flex items-center justify-between gap-4">
           <div>
@@ -272,16 +280,9 @@ export default function Risk() {
               Immediately close all open positions and halt trading. Cannot be undone automatically.
             </p>
           </div>
-
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="shrink-0 font-mono text-xs h-8 px-4 font-bold"
-                data-testid="kill-switch-btn"
-                disabled={riskState?.killSwitchActive}
-              >
+              <Button variant="destructive" size="sm" className="shrink-0 font-mono text-xs h-8 px-4 font-bold" data-testid="kill-switch-btn" disabled={riskState?.killSwitchActive}>
                 <Zap size={12} className="mr-1" />
                 {riskState?.killSwitchActive ? "ACTIVE" : "KILL SWITCH"}
               </Button>
@@ -299,11 +300,7 @@ export default function Risk() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel className="text-xs h-8" data-testid="kill-switch-cancel">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700 text-xs h-8"
-                  onClick={handleKillSwitch}
-                  data-testid="kill-switch-confirm"
-                >
+                <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-xs h-8" onClick={handleKillSwitch} data-testid="kill-switch-confirm">
                   {killSwitch.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
                   Confirm Kill Switch
                 </AlertDialogAction>
