@@ -66,30 +66,41 @@ class TradingEngine:
         side = trade["side"]
         strategy = trade["strategy"]
         price = trade["entry_price"]
+        indicators = signal.get("indicators", {})
 
-        # Build a details string from available signal fields
-        details_parts = []
-        if signal.get("z_score") is not None:
-            details_parts.append(f"z_score={signal['z_score']:.3f}")
-        if signal.get("rsi") is not None:
-            details_parts.append(f"rsi={signal['rsi']:.1f}")
-        details = ", ".join(details_parts) if details_parts else "no additional indicators"
+        ind_text = ""
+        if indicators:
+            ind_text = (
+                f"- RSI(14): {indicators.get('rsi_14', 'n/a')}\n"
+                f"- MACD line: {indicators.get('macd_line', 'n/a')}, signal: {indicators.get('macd_signal', 'n/a')}, histogram: {indicators.get('macd_hist', 'n/a')}\n"
+                f"- EMA20: {indicators.get('ema_20', 'n/a')}, EMA50: {indicators.get('ema_50', 'n/a')} → trend: {indicators.get('trend', 'n/a')}\n"
+                f"- Bollinger Bands: upper={indicators.get('bb_upper', 'n/a')}, mid={indicators.get('bb_mid', 'n/a')}, lower={indicators.get('bb_lower', 'n/a')}\n"
+                f"- Price position in BB: {indicators.get('bb_position_pct', 'n/a')}% (0=lower band, 100=upper band)\n"
+                f"- ATR(14): {indicators.get('atr', 'n/a')}\n"
+                f"- Z-score(20): {indicators.get('z_score', 'n/a')}\n"
+                f"- Last 10 H1 closes: {indicators.get('last_10_h1_closes', 'n/a')}\n"
+            )
+        else:
+            r = signal.get("rsi")
+            z = signal.get("z_score")
+            ind_text = f"- RSI: {r}\n- Z-score: {z}\n"
 
         prompt = (
-            f"You are a forex trading risk analyst. A trading bot wants to place the following order:\n"
+            f"You are a professional forex trading risk analyst. A trading bot wants to place this order:\n"
             f"- Symbol: {symbol}\n"
-            f"- Direction: {side} (buy=long, sell=short)\n"
+            f"- Direction: {side} (long=buy, short=sell)\n"
             f"- Strategy: {strategy}\n"
-            f"- Entry price: {price}\n"
-            f"- Signal details: {details}\n\n"
-            f"Based on typical forex market conditions and the signal details provided, is this a reasonable trade to execute? "
-            f"Respond with only YES or NO followed by one brief sentence reason."
+            f"- Entry price: {price}\n\n"
+            f"Technical indicators (H1 timeframe):\n{ind_text}\n"
+            f"Based on the indicators above, does this trade have a reasonable probability of success?\n"
+            f"Consider: trend alignment, momentum confirmation, risk/reward, overbought/oversold conditions.\n"
+            f"Respond with only YES or NO followed by one brief sentence explaining why."
         )
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"maxOutputTokens": 100, "temperature": 0.1},
+            "generationConfig": {"maxOutputTokens": 120, "temperature": 0.1},
         }
 
         try:
@@ -97,7 +108,7 @@ class TradingEngine:
                 async with session.post(
                     url,
                     json=body,
-                    timeout=aiohttp.ClientTimeout(total=5),
+                    timeout=aiohttp.ClientTimeout(total=8),
                 ) as resp:
                     if resp.status != 200:
                         log.warning(f"[AI] Gemini API returned {resp.status} — allowing trade")
@@ -105,7 +116,6 @@ class TradingEngine:
                     data = await resp.json()
                     text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-            # Parse decision and reason
             upper = text.upper()
             if upper.startswith("YES"):
                 decision = "YES"
@@ -122,16 +132,14 @@ class TradingEngine:
                 await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": decision, "reason": reason, "price": price})
                 return False
             else:
-                # Ambiguous response — scan for YES/NO anywhere
                 if "YES" in upper:
                     self.ai_validated += 1
-                    log.info(f"[AI] {symbol} {side}: YES — {text}")
+                    await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": "YES", "reason": text, "price": price})
                     return True
                 elif "NO" in upper:
                     self.ai_rejected += 1
-                    log.info(f"[AI] {symbol} {side}: NO — {text}")
+                    await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": "NO", "reason": text, "price": price})
                     return False
-                # Truly ambiguous — fail-open
                 log.info(f"[AI] {symbol} {side}: ambiguous response, allowing trade — {text}")
                 return True
 
@@ -159,6 +167,9 @@ class TradingEngine:
             self.ws.mt5_server = server
             self.ws.mt5_equity = self.equity
             strategies_module.set_mt5(mt5)
+            # Pre-load 200 H1 bars for all strategy symbols so indicators are ready immediately
+            all_symbols = list({s for strat in self.strategies for s in strat.symbols})
+            strategies_module.initialize_history(all_symbols)
             log.info(f"MT5 connected: account={account}, equity={self.equity:.2f}")
             return True
         except Exception as e:
