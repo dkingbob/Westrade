@@ -825,14 +825,16 @@ class TradingEngine:
         while self.running:
             self.tick_count += 1
 
+            # Heartbeat fires regardless of kill switch — always visible in Bot Feed
+            if self.tick_count % 30 == 1:
+                total_syms = len({s for strat in self.strategies for s in strat.symbols})
+                status = "PAUSED" if self.kill_switch_active else "SCANNING"
+                await self._emit_log("scan",
+                    f"{status} — {total_syms} symbols | {len(self.strategies)} strategies | "
+                    f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}")
+
             can_trade = not self.kill_switch_active and await self._check_interval()
             if can_trade:
-                # Every 30 ticks (~60s) emit a scan heartbeat so the feed shows activity
-                if self.tick_count % 30 == 1:
-                    total_syms = len({s for strat in self.strategies for s in strat.symbols})
-                    await self._emit_log("scan",
-                        f"Scanning {total_syms} symbols across {len(self.strategies)} strategies | "
-                        f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}")
                 for strategy in self.strategies:
                     try:
                         signals = await strategy.generate_signals()

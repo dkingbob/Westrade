@@ -94,6 +94,8 @@ class BackendWSClient:
                 await self.ws.send_str(json.dumps({"type": "bot_trade", "data": trade}))
             except Exception as e:
                 log.warning(f"Failed to emit trade: {e}")
+        else:
+            log.warning(f"WS not connected — dropped {trade.get('action', 'event')}")
 
     async def emit_position_update(self, positions: list):
         """Send position update to the dashboard."""
