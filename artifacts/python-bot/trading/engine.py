@@ -752,6 +752,7 @@ class TradingEngine:
         if self.mode == "live" and self.mt5_available:
             fill = await self._execute_mt5_order(trade)
             if fill:
+                strategies_module.confirm_cooldown(symbol)  # lock symbol after successful order
                 trade["entry_price"] = fill["price"]
                 trade["volume"] = fill["volume"]
                 await self.ws.emit_trade({"action": "open", "trade": trade})
@@ -759,8 +760,10 @@ class TradingEngine:
                     f"✅ {symbol} {signal['side'].upper()} placed @ {fill['price']:.5f} | {fill['volume']} lots | #{fill.get('ticket','?')}")
             else:
                 self._new_trades_this_tick -= 1  # order failed — release the slot
+                strategies_module.cancel_cooldown(symbol)   # allow retry next scan
                 await self._emit_log("trade", f"❌ {symbol} order failed — check MT5 logs", "warn")
         else:
+            strategies_module.confirm_cooldown(symbol)
             self.open_positions[symbol] = trade
             await self._emit_log("trade",
                 f"✅ [PAPER] {symbol} {signal['side'].upper()} @ {trade['entry_price']:.5f} × {trade['quantity']}")
@@ -890,13 +893,31 @@ class TradingEngine:
         while self.running:
             self.tick_count += 1
 
+            # Weekend check — forex is closed Fri 22:00 UTC → Sun 22:00 UTC
+            now_utc = datetime.utcnow()
+            wday = now_utc.weekday()  # Mon=0 ... Fri=4, Sat=5, Sun=6
+            market_closed = (
+                wday == 5 or                                      # all Saturday
+                (wday == 6 and now_utc.hour < 22) or             # Sunday before 22:00
+                (wday == 4 and now_utc.hour >= 22)               # Friday after 22:00
+            )
+
             # Heartbeat fires regardless of kill switch — always visible in Bot Feed
             if self.tick_count % 30 == 1:
                 total_syms = len({s for strat in self.strategies for s in strat.symbols})
-                status = "PAUSED" if self.kill_switch_active else "SCANNING"
-                await self._emit_log("scan",
-                    f"{status} — {total_syms} symbols | {len(self.strategies)} strategies | "
-                    f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}")
+                if market_closed:
+                    await self._emit_log("scan",
+                        f"WEEKEND — forex market closed | reopens Sunday 22:00 UTC "
+                        f"({now_utc.strftime('%A %H:%M')} UTC)")
+                else:
+                    status = "PAUSED" if self.kill_switch_active else "SCANNING"
+                    await self._emit_log("scan",
+                        f"{status} — {total_syms} symbols | {len(self.strategies)} strategies | "
+                        f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}")
+
+            if market_closed:
+                await asyncio.sleep(TICK_INTERVAL)
+                continue
 
             can_trade = not self.kill_switch_active and await self._check_interval()
             self._new_trades_this_tick = 0

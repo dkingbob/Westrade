@@ -96,6 +96,16 @@ def _set_cooldown(symbol: str):
     _last_signal_time[symbol] = time.time()
 
 
+def confirm_cooldown(symbol: str):
+    """Call this after a successful order to lock the symbol for SIGNAL_COOLDOWN_SECONDS."""
+    _last_signal_time[symbol] = time.time()
+
+
+def cancel_cooldown(symbol: str):
+    """Call this after a failed order to release the cooldown so the symbol can retry."""
+    _last_signal_time.pop(symbol, None)
+
+
 # ── Indicators (operate on H1 closes only) ───────────────────────────────────
 
 def ema(prices: List[float], period: int) -> float:
@@ -289,7 +299,6 @@ class TrendPullbackStrategy:
             # Long: uptrend + RSI pulled back to 35-55
             if bullish_trend and 35 <= r <= 55:
                 log.info(f"[{self.name}] LONG {symbol}: adx={adx_val:.1f} rsi={r:.1f} macd_hist={macd_hist:.6f}")
-                _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "long", "strategy": self.name,
                     "price": price, "risk_pct": self.risk_pct,
@@ -300,7 +309,6 @@ class TrendPullbackStrategy:
             # Short: downtrend + RSI bounced to 45-65
             elif bearish_trend and 45 <= r <= 65:
                 log.info(f"[{self.name}] SHORT {symbol}: adx={adx_val:.1f} rsi={r:.1f} macd_hist={macd_hist:.6f}")
-                _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "short", "strategy": self.name,
                     "price": price, "risk_pct": self.risk_pct,
@@ -358,7 +366,6 @@ class BollingerMeanReversionStrategy:
             # Long: bottom 20% of BB + RSI < 45
             if bb_pct < 0.20 and r < 45:
                 log.info(f"[{self.name}] LONG {symbol}: bb_pct={bb_pct:.2f} rsi={r:.1f} adx={adx_val:.1f}")
-                _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "long", "strategy": self.name,
                     "price": price, "risk_pct": self.risk_pct,
@@ -369,7 +376,6 @@ class BollingerMeanReversionStrategy:
             # Short: top 20% of BB + RSI > 55
             elif bb_pct > 0.80 and r > 55:
                 log.info(f"[{self.name}] SHORT {symbol}: bb_pct={bb_pct:.2f} rsi={r:.1f} adx={adx_val:.1f}")
-                _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "short", "strategy": self.name,
                     "price": price, "risk_pct": self.risk_pct,
