@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Optional
 
 import trading.strategies as strategies_module
+from trading.auto_tuner import AutoTuner
 
 log = logging.getLogger("algodesk.engine")
 
@@ -54,6 +55,10 @@ class TradingEngine:
         self.interval_pause_hours: Optional[float] = None
         self._interval_window_start: Optional[datetime] = None
         self._interval_paused: bool = False
+
+        # AutoTuner — adaptive parameter optimizer and self-learner
+        self.tuner = AutoTuner(strategies=strategies, api_url=ws_client.api_url)
+        self._last_mt5_positions: list = []  # tracks previous sync so we can detect closures
 
         # Push sentiment API status into ws_client so heartbeat reports it
         self.ws.sentiment_api_status = self.sentiment.get_api_status()
@@ -225,7 +230,9 @@ class TradingEngine:
                             self.interval_trade_hours = float(extra["intervalTradeHours"])
                         if extra.get("intervalPauseHours") is not None:
                             self.interval_pause_hours = float(extra["intervalPauseHours"])
-                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}, interval={self.interval_trade_hours}h/{self.interval_pause_hours}h")
+                        if extra.get("autoTunerEnabled") is not None:
+                            self.tuner.enabled = bool(extra["autoTunerEnabled"])
+                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}, interval={self.interval_trade_hours}h/{self.interval_pause_hours}h, autoTuner={self.tuner.enabled}")
         except Exception as e:
             log.warning(f"Could not load initial config: {e}")
 
@@ -296,6 +303,9 @@ class TradingEngine:
             self._interval_paused = False
         if "intervalPauseHours" in config:
             self.interval_pause_hours = float(config["intervalPauseHours"]) if config["intervalPauseHours"] else None
+        if "autoTunerEnabled" in config:
+            self.tuner.enabled = bool(config["autoTunerEnabled"])
+            log.info(f"AutoTuner {'enabled' if self.tuner.enabled else 'disabled'}")
         log.info("Config updated from dashboard")
 
     async def _check_interval(self) -> bool:
@@ -405,6 +415,21 @@ class TradingEngine:
                     "pnl": pnl,
                     "strategy": pos.comment.replace("AlgoDesk/", "") if pos.comment else "bot",
                 })
+
+            # Detect positions that closed since last sync → feed AutoTuner
+            if self._last_mt5_positions:
+                open_tickets = {str(p["ticket"]) for p in pos_list}
+                for prev in self._last_mt5_positions:
+                    if str(prev["ticket"]) not in open_tickets:
+                        self.tuner.record_closed_trade(
+                            strategy_name=prev.get("strategy", "unknown"),
+                            side=prev.get("side", "long"),
+                            pnl=prev.get("pnl", 0),
+                            entry_indicators={},
+                            entry_price=prev.get("entry_price", 0),
+                        )
+            self._last_mt5_positions = pos_list
+
             await self.ws.emit_position_update(pos_list)
 
             # Check session limits after equity update
@@ -628,5 +653,9 @@ class TradingEngine:
             if self.tick_count % h1_refresh_interval == 0 and self._mt5 is not None:
                 strategies_module.refresh_latest_h1(all_symbols)
                 log.debug("H1 bar cache refreshed")
+
+            # AutoTuner: evaluate and adjust strategy params every 60 seconds
+            if self.tick_count % 30 == 0:
+                await self.tuner.evaluate_and_tune()
 
             await asyncio.sleep(TICK_INTERVAL)

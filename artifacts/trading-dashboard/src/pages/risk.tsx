@@ -26,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Shield, AlertTriangle, Zap, Loader2, Clock } from "lucide-react";
+import { Shield, AlertTriangle, Zap, Loader2, Clock, Brain, TrendingUp, TrendingDown } from "lucide-react";
 
 function fmt(n: number, dec = 2) { return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 function fmtUsd(n: number) { return `$${fmt(n)}`; }
@@ -154,6 +154,7 @@ export default function Risk() {
   const [sessionHours, setSessionHours] = useState<number | null>(null);
   const [intervalTradeHours, setIntervalTradeHours] = useState<number | null>(null);
   const [intervalPauseHours, setIntervalPauseHours] = useState<number | null>(null);
+  const [autoTunerEnabled, setAutoTunerEnabled] = useState(false);
 
   const sessionInitialized = useRef(false);
   useEffect(() => {
@@ -168,6 +169,7 @@ export default function Risk() {
     if (extra.sessionHours != null) setSessionHours(Number(extra.sessionHours));
     if (extra.intervalTradeHours != null) setIntervalTradeHours(Number(extra.intervalTradeHours));
     if (extra.intervalPauseHours != null) setIntervalPauseHours(Number(extra.intervalPauseHours));
+    if (extra.autoTunerEnabled != null) setAutoTunerEnabled(Boolean(extra.autoTunerEnabled));
   }, [botConfig]);
 
   const eff = {
@@ -192,6 +194,7 @@ export default function Risk() {
     if (sessionHours !== null) extra.sessionHours = sessionHours <= 0 ? 24 : sessionHours;
     if (intervalTradeHours !== null) extra.intervalTradeHours = intervalTradeHours <= 0 ? null : intervalTradeHours;
     if (intervalPauseHours !== null) extra.intervalPauseHours = intervalPauseHours <= 0 ? null : intervalPauseHours;
+    extra.autoTunerEnabled = autoTunerEnabled;
     if (Object.keys(extra).length > 0) {
       await fetch("/api/bot/config", {
         method: "PUT",
@@ -468,6 +471,124 @@ export default function Risk() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Auto-Tuner / Self-Learning */}
+      {(() => {
+        const extra = (botConfig?.botExtra as Record<string, unknown>) ?? {};
+        const tunerState = (extra.autoTuner as Record<string, unknown> | undefined) ?? {};
+        const currentParams = (tunerState.currentParams as Record<string, { z_threshold: number | null; risk_pct: number }> | undefined) ?? {};
+        const tunerLog = (tunerState.log as Array<{
+          timestamp: string;
+          strategy: string;
+          reason: string;
+          changes: Record<string, { from: number; to: number }>;
+          performance: { winRate: number; avgPnl: number; tradeCount: number };
+        }>) ?? [];
+        const totalTrades = (tunerState.totalTradesEvaluated as number | undefined) ?? 0;
+
+        return (
+          <Card className="bg-card border-card-border">
+            <CardHeader className="py-2 px-3 border-b border-border flex-row items-center gap-2">
+              <Brain size={13} className="text-purple-400" />
+              <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                Self-Learning Auto-Tuner
+              </CardTitle>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-[10px] font-mono text-muted-foreground">{totalTrades} trades evaluated</span>
+                <button
+                  onClick={() => {
+                    setAutoTunerEnabled(v => !v);
+                    // immediate save for this toggle
+                    const extra2: Record<string, unknown> = { autoTunerEnabled: !autoTunerEnabled };
+                    fetch("/api/bot/config", {
+                      method: "PUT",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(extra2),
+                    }).then(() => qc.invalidateQueries({ queryKey: ["bot-config"] }));
+                  }}
+                  className={cn(
+                    "relative inline-flex h-5 w-9 items-center rounded-full transition-colors border",
+                    autoTunerEnabled
+                      ? "bg-purple-500/20 border-purple-400/50"
+                      : "bg-muted border-border"
+                  )}
+                >
+                  <span className={cn(
+                    "inline-block h-3.5 w-3.5 transform rounded-full transition-transform",
+                    autoTunerEnabled ? "translate-x-4 bg-purple-400" : "translate-x-1 bg-muted-foreground"
+                  )} />
+                </button>
+                <span className={cn("text-[10px] font-mono font-bold", autoTunerEnabled ? "text-purple-400" : "text-muted-foreground")}>
+                  {autoTunerEnabled ? "ON" : "OFF"}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3 space-y-3">
+              <p className="text-[10px] font-mono text-muted-foreground">
+                When enabled, the bot evaluates every closed trade and automatically adjusts entry thresholds and position sizing using fractional Kelly Criterion.
+                Needs at least 5 closed trades to start learning.
+              </p>
+
+              {/* Current strategy params */}
+              {Object.keys(currentParams).length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Current Strategy Parameters</p>
+                  <div className="grid grid-cols-1 gap-1">
+                    {Object.entries(currentParams).map(([name, p]) => (
+                      <div key={name} className="flex items-center gap-2 text-[10px] font-mono bg-background/50 rounded px-2 py-1 border border-border/40">
+                        <span className="text-foreground font-bold min-w-[120px]">{name}</span>
+                        {p.z_threshold != null && (
+                          <span className="text-muted-foreground">z: <span className="text-blue-300">{p.z_threshold}</span></span>
+                        )}
+                        <span className="text-muted-foreground ml-auto">risk: <span className="text-green-300">{p.risk_pct}%</span></span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Adjustment log */}
+              {tunerLog.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Adjustment Log</p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                    {tunerLog.slice(0, 10).map((entry, i) => (
+                      <div key={i} className="text-[10px] font-mono bg-background/50 rounded px-2 py-1.5 border border-border/40 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-purple-300">{entry.strategy}</span>
+                          <span className="text-muted-foreground ml-auto">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                        <div className="text-muted-foreground">{entry.reason}</div>
+                        <div className="flex items-center gap-3 text-[9px]">
+                          <span className={cn("font-bold", entry.performance.winRate >= 0.5 ? "text-green-400" : "text-red-400")}>
+                            {(entry.performance.winRate * 100).toFixed(0)}% win
+                          </span>
+                          <span className={cn(entry.performance.avgPnl >= 0 ? "text-green-400" : "text-red-400")}>
+                            {entry.performance.avgPnl >= 0 ? "+" : ""}${entry.performance.avgPnl.toFixed(2)} avg
+                          </span>
+                          <span className="text-muted-foreground">{entry.performance.tradeCount} trades</span>
+                          {Object.entries(entry.changes).map(([param, ch]) => (
+                            <span key={param} className="text-blue-300">
+                              {param}: {typeof ch.from === "number" ? ch.from.toFixed(3) : ch.from} → {typeof ch.to === "number" ? ch.to.toFixed(3) : ch.to}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {tunerLog.length === 0 && (
+                <p className="text-[10px] font-mono text-muted-foreground text-center py-2">
+                  No adjustments yet — waiting for closed trades
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Kill Switch */}
       <Card className={cn("bg-card border-card-border", riskState?.killSwitchActive ? "border-red-500/60" : "border-red-500/30")}>
