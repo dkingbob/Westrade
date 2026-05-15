@@ -29,7 +29,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     newsHaltMode, longTermMode, pausedSymbols, restrictedAssets,
     mt5AccountId, mt5Server, maxPositionUsd,
     dailyLossLimitUsd, dailyProfitTargetUsd, lossBufferUsd, winBufferUsd, sessionHours,
-    intervalTradeHours, intervalPauseHours, autoTunerEnabled,
+    intervalTradeHours, intervalPauseHours, autoTunerEnabled, autoTunerMode,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
@@ -45,6 +45,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     ...(intervalTradeHours !== undefined && { intervalTradeHours: intervalTradeHours === null ? null : parseFloat(intervalTradeHours) }),
     ...(intervalPauseHours !== undefined && { intervalPauseHours: intervalPauseHours === null ? null : parseFloat(intervalPauseHours) }),
     ...(autoTunerEnabled !== undefined && { autoTunerEnabled: Boolean(autoTunerEnabled) }),
+    ...(autoTunerMode !== undefined && { autoTunerMode: String(autoTunerMode) }),
   };
 
   const [updated] = await db
@@ -84,6 +85,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     intervalTradeHours: extra.intervalTradeHours ?? null,
     intervalPauseHours: extra.intervalPauseHours ?? null,
     autoTunerEnabled: extra.autoTunerEnabled ?? false,
+    autoTunerMode: extra.autoTunerMode ?? "guided",
   });
 
   res.json(updated);

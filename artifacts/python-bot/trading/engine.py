@@ -60,6 +60,8 @@ class TradingEngine:
         # AutoTuner — adaptive parameter optimizer and self-learner
         self.tuner = AutoTuner(strategies=strategies, api_url=ws_client.api_url)
         self._last_mt5_positions: list = []  # tracks previous sync so we can detect closures
+        self._symbol_cooldowns: dict = {}  # symbol -> datetime of last close, prevents instant re-entry
+        self.reentry_cooldown_minutes: float = 30.0
 
         # Push sentiment API status into ws_client so heartbeat reports it
         self.ws.sentiment_api_status = self.sentiment.get_api_status()
@@ -68,32 +70,61 @@ class TradingEngine:
         self.ws.on_kill_switch(self._handle_kill_switch)
         self.ws.on_config_update(self._handle_config_update)
 
+    async def _emit_log(self, category: str, message: str, level: str = "info"):
+        """Emit a structured log entry to the dashboard Bot Feed page."""
+        log_fn = log.warning if level == "warn" else log.debug if level == "debug" else log.info
+        log_fn(f"[{category}] {message}")
+        await self.ws.emit_trade({
+            "action": "bot_log",
+            "category": category,
+            "message": message,
+            "level": level,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+
     async def _call_gemini(self, api_key: str, prompt: str) -> str:
-        """Call Gemini 2.5 Flash. Returns 'YES', 'NO', or 'ERROR'."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        """Call Gemini — tries model names in order until one works. Returns 'YES', 'NO', or 'ERROR'."""
+        import os
+        models = [
+            os.environ.get("GEMINI_MODEL", "").strip(),
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-preview-05-20",
+            "gemini-2.5-flash-preview-04-17",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-latest",
+        ]
+        models = [m for m in models if m]  # drop empty
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"maxOutputTokens": 120, "temperature": 0.1},
         }
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                    if resp.status == 429:
-                        log.warning("[AI/Gemini] Rate limit hit (free tier: 20 req/day). Consider upgrading at aistudio.google.com")
-                        return "ERROR"
-                    if resp.status != 200:
-                        log.warning(f"[AI/Gemini] HTTP {resp.status}")
-                        return "ERROR"
-                    data = await resp.json()
-                    text = data["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
-                    if text.startswith("YES") or "YES" in text[:10]:
-                        return "YES"
-                    if text.startswith("NO") or "NO" in text[:10]:
-                        return "NO"
-                    return "YES"  # ambiguous → allow
-        except Exception as e:
-            log.warning(f"[AI/Gemini] Error: {e}")
-            return "ERROR"
+        async with aiohttp.ClientSession() as session:
+            for model in models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+                try:
+                    async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status == 404:
+                            log.debug(f"[AI/Gemini] {model} not found, trying next...")
+                            continue
+                        if resp.status == 429:
+                            log.warning("[AI/Gemini] Rate limit (free tier: 20 req/day). Upgrade at aistudio.google.com")
+                            return "ERROR"
+                        if resp.status != 200:
+                            log.warning(f"[AI/Gemini] {model} HTTP {resp.status}")
+                            return "ERROR"
+                        data = await resp.json()
+                        text = data["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
+                        log.info(f"[AI/Gemini] Using model: {model}")
+                        if text.startswith("YES") or "YES" in text[:10]:
+                            return "YES"
+                        if text.startswith("NO") or "NO" in text[:10]:
+                            return "NO"
+                        return "YES"  # ambiguous → allow
+                except Exception as e:
+                    log.warning(f"[AI/Gemini] {model} error: {e}")
+                    continue
+        log.warning("[AI/Gemini] All model names exhausted — no response")
+        return "ERROR"
 
     async def _call_deepseek(self, api_key: str, prompt: str) -> str:
         """Call DeepSeek Chat API. Returns 'YES', 'NO', or 'ERROR'."""
@@ -487,18 +518,24 @@ class TradingEngine:
                     "strategy": pos.comment.replace("AlgoDesk/", "") if pos.comment else "bot",
                 })
 
-            # Detect positions that closed since last sync → feed AutoTuner
+            # Detect positions that closed since last sync → feed AutoTuner + set cooldown
             if self._last_mt5_positions:
                 open_tickets = {str(p["ticket"]) for p in pos_list}
                 for prev in self._last_mt5_positions:
                     if str(prev["ticket"]) not in open_tickets:
+                        sym = prev.get("symbol", "")
+                        pnl = prev.get("pnl", 0)
                         self.tuner.record_closed_trade(
                             strategy_name=prev.get("strategy", "unknown"),
                             side=prev.get("side", "long"),
-                            pnl=prev.get("pnl", 0),
+                            pnl=pnl,
                             entry_indicators={},
                             entry_price=prev.get("entry_price", 0),
                         )
+                        # Set re-entry cooldown so bot doesn't immediately re-buy
+                        self._symbol_cooldowns[sym] = datetime.utcnow()
+                        asyncio.create_task(self._emit_log("risk",
+                            f"{sym} closed (P&L ${pnl:.2f}) — {self.reentry_cooldown_minutes:.0f}m re-entry cooldown started"))
             self._last_mt5_positions = pos_list
 
             await self.ws.emit_position_update(pos_list)
@@ -582,11 +619,21 @@ class TradingEngine:
         if self.kill_switch_active or not self.running:
             return
         if self.in_warning_zone:
-            log.debug(f"In warning zone — no new trades")
+            await self._emit_log("risk", f"{symbol} skipped — near loss limit (warning zone active)", "warn")
             return
         if symbol in self.paused_symbols or symbol in self.restricted_assets:
-            log.info(f"Symbol {symbol} is paused/restricted — skipping")
+            await self._emit_log("risk", f"{symbol} is paused/restricted — skipping", "warn")
             return
+
+        # Re-entry cooldown — prevents immediate re-buy after manual/auto close
+        if symbol in self._symbol_cooldowns:
+            elapsed = (datetime.utcnow() - self._symbol_cooldowns[symbol]).total_seconds() / 60
+            if elapsed < self.reentry_cooldown_minutes:
+                remaining = self.reentry_cooldown_minutes - elapsed
+                await self._emit_log("risk", f"{symbol} cooldown active — {remaining:.0f}m before re-entry allowed")
+                return
+            else:
+                del self._symbol_cooldowns[symbol]
 
         # Enforce maxOpenPositions limit
         if self.max_open_positions is not None:
@@ -595,24 +642,34 @@ class TradingEngine:
             else:
                 open_count = len(self.open_positions)
             if open_count >= self.max_open_positions:
-                log.debug(f"Max open positions ({self.max_open_positions}) reached — skipping {symbol}")
+                await self._emit_log("risk", f"Max positions ({self.max_open_positions}) reached — {symbol} skipped")
                 return
 
-        # AI trade validation — build a minimal trade dict for context
+        # Signal detected — log it before AI check
+        indicators = signal.get("indicators", {})
+        z = indicators.get("z_score") or signal.get("z_score", "n/a")
+        rsi = indicators.get("rsi_14", "n/a")
+        atr = indicators.get("atr", "n/a")
+        await self._emit_log("signal",
+            f"{symbol} {signal['side'].upper()} signal — z={z}, RSI={rsi}, ATR={atr} [{signal['strategy']}]")
+
+        # AI trade validation
         _pre_trade = {
             "symbol": symbol,
             "side": signal["side"],
             "strategy": signal["strategy"],
             "entry_price": signal["price"],
         }
+        await self._emit_log("ai", f"Evaluating {symbol} {signal['side'].upper()} with Gemini + DeepSeek...")
         if not await self._ai_validate_trade(_pre_trade, signal):
-            log.info(f"[AI] Trade rejected by Gemini AI — skipping {symbol} {signal['side']}")
+            await self._emit_log("ai", f"{symbol} REJECTED by AI — trade blocked", "warn")
             return
 
         # Don't open another position in same symbol
         if self.mode == "live" and self._mt5 is not None:
             existing = self._mt5.positions_get(symbol=symbol)
             if existing:
+                await self._emit_log("risk", f"{symbol} already has an open position — skipping")
                 return
         elif symbol in self.open_positions:
             return
@@ -642,9 +699,14 @@ class TradingEngine:
                 trade["entry_price"] = fill["price"]
                 trade["volume"] = fill["volume"]
                 await self.ws.emit_trade({"action": "open", "trade": trade})
+                await self._emit_log("trade",
+                    f"✅ {symbol} {signal['side'].upper()} placed @ {fill['price']:.5f} | {fill['volume']} lots | #{fill.get('ticket','?')}")
+            else:
+                await self._emit_log("trade", f"❌ {symbol} order failed — check MT5 logs", "warn")
         else:
             self.open_positions[symbol] = trade
-            log.info(f"[PAPER] {trade['side'].upper()} {symbol} @ {trade['entry_price']:.4f} x {trade['quantity']}")
+            await self._emit_log("trade",
+                f"✅ [PAPER] {symbol} {signal['side'].upper()} @ {trade['entry_price']:.5f} × {trade['quantity']}")
             await self.ws.emit_trade({"action": "open", "trade": trade})
 
     async def _execute_mt5_order(self, trade: dict):
@@ -764,6 +826,12 @@ class TradingEngine:
 
             can_trade = not self.kill_switch_active and await self._check_interval()
             if can_trade:
+                # Every 30 ticks (~60s) emit a scan heartbeat so the feed shows activity
+                if self.tick_count % 30 == 1:
+                    total_syms = len({s for strat in self.strategies for s in strat.symbols})
+                    await self._emit_log("scan",
+                        f"Scanning {total_syms} symbols across {len(self.strategies)} strategies | "
+                        f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}", "debug")
                 for strategy in self.strategies:
                     try:
                         signals = await strategy.generate_signals()
@@ -771,6 +839,7 @@ class TradingEngine:
                             await self._execute_trade(signal)
                     except Exception as e:
                         log.error(f"Strategy error ({strategy.name}): {e}")
+                        await self._emit_log("scan", f"Strategy error ({strategy.name}): {e}", "warn")
 
             # Sync real MT5 positions every 5 ticks
             if self.tick_count % 5 == 0:

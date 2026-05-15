@@ -9,6 +9,7 @@ import {
   getGetAlertsQueryKey
 } from "@workspace/api-client-react";
 import { ingestAiDecision } from "@/pages/ai-activity";
+import { ingestBotLog } from "@/pages/bot-feed";
 
 export function useWebSocket() {
   const queryClient = useQueryClient();
@@ -54,6 +55,9 @@ export function useWebSocket() {
               break;
             case "ai_decision":
               ingestAiDecision(data.data);
+              break;
+            case "bot_log":
+              ingestBotLog(data.data);
               break;
           }
         } catch (e) {

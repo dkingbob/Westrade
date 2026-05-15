@@ -21,6 +21,7 @@ import Presets from "@/pages/presets";
 import Settings from "@/pages/settings";
 import AiActivity from "@/pages/ai-activity";
 import AutoTuner from "@/pages/auto-tuner";
+import BotFeed from "@/pages/bot-feed";
 import LandingPage from "@/pages/landing";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -62,6 +63,7 @@ function AppShell() {
         <Route path="/settings" component={Settings} />
         <Route path="/ai-activity" component={AiActivity} />
         <Route path="/auto-tuner" component={AutoTuner} />
+        <Route path="/bot-feed" component={BotFeed} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

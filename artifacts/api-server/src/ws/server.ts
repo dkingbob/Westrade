@@ -70,6 +70,16 @@ class WsServer {
     const action = data?.action as string;
     const trade = data?.trade as Record<string, unknown> | undefined;
 
+    if (action === "bot_log") {
+      this.broadcast("bot_log", {
+        category: data.category as string,
+        message: data.message as string,
+        level: data.level as string ?? "info",
+        timestamp: data.timestamp as string ?? new Date().toISOString(),
+      });
+      return;
+    }
+
     if (action === "ai_decision") {
       const record: AiDecisionRecord = {
         symbol: data.symbol as string,
