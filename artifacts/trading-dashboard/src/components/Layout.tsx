@@ -5,6 +5,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useTheme } from "@/hooks/use-theme";
 import { useGetEngineStatus, useGetTicker, useGetRiskState, useTriggerKillSwitch, getGetEngineStatusQueryKey, getGetTickerQueryKey, getGetRiskStateQueryKey } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useStartEngine, useStopEngine } from "@workspace/api-client-react";
 import { UserProfileWidget } from "@/components/UserProfile";
 import {
   LayoutDashboard, BookOpen, PieChart, BarChart2, Cpu, Shield, Brain,
@@ -94,6 +95,58 @@ function NavItem({ path, label, icon: Icon, collapsed, location, onNavigate }: {
   return inner;
 }
 
+function EngineWidget({ collapsed }: { collapsed: boolean }) {
+  const qc = useQueryClient();
+  const { data: engineStatus } = useGetEngineStatus({ query: { queryKey: getGetEngineStatusQueryKey(), refetchInterval: 5000 } });
+  const startEngine = useStartEngine();
+  const stopEngine = useStopEngine();
+  const running = engineStatus?.running ?? false;
+  const pending = startEngine.isPending || stopEngine.isPending;
+
+  const toggle = async () => {
+    if (running) await stopEngine.mutateAsync();
+    else await startEngine.mutateAsync();
+    qc.invalidateQueries({ queryKey: getGetEngineStatusQueryKey() });
+  };
+
+  const inner = (
+    <button
+      onClick={toggle}
+      disabled={pending}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 w-full transition-colors text-xs font-mono",
+        collapsed && "justify-center",
+        running
+          ? "text-emerald-400 hover:bg-emerald-400/10"
+          : "text-muted-foreground hover:bg-muted/40"
+      )}
+    >
+      {pending ? (
+        <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+      ) : (
+        <div className={cn("w-2 h-2 rounded-full shrink-0", running ? "bg-emerald-400" : "bg-zinc-500")} />
+      )}
+      {!collapsed && (
+        <span className="font-bold tracking-wider uppercase text-[10px]">
+          {pending ? "…" : running ? "Engine ON" : "Engine OFF"}
+        </span>
+      )}
+    </button>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>{inner}</TooltipTrigger>
+        <TooltipContent side="right" className="text-[10px] font-mono">
+          {running ? "Engine running — click to stop" : "Engine stopped — click to start"}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return inner;
+}
+
 function KillSwitchWidget({ collapsed }: { collapsed: boolean }) {
   const qc = useQueryClient();
   const { data: riskState } = useGetRiskState({
@@ -153,7 +206,6 @@ function SidebarContent({ collapsed, location, onNavigate, mode, setMode }: {
   collapsed: boolean; location: string; onNavigate?: () => void;
   mode: string; setMode: (m: "dark" | "light") => void;
 }) {
-  const { data: engineStatus } = useGetEngineStatus({ query: { queryKey: getGetEngineStatusQueryKey(), refetchInterval: 5000 } });
   return (
     <>
       {/* Logo */}
@@ -162,17 +214,10 @@ function SidebarContent({ collapsed, location, onNavigate, mode, setMode }: {
         {!collapsed && <span className="text-xs font-mono font-bold text-foreground tracking-widest uppercase">Westrade</span>}
       </div>
 
-      {/* Engine Status */}
-      {!collapsed && (
-        <div className="px-3 py-2 border-b border-sidebar-border">
-          <div className="flex items-center gap-1.5">
-            <div className={cn("w-1.5 h-1.5 rounded-full", engineStatus?.running ? "bg-green-400 animate-pulse" : "bg-red-400")} />
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-              {engineStatus?.running ? `LIVE · ${engineStatus.mode ?? "paper"}` : "ENGINE OFF"}
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Engine start/stop — clickable from any page */}
+      <div className="border-b border-sidebar-border">
+        <EngineWidget collapsed={collapsed} />
+      </div>
 
       <KillSwitchWidget collapsed={collapsed} />
 
