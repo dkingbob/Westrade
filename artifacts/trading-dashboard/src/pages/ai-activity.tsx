@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Brain, CheckCircle2, XCircle, Trash2, Wifi, WifiOff } from "lucide-react";
+import { Brain, CheckCircle2, XCircle, Trash2 } from "lucide-react";
 
 interface AiDecision {
-  id: number;
+  id: string;
   symbol: string;
   side: string;
   strategy: string;
@@ -16,27 +16,64 @@ interface AiDecision {
   timestamp: string;
 }
 
-// Module-level store so decisions persist across re-renders / navigation
-const decisions: AiDecision[] = [];
-let nextId = 1;
-const listeners = new Set<() => void>();
+// Module-level store — decisions survive navigation (WS pushes add here in real-time)
+const wsDecisions = new Map<string, AiDecision>();
+let listeners = new Set<() => void>();
 
 function notify() { listeners.forEach(fn => fn()); }
 
+// Called from use-websocket.ts when bot sends an ai_decision
 export function ingestAiDecision(data: Omit<AiDecision, "id">) {
-  decisions.unshift({ ...data, id: nextId++ });
-  if (decisions.length > 100) decisions.pop(); // keep last 100
-  notify();
+  const id = `${data.timestamp}-${data.symbol}-${data.strategy}`;
+  if (!wsDecisions.has(id)) {
+    wsDecisions.set(id, { ...data, id });
+    // Keep last 200
+    if (wsDecisions.size > 200) {
+      const oldest = wsDecisions.keys().next().value;
+      if (oldest) wsDecisions.delete(oldest);
+    }
+    notify();
+  }
 }
 
 function useAiDecisions() {
   const [, tick] = useState(0);
+  const serverIds = useRef(new Set<string>());
+
   useEffect(() => {
     const refresh = () => tick(n => n + 1);
     listeners.add(refresh);
     return () => { listeners.delete(refresh); };
   }, []);
-  return decisions;
+
+  // Poll server every 3s to catch decisions that happened before WS connected
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/ai-decisions", { credentials: "include" });
+        if (!res.ok || cancelled) return;
+        const items: Omit<AiDecision, "id">[] = await res.json();
+        let changed = false;
+        for (const item of items) {
+          const id = `${item.timestamp}-${item.symbol}-${item.strategy}`;
+          if (!wsDecisions.has(id) && !serverIds.current.has(id)) {
+            serverIds.current.add(id);
+            wsDecisions.set(id, { ...item, id });
+            changed = true;
+          }
+        }
+        if (changed && !cancelled) tick(n => n + 1);
+      } catch {}
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  return Array.from(wsDecisions.values()).sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 }
 
 export default function AiActivity() {
@@ -59,7 +96,7 @@ export default function AiActivity() {
           </Badge>
           {items.length > 0 && (
             <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] font-mono gap-1"
-              onClick={() => { decisions.length = 0; nextId = 1; notify(); }}>
+              onClick={() => { wsDecisions.clear(); notify(); }}>
               <Trash2 size={9} /> Clear
             </Button>
           )}

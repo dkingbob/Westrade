@@ -6,9 +6,20 @@ import { tradesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { sendAlertEmail } from "../routes/notifications";
 
+interface AiDecisionRecord {
+  symbol: string;
+  side: string;
+  strategy: string;
+  decision: string;
+  reason: string;
+  price: number;
+  timestamp: string;
+}
+
 class WsServer {
   private wss: WebSocketServer | null = null;
   private clients = new Set<WebSocket>();
+  private aiDecisions: AiDecisionRecord[] = [];
 
   attach(server: Server) {
     this.wss = new WebSocketServer({ server, path: "/api/ws" });
@@ -59,16 +70,20 @@ class WsServer {
     const trade = data?.trade as Record<string, unknown> | undefined;
 
     if (action === "ai_decision") {
-      // Broadcast AI thinking to all dashboard clients
-      this.broadcast("ai_decision", {
-        symbol: data.symbol,
-        side: data.side,
-        strategy: data.strategy,
-        decision: data.decision,
-        reason: data.reason,
-        price: data.price,
+      const record: AiDecisionRecord = {
+        symbol: data.symbol as string,
+        side: data.side as string,
+        strategy: data.strategy as string,
+        decision: data.decision as string,
+        reason: data.reason as string,
+        price: data.price as number,
         timestamp: new Date().toISOString(),
-      });
+      };
+      // Keep last 200 decisions in memory so late-connecting browsers can catch up
+      this.aiDecisions.unshift(record);
+      if (this.aiDecisions.length > 200) this.aiDecisions.length = 200;
+      // Broadcast to all connected dashboard clients
+      this.broadcast("ai_decision", record);
       return;
     }
 
@@ -143,6 +158,10 @@ class WsServer {
     }
 
     this.broadcast("bot_positions", positions);
+  }
+
+  getAiDecisions(): AiDecisionRecord[] {
+    return this.aiDecisions;
   }
 
   broadcast(type: string, data: unknown) {

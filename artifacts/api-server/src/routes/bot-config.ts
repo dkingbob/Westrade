@@ -19,12 +19,17 @@ router.get("/bot/config", async (req, res): Promise<void> => {
   res.json(cfg);
 });
 
+router.get("/ai-decisions", (req, res): void => {
+  res.json(wsServer.getAiDecisions());
+});
+
 router.put("/bot/config", async (req, res): Promise<void> => {
   const {
     limitOrderOnly, waitForPriceEntry, adaptiveSentiment,
     newsHaltMode, longTermMode, pausedSymbols, restrictedAssets,
     mt5AccountId, mt5Server, maxPositionUsd,
     dailyLossLimitUsd, dailyProfitTargetUsd, lossBufferUsd, winBufferUsd, sessionHours,
+    intervalTradeHours, intervalPauseHours, autoTunerEnabled,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
@@ -37,6 +42,9 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     ...(lossBufferUsd !== undefined && { lossBufferUsd: lossBufferUsd === null ? null : parseFloat(lossBufferUsd) }),
     ...(winBufferUsd !== undefined && { winBufferUsd: winBufferUsd === null ? null : parseFloat(winBufferUsd) }),
     ...(sessionHours !== undefined && { sessionHours: sessionHours === null ? 24 : parseFloat(sessionHours) }),
+    ...(intervalTradeHours !== undefined && { intervalTradeHours: intervalTradeHours === null ? null : parseFloat(intervalTradeHours) }),
+    ...(intervalPauseHours !== undefined && { intervalPauseHours: intervalPauseHours === null ? null : parseFloat(intervalPauseHours) }),
+    ...(autoTunerEnabled !== undefined && { autoTunerEnabled: Boolean(autoTunerEnabled) }),
   };
 
   const [updated] = await db
@@ -73,6 +81,9 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     lossBufferUsd: extra.lossBufferUsd ?? null,
     winBufferUsd: extra.winBufferUsd ?? null,
     sessionHours: extra.sessionHours ?? 24,
+    intervalTradeHours: extra.intervalTradeHours ?? null,
+    intervalPauseHours: extra.intervalPauseHours ?? null,
+    autoTunerEnabled: extra.autoTunerEnabled ?? false,
   });
 
   res.json(updated);
