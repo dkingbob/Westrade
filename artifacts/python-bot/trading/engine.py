@@ -63,6 +63,7 @@ class TradingEngine:
         self._symbol_cooldowns: dict = {}  # symbol -> datetime of last close, prevents instant re-entry
         self.reentry_cooldown_minutes: float = 30.0
         self.block_on_ai_error: bool = True   # True = reject trade when all AI providers fail
+        self.ai_enabled: bool = True          # False = skip AI entirely, auto-approve all signals
         self._new_trades_this_tick: int = 0   # cap new positions per scan cycle
         self.max_new_trades_per_tick: int = 2  # never open more than 2 positions per 60s scan
 
@@ -161,6 +162,15 @@ class TradingEngine:
 
     async def _ai_validate_trade(self, trade: dict, signal: dict) -> bool:
         """Run Gemini and/or DeepSeek in parallel. Trade only if at least one says YES and none say NO."""
+        if not self.ai_enabled:
+            await self.ws.emit_trade({
+                "action": "ai_decision", "symbol": trade["symbol"], "side": trade["side"],
+                "strategy": trade["strategy"], "decision": "YES", "price": trade["entry_price"],
+                "reason": "AI validation disabled — auto-approved",
+                "votes": {},
+            })
+            self.ai_validated += 1
+            return True
         import os
         gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
         deepseek_key = (os.environ.get("DEEPSEEK") or os.environ.get("DEEPSEEK_API_KEY") or "").strip()
@@ -335,6 +345,8 @@ class TradingEngine:
                         if extra.get("autoTunerEnabled") is not None:
                             self.tuner.enabled = bool(extra["autoTunerEnabled"])
                         self.tuner.mode = extra.get("autoTunerMode", "guided")
+                        if "aiEnabled" in extra:
+                            self.ai_enabled = bool(extra["aiEnabled"])
                         log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}, interval={self.interval_trade_hours}h/{self.interval_pause_hours}h, autoTuner={self.tuner.enabled}, tunerMode={self.tuner.mode}")
         except Exception as e:
             log.warning(f"Could not load initial config: {e}")
@@ -363,10 +375,19 @@ class TradingEngine:
             await self.load_initial_config()
 
     async def _handle_kill_switch(self):
-        """React to kill switch from dashboard."""
+        """Kill switch: close all positions and terminate the bot process."""
         self.kill_switch_active = True
         self.running = False
-        log.warning("Kill switch activated — bot stopped (existing positions left open)")
+        log.warning("Kill switch activated — closing all positions and shutting down")
+        await self._emit_log("warn", "KILL SWITCH — closing positions and terminating bot process")
+        try:
+            if self.mode == "live" and self._mt5 is not None:
+                await self._close_all_mt5_positions()
+        except Exception as e:
+            log.warning(f"Error closing positions on kill switch: {e}")
+        await asyncio.sleep(1)
+        import os, signal as _signal
+        os.kill(os.getpid(), _signal.SIGTERM)
 
     async def _handle_config_update(self, config: dict):
         """Apply config updates from the dashboard."""
@@ -388,6 +409,9 @@ class TradingEngine:
             rpt = config["riskSettings"].get("riskPerTradePct", 0.01)
             for s in self.strategies:
                 s.risk_pct = rpt
+        if "aiEnabled" in config:
+            self.ai_enabled = bool(config["aiEnabled"])
+            log.info(f"AI validation {'enabled' if self.ai_enabled else 'DISABLED — all signals auto-approved'}")
         if "maxPositionUsd" in config:
             self.max_position_usd = config["maxPositionUsd"]
         if "dailyLossLimitUsd" in config:

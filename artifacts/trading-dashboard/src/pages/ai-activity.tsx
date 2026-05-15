@@ -3,7 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Brain, CheckCircle2, XCircle, Trash2, Cpu, Zap } from "lucide-react";
+import { Brain, CheckCircle2, XCircle, Trash2, Cpu, Zap, ToggleLeft, ToggleRight } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useGetBotConfig, getGetBotConfigQueryKey } from "@workspace/api-client-react";
 
 interface AiDecision {
   id: string;
@@ -97,9 +99,22 @@ function VoteChip({ name, vote }: { name: string; vote: string | undefined }) {
 }
 
 export default function AiActivity() {
+  const qc = useQueryClient();
   const items = useAiDecisions();
   const approved = items.filter(d => d.decision === "YES").length;
   const rejected = items.filter(d => d.decision === "NO").length;
+  const { data: cfg } = useGetBotConfig({ query: { queryKey: getGetBotConfigQueryKey() } });
+  const aiEnabled = (cfg as any)?.aiEnabled ?? true;
+
+  const toggleAi = useMutation({
+    mutationFn: (enabled: boolean) =>
+      fetch("/api/bot/config", {
+        method: "PUT", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aiEnabled: enabled }),
+      }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: getGetBotConfigQueryKey() }),
+  });
 
   return (
     <div className="p-4 space-y-4">
@@ -129,7 +144,18 @@ export default function AiActivity() {
         <span className="text-[9px] font-mono text-muted-foreground">Active models:</span>
         <span className="text-[9px] font-mono text-blue-300">✦ Gemini 2.5 Flash</span>
         <span className="text-[9px] font-mono text-purple-300">◈ DeepSeek Chat</span>
-        <span className="text-[9px] font-mono text-muted-foreground/60 ml-auto">Any NO blocks · All error = allow</span>
+        <button
+          onClick={() => toggleAi.mutate(!aiEnabled)}
+          className={cn(
+            "ml-auto flex items-center gap-1.5 text-[9px] font-mono px-2 py-0.5 rounded border transition-colors",
+            aiEnabled
+              ? "text-blue-400 border-blue-400/40 hover:bg-blue-400/10"
+              : "text-orange-400 border-orange-400/40 hover:bg-orange-400/10"
+          )}
+        >
+          {aiEnabled ? <ToggleRight size={11} /> : <ToggleLeft size={11} />}
+          AI {aiEnabled ? "ON — any NO blocks · errors block" : "OFF — all signals auto-approve"}
+        </button>
       </div>
 
       {items.length === 0 ? (
