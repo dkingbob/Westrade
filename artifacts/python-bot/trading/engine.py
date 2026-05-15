@@ -729,7 +729,7 @@ class TradingEngine:
         elif symbol in self.open_positions:
             return
 
-        self._new_trades_this_tick += 1
+        self._new_trades_this_tick += 1  # reserve slot — decremented below on failure
         sentiment_score = self.sentiment.get_score()
         sentiment_multiplier = max(0.5, min(1.5, sentiment_score / 50.0))
         position_size = self.equity * signal.get("risk_pct", 0.01) * sentiment_multiplier
@@ -758,6 +758,7 @@ class TradingEngine:
                 await self._emit_log("trade",
                     f"✅ {symbol} {signal['side'].upper()} placed @ {fill['price']:.5f} | {fill['volume']} lots | #{fill.get('ticket','?')}")
             else:
+                self._new_trades_this_tick -= 1  # order failed — release the slot
                 await self._emit_log("trade", f"❌ {symbol} order failed — check MT5 logs", "warn")
         else:
             self.open_positions[symbol] = trade
@@ -770,6 +771,14 @@ class TradingEngine:
         try:
             mt5 = self._mt5
             symbol = trade["symbol"]
+
+            # Skip orders during broker daily close window (22:55–23:10 UTC)
+            now_utc = datetime.utcnow()
+            close_start = now_utc.replace(hour=22, minute=55, second=0, microsecond=0)
+            close_end   = now_utc.replace(hour=23, minute=10, second=0, microsecond=0)
+            if close_start <= now_utc <= close_end:
+                log.warning(f"Daily close window — skipping {symbol} order (retry after 23:10 UTC)")
+                return None
 
             if not mt5.symbol_select(symbol, True):
                 log.warning(f"Symbol {symbol} not available on this broker — skipping")
