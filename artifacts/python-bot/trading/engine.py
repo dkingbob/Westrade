@@ -675,9 +675,36 @@ class TradingEngine:
 
             digits = info.digits if info else 5
             point = info.point if info else 0.00001
-            atr = trade.get("atr")
 
-            # SL/TP: prefer ATR-based levels, fall back to 20/40 pip fixed
+            # Step 1: Place the market order WITHOUT SL/TP (more reliable across brokers)
+            request = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": volume,
+                "type": order_type,
+                "price": price,
+                "deviation": 20,
+                "magic": 202500,
+                "comment": f"AlgoDesk/{trade['strategy']}",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+            result = mt5.order_send(request)
+            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+                # Try FOK as fallback
+                request["type_filling"] = mt5.ORDER_FILLING_FOK
+                result = mt5.order_send(request)
+            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+                err = result.comment if result else mt5.last_error()
+                log.error(f"MT5 order failed: {err}")
+                return None
+
+            ticket = result.order
+            fill_price = result.price if result.price else price
+            log.info(f"MT5 order placed: #{ticket} {symbol} {trade['side']} {volume} lots @ {fill_price:.{digits}f}")
+
+            # Step 2: Set SL/TP on the now-open position via TRADE_ACTION_SLTP
+            atr = trade.get("atr")
             if atr and atr > 0:
                 sl_dist = atr * 1.5
                 tp_dist = atr * 2.5
@@ -686,34 +713,33 @@ class TradingEngine:
                 sl_dist = pip * 20
                 tp_dist = pip * 40
 
-            if trade["side"] == "long":
-                sl_price = round(price - sl_dist, digits)
-                tp_price = round(price + tp_dist, digits)
-            else:
-                sl_price = round(price + sl_dist, digits)
-                tp_price = round(price - tp_dist, digits)
+            # Clamp to broker's minimum stop level
+            stop_level = (info.trade_stops_level * point) if info else 0
+            sl_dist = max(sl_dist, stop_level + point)
+            tp_dist = max(tp_dist, stop_level + point)
 
-            request = {
-                "action": mt5.TRADE_ACTION_DEAL,
+            if trade["side"] == "long":
+                sl_price = round(fill_price - sl_dist, digits)
+                tp_price = round(fill_price + tp_dist, digits)
+            else:
+                sl_price = round(fill_price + sl_dist, digits)
+                tp_price = round(fill_price - tp_dist, digits)
+
+            sltp_request = {
+                "action": mt5.TRADE_ACTION_SLTP,
                 "symbol": symbol,
-                "volume": volume,
-                "type": order_type,
-                "price": price,
+                "position": ticket,
                 "sl": sl_price,
                 "tp": tp_price,
-                "deviation": 10,
-                "magic": 202500,
-                "comment": f"AlgoDesk/{trade['strategy']}",
-                "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_FOK,
             }
-            log.info(f"[MT5] SL={sl_price:.{digits}f} TP={tp_price:.{digits}f} (ATR={atr})")
-            result = mt5.order_send(request)
-            if result.retcode != mt5.TRADE_RETCODE_DONE:
-                log.error(f"MT5 order failed: {result.comment}")
-                return None
-            log.info(f"MT5 order placed: #{result.order} {symbol} {trade['side']} {volume} lots @ {price}")
-            return {"price": price, "volume": volume, "ticket": result.order}
+            sltp_result = mt5.order_send(sltp_request)
+            if sltp_result and sltp_result.retcode == mt5.TRADE_RETCODE_DONE:
+                log.info(f"[MT5] SL={sl_price:.{digits}f} TP={tp_price:.{digits}f} set on #{ticket}")
+            else:
+                err = sltp_result.comment if sltp_result else mt5.last_error()
+                log.warning(f"[MT5] SL/TP set failed on #{ticket}: {err} — position open without SL/TP")
+
+            return {"price": fill_price, "volume": volume, "ticket": ticket}
         except Exception as e:
             log.error(f"MT5 order error: {e}")
             return None
