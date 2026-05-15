@@ -257,14 +257,15 @@ class TrendPullbackStrategy:
 
     async def generate_signals(self) -> List[Dict]:
         signals = []
+        skip_bars = skip_cool = skip_adx = skip_trend = skip_rsi = 0
         for symbol in self.symbols:
             prices = _price_cache.get(symbol, [])
             highs  = _high_cache.get(symbol, prices)
             lows   = _low_cache.get(symbol, prices)
             if len(prices) < 200:
-                continue
+                skip_bars += 1; continue
             if _on_cooldown(symbol):
-                continue
+                skip_cool += 1; continue
 
             price = await fetch_price(symbol)
             if price is None:
@@ -274,19 +275,20 @@ class TrendPullbackStrategy:
             ema50_val   = ema(prices, 50)
             ema200_val  = ema(prices, 200)
             adx_val     = adx(highs, lows, prices)
-            at          = atr(highs, lows, prices)
             _, _, macd_hist = macd(prices)
 
-            # Require meaningful trend strength
             if adx_val < 22:
-                continue
+                skip_adx += 1; continue
 
             bullish_trend = ema50_val > ema200_val and price > ema200_val
             bearish_trend = ema50_val < ema200_val and price < ema200_val
 
-            # Long: uptrend + RSI pulled back to 38-52 (not exhausted) + MACD turning up
-            if bullish_trend and 38 <= r <= 52 and macd_hist > 0:
-                log.info(f"[{self.name}] LONG {symbol}: adx={adx_val:.1f}, rsi={r:.1f}, ema50>{ema200_val:.5f}")
+            if not bullish_trend and not bearish_trend:
+                skip_trend += 1; continue
+
+            # Long: uptrend + RSI pulled back to 35-55
+            if bullish_trend and 35 <= r <= 55:
+                log.info(f"[{self.name}] LONG {symbol}: adx={adx_val:.1f} rsi={r:.1f} macd_hist={macd_hist:.6f}")
                 _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "long", "strategy": self.name,
@@ -295,9 +297,9 @@ class TrendPullbackStrategy:
                     "indicators": build_indicator_snapshot(symbol),
                 })
 
-            # Short: downtrend + RSI bounced to 48-62 (not exhausted) + MACD turning down
-            elif bearish_trend and 48 <= r <= 62 and macd_hist < 0:
-                log.info(f"[{self.name}] SHORT {symbol}: adx={adx_val:.1f}, rsi={r:.1f}, ema50<{ema200_val:.5f}")
+            # Short: downtrend + RSI bounced to 45-65
+            elif bearish_trend and 45 <= r <= 65:
+                log.info(f"[{self.name}] SHORT {symbol}: adx={adx_val:.1f} rsi={r:.1f} macd_hist={macd_hist:.6f}")
                 _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "short", "strategy": self.name,
@@ -305,6 +307,14 @@ class TrendPullbackStrategy:
                     "z_score": None, "rsi": round(r, 1),
                     "indicators": build_indicator_snapshot(symbol),
                 })
+            else:
+                skip_rsi += 1
+
+        log.info(
+            f"[{self.name}] scan done — signals={len(signals)} "
+            f"| skip_bars={skip_bars} cooldown={skip_cool} adx<22={skip_adx} "
+            f"no_trend={skip_trend} rsi_miss={skip_rsi}"
+        )
         return signals
 
 
@@ -322,14 +332,15 @@ class BollingerMeanReversionStrategy:
 
     async def generate_signals(self) -> List[Dict]:
         signals = []
+        skip_bars = skip_cool = skip_adx = skip_bb = 0
         for symbol in self.symbols:
             prices = _price_cache.get(symbol, [])
             highs  = _high_cache.get(symbol, prices)
             lows   = _low_cache.get(symbol, prices)
             if len(prices) < MIN_BARS:
-                continue
+                skip_bars += 1; continue
             if _on_cooldown(symbol):
-                continue
+                skip_cool += 1; continue
 
             price = await fetch_price(symbol)
             if price is None:
@@ -338,19 +349,15 @@ class BollingerMeanReversionStrategy:
             upper, mid, lower = bollinger(prices)
             r       = rsi(prices)
             adx_val = adx(highs, lows, prices)
-            _, _, macd_hist = macd(prices)
 
-            # Only trade ranges — ADX below 22 means no strong trend
-            if adx_val > 25:
-                continue
-            if upper == lower:
-                continue
+            if adx_val > 25 or upper == lower:
+                skip_adx += 1; continue
 
             bb_pct = (price - lower) / (upper - lower)
 
-            # Long: price in bottom 15% of BB range + RSI oversold + MACD turning up
-            if bb_pct < 0.15 and r < 40 and macd_hist > 0:
-                log.info(f"[{self.name}] LONG {symbol}: bb_pct={bb_pct:.2f}, rsi={r:.1f}, adx={adx_val:.1f}")
+            # Long: bottom 20% of BB + RSI < 45
+            if bb_pct < 0.20 and r < 45:
+                log.info(f"[{self.name}] LONG {symbol}: bb_pct={bb_pct:.2f} rsi={r:.1f} adx={adx_val:.1f}")
                 _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "long", "strategy": self.name,
@@ -359,9 +366,9 @@ class BollingerMeanReversionStrategy:
                     "indicators": build_indicator_snapshot(symbol),
                 })
 
-            # Short: price in top 15% of BB range + RSI overbought + MACD turning down
-            elif bb_pct > 0.85 and r > 60 and macd_hist < 0:
-                log.info(f"[{self.name}] SHORT {symbol}: bb_pct={bb_pct:.2f}, rsi={r:.1f}, adx={adx_val:.1f}")
+            # Short: top 20% of BB + RSI > 55
+            elif bb_pct > 0.80 and r > 55:
+                log.info(f"[{self.name}] SHORT {symbol}: bb_pct={bb_pct:.2f} rsi={r:.1f} adx={adx_val:.1f}")
                 _set_cooldown(symbol)
                 signals.append({
                     "symbol": symbol, "side": "short", "strategy": self.name,
@@ -369,6 +376,13 @@ class BollingerMeanReversionStrategy:
                     "z_score": round(bb_pct, 4), "rsi": round(r, 1),
                     "indicators": build_indicator_snapshot(symbol),
                 })
+            else:
+                skip_bb += 1
+
+        log.info(
+            f"[{self.name}] scan done — signals={len(signals)} "
+            f"| skip_bars={skip_bars} cooldown={skip_cool} adx>25={skip_adx} bb_miss={skip_bb}"
+        )
         return signals
 
 
