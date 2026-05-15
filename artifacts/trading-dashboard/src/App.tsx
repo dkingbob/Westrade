@@ -20,6 +20,7 @@ import Help from "@/pages/help";
 import Presets from "@/pages/presets";
 import Settings from "@/pages/settings";
 import AiActivity from "@/pages/ai-activity";
+import LandingPage from "@/pages/landing";
 import { useTheme } from "@/hooks/use-theme";
 
 const queryClient = new QueryClient({
@@ -31,48 +32,45 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRouter() {
+const Loading = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="text-muted-foreground text-sm font-mono">Loading…</div>
+  </div>
+);
+
+// "/" — shows landing for guests, dashboard for authenticated users
+function SmartHome() {
   const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <Loading />;
+  if (!isAuthenticated) return <LandingPage />;
+  return <Layout><Dashboard /></Layout>;
+}
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">Loading…</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Redirect to="/login" />;
-  }
-
-  return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/trades" component={Trades} />
-        <Route path="/portfolio" component={Portfolio} />
-        <Route path="/analytics" component={Analytics} />
-        <Route path="/strategies" component={Strategies} />
-        <Route path="/risk" component={Risk} />
-        <Route path="/sentiment" component={Sentiment} />
-        <Route path="/notifications" component={Notifications} />
-        <Route path="/connections" component={Connections} />
-        <Route path="/help" component={Help} />
-        <Route path="/presets" component={Presets} />
-        <Route path="/settings" component={Settings} />
-        <Route path="/ai-activity" component={AiActivity} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
-  );
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <Loading />;
+  if (!isAuthenticated) return <Redirect to="/" />;
+  return <Layout><Component /></Layout>;
 }
 
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={SmartHome} />
       <Route path="/login" component={LoginPage} />
-      <Route component={ProtectedRouter} />
+      <Route path="/trades" component={() => <ProtectedRoute component={Trades} />} />
+      <Route path="/portfolio" component={() => <ProtectedRoute component={Portfolio} />} />
+      <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
+      <Route path="/strategies" component={() => <ProtectedRoute component={Strategies} />} />
+      <Route path="/risk" component={() => <ProtectedRoute component={Risk} />} />
+      <Route path="/sentiment" component={() => <ProtectedRoute component={Sentiment} />} />
+      <Route path="/notifications" component={() => <ProtectedRoute component={Notifications} />} />
+      <Route path="/connections" component={() => <ProtectedRoute component={Connections} />} />
+      <Route path="/help" component={() => <ProtectedRoute component={Help} />} />
+      <Route path="/presets" component={() => <ProtectedRoute component={Presets} />} />
+      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/ai-activity" component={() => <ProtectedRoute component={AiActivity} />} />
+      <Route component={NotFound} />
     </Switch>
   );
 }

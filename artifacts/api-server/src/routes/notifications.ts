@@ -114,6 +114,12 @@ export async function sendAlertEmail(subject: string, body: string) {
   // Support both legacy single `email` and new `emails` array
   const recipients: string[] = s.emails?.length ? s.emails : s.email ? [s.email] : [];
   if (recipients.length === 0) return;
+  await sendEmailTo(recipients.join(", "), subject, body);
+}
+
+export async function sendEmailTo(to: string, subject: string, body: string) {
+  const s = await getEmailSettings() as any;
+  if (!s?.smtpHost || !s?.smtpUser || !s?.smtpPass) return;
   try {
     const transporter = nodemailer.createTransport({
       host: s.smtpHost,
@@ -123,7 +129,7 @@ export async function sendAlertEmail(subject: string, body: string) {
     });
     await transporter.sendMail({
       from: `"Westrade" <${s.smtpUser}>`,
-      to: recipients.join(", "),
+      to,
       subject: `[Westrade] ${subject}`,
       text: body,
       html: `<pre style="font-family:monospace">${body}</pre>`,
