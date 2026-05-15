@@ -167,6 +167,15 @@ class TradingEngine:
 
         except Exception as e:
             log.warning(f"[AI] Gemini validation error ({symbol} {side}): {e} — allowing trade")
+            await self.ws.emit_trade({
+                "action": "ai_decision",
+                "symbol": symbol,
+                "side": side,
+                "strategy": strategy,
+                "decision": "YES",
+                "reason": f"AI validation error ({type(e).__name__}) — trade allowed by default.",
+                "price": price,
+            })
             return True
 
     async def connect_mt5(self, account: int, password: str, server: str):

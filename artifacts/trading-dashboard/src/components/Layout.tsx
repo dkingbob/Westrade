@@ -8,7 +8,7 @@ import { UserProfileWidget } from "@/components/UserProfile";
 import {
   LayoutDashboard, BookOpen, PieChart, BarChart2, Cpu, Shield, Brain,
   Activity, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Plug,
-  HelpCircle, Layers, Settings2, Sparkles, Sun, Moon, Menu, X,
+  HelpCircle, Layers, Settings2, Sparkles, Sun, Moon, Menu, X, Bot,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -21,6 +21,7 @@ const navItems = [
   { path: "/risk", label: "Risk Engine", icon: Shield },
   { path: "/sentiment", label: "Sentiment", icon: Brain },
   { path: "/ai-activity", label: "AI Activity", icon: Sparkles },
+  { path: "/auto-tuner", label: "Auto-Tuner", icon: Bot },
 ];
 
 const bottomNavItems = [
