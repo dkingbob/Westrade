@@ -79,9 +79,8 @@ async def main():
     ]
 
     strategies = [
-        MeanReversionStrategy(symbols=_FOREX_POOL, risk_pct=RISK_PCT, z_threshold=2.5),
-        MomentumStrategy(symbols=_FOREX_POOL[:14], risk_pct=RISK_PCT * 1.2),
-        StatArbStrategy(symbols=_FOREX_POOL[6:22], risk_pct=RISK_PCT * 0.8),
+        MomentumStrategy(symbols=_FOREX_POOL, risk_pct=RISK_PCT),
+        MeanReversionStrategy(symbols=_FOREX_POOL, risk_pct=RISK_PCT),
     ]
 
     engine = TradingEngine(
