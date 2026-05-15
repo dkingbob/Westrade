@@ -122,14 +122,14 @@ export default function BrainGymPage() {
 
   const trigger = useMutation({
     mutationFn: (lookback: Lookback) =>
-      fetch("/api/bot/config", {
-        method: "PUT",
+      fetch("/api/analytics/brain-gym/run", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ brainGymLookback: lookback, triggerBrainGym: true }),
+        body: JSON.stringify({ lookback }),
       }).then(r => r.json()),
     onSuccess: () => {
-      setTimeout(() => qc.invalidateQueries({ queryKey: ["brain-gym-latest"] }), 3000);
+      qc.invalidateQueries({ queryKey: ["brain-gym-latest"] });
     },
   });
 
