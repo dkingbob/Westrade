@@ -87,6 +87,7 @@ class TradingEngine {
 
   private async seedStrategies() {
     const existing = await db.select().from(strategiesTable);
+    const existingTypes = new Set(existing.map(r => r.type));
 
     const desired = [
       {
@@ -109,30 +110,22 @@ class TradingEngine {
       },
     ];
 
-    if (existing.length === 0) {
-      await db.insert(strategiesTable).values(desired);
-      logger.info("Seeded 2 new strategies");
-    } else {
-      // Update names/descriptions to reflect the new strategies
-      for (const row of existing) {
-        const match = desired.find(d => d.type === row.type);
-        if (match) {
-          await db.update(strategiesTable).set({
-            name: match.name,
-            description: match.description,
-            symbols: match.symbols,
-            parameters: match.parameters,
-          }).where(eq(strategiesTable.id, row.id));
-        }
-      }
-      // Remove old strategy types that no longer exist
-      for (const row of existing) {
-        if (!desired.find(d => d.type === row.type)) {
-          await db.update(strategiesTable).set({ active: false, name: row.name + " (retired)" }).where(eq(strategiesTable.id, row.id));
-        }
-      }
-      logger.info("Updated existing strategies to new names");
+    // Insert any new strategy types that don't exist yet
+    const toInsert = desired.filter(d => !existingTypes.has(d.type));
+    if (toInsert.length > 0) {
+      await db.insert(strategiesTable).values(toInsert);
+      logger.info(`Inserted ${toInsert.length} new strategies`);
     }
+
+    // Delete old strategy types that are no longer used
+    const keepTypes = new Set(desired.map(d => d.type));
+    for (const row of existing) {
+      if (!keepTypes.has(row.type)) {
+        await db.delete(strategiesTable).where(eq(strategiesTable.id, row.id));
+      }
+    }
+
+    logger.info("Strategies synced");
   }
 
   private async refreshEquityFromBot() {
