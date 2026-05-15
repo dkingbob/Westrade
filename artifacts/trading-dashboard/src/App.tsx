@@ -38,32 +38,39 @@ const Loading = () => (
   </div>
 );
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+// Layout mounts once here — only the inner page swaps on navigation
+function AppShell() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <Loading />;
   if (!isAuthenticated) return <Redirect to="/login" />;
-  return <Layout><Component /></Layout>;
+  return (
+    <Layout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/trades" component={Trades} />
+        <Route path="/portfolio" component={Portfolio} />
+        <Route path="/analytics" component={Analytics} />
+        <Route path="/strategies" component={Strategies} />
+        <Route path="/risk" component={Risk} />
+        <Route path="/sentiment" component={Sentiment} />
+        <Route path="/notifications" component={Notifications} />
+        <Route path="/connections" component={Connections} />
+        <Route path="/help" component={Help} />
+        <Route path="/presets" component={Presets} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/ai-activity" component={AiActivity} />
+        <Route component={NotFound} />
+      </Switch>
+    </Layout>
+  );
 }
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/login" component={LoginPage} />
-      <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/trades" component={() => <ProtectedRoute component={Trades} />} />
-      <Route path="/portfolio" component={() => <ProtectedRoute component={Portfolio} />} />
-      <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
-      <Route path="/strategies" component={() => <ProtectedRoute component={Strategies} />} />
-      <Route path="/risk" component={() => <ProtectedRoute component={Risk} />} />
-      <Route path="/sentiment" component={() => <ProtectedRoute component={Sentiment} />} />
-      <Route path="/notifications" component={() => <ProtectedRoute component={Notifications} />} />
-      <Route path="/connections" component={() => <ProtectedRoute component={Connections} />} />
-      <Route path="/help" component={() => <ProtectedRoute component={Help} />} />
-      <Route path="/presets" component={() => <ProtectedRoute component={Presets} />} />
-      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-      <Route path="/ai-activity" component={() => <ProtectedRoute component={AiActivity} />} />
-      <Route component={NotFound} />
+      <Route component={AppShell} />
     </Switch>
   );
 }
