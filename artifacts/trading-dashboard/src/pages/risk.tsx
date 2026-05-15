@@ -83,24 +83,31 @@ function SettingField({
 }: {
   label: string; value: number; onChange: (v: number) => void; step?: number; suffix?: string;
 }) {
-  const displayVal = suffix === "%" ? parseFloat((value * 100).toFixed(2)) : value;
   const maxVal = suffix === "%" ? 50 : undefined;
+  const [raw, setRaw] = useState("");
+  const displayVal = suffix === "%" ? parseFloat((value * 100).toFixed(2)) : value;
+
   return (
     <div className="space-y-0.5">
       <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
       <div className="flex items-center gap-1">
-        <Input
+        <input
           type="number"
-          value={displayVal}
+          value={raw !== "" ? raw : displayVal}
           step={step}
           min={0}
           max={maxVal}
-          className="h-7 text-xs font-mono bg-background border-border"
-          onChange={(e) => {
-            const raw = parseFloat(e.target.value);
-            if (isNaN(raw)) return;
-            const capped = maxVal !== undefined ? Math.min(raw, maxVal) : raw;
+          className="h-7 text-xs font-mono bg-background border border-border rounded px-2 w-full"
+          onChange={(e) => setRaw(e.target.value)}
+          onBlur={(e) => {
+            const n = parseFloat(e.target.value);
+            setRaw("");
+            if (isNaN(n)) return;
+            const capped = maxVal !== undefined ? Math.min(n, maxVal) : n;
             onChange(suffix === "%" ? capped / 100 : capped);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
           data-testid={`risk-field-${label.toLowerCase().replace(/\s/g, "-")}`}
         />

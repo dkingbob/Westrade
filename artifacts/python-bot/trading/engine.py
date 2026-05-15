@@ -62,6 +62,9 @@ class TradingEngine:
         self._last_mt5_positions: list = []  # tracks previous sync so we can detect closures
         self._symbol_cooldowns: dict = {}  # symbol -> datetime of last close, prevents instant re-entry
         self.reentry_cooldown_minutes: float = 30.0
+        self.block_on_ai_error: bool = True   # True = reject trade when all AI providers fail
+        self._new_trades_this_tick: int = 0   # cap new positions per scan cycle
+        self.max_new_trades_per_tick: int = 2  # never open more than 2 positions per 60s scan
 
         # Push sentiment API status into ws_client so heartbeat reports it
         self.ws.sentiment_api_status = self.sentiment.get_api_status()
@@ -251,10 +254,15 @@ class TradingEngine:
             reason = f"Approved by {', '.join(yes_votes)}"
             self.ai_validated += 1
         else:
-            # All errored — allow with note
-            decision = "YES"
-            reason = "AI services unavailable — trade allowed by default"
-            self.ai_validated += 1
+            # All AI providers failed — block by default (safer than allowing blind trades)
+            if self.block_on_ai_error:
+                decision = "NO"
+                reason = "AI unavailable — trade blocked (all providers failed)"
+                self.ai_rejected += 1
+            else:
+                decision = "YES"
+                reason = "AI services unavailable — trade allowed by default"
+                self.ai_validated += 1
 
         await self.ws.emit_trade({
             "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
@@ -637,6 +645,10 @@ class TradingEngine:
 
         if self.kill_switch_active or not self.running:
             return
+        # Never open more than max_new_trades_per_tick new positions in a single scan cycle
+        if self._new_trades_this_tick >= self.max_new_trades_per_tick:
+            await self._emit_log("risk", f"{symbol} skipped — already opened {self.max_new_trades_per_tick} positions this scan")
+            return
         if self.in_warning_zone:
             await self._emit_log("risk", f"{symbol} skipped — near loss limit (warning zone active)", "warn")
             return
@@ -693,6 +705,7 @@ class TradingEngine:
         elif symbol in self.open_positions:
             return
 
+        self._new_trades_this_tick += 1
         sentiment_score = self.sentiment.get_score()
         sentiment_multiplier = max(0.5, min(1.5, sentiment_score / 50.0))
         position_size = self.equity * signal.get("risk_pct", 0.01) * sentiment_multiplier
@@ -853,6 +866,7 @@ class TradingEngine:
                     f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}")
 
             can_trade = not self.kill_switch_active and await self._check_interval()
+            self._new_trades_this_tick = 0
             if can_trade:
                 for strategy in self.strategies:
                     try:

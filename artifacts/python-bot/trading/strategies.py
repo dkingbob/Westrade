@@ -213,7 +213,7 @@ def build_indicator_snapshot(symbol: str) -> dict:
 class MeanReversionStrategy:
     name = "mean_reversion"
 
-    def __init__(self, symbols: List[str], risk_pct: float = 0.01, z_threshold: float = 1.8):
+    def __init__(self, symbols: List[str], risk_pct: float = 0.05, z_threshold: float = 1.8):
         self.symbols = symbols
         self.risk_pct = risk_pct
         self.z_threshold = z_threshold
@@ -265,7 +265,7 @@ class MeanReversionStrategy:
 class MomentumStrategy:
     name = "momentum"
 
-    def __init__(self, symbols: List[str], risk_pct: float = 0.012):
+    def __init__(self, symbols: List[str], risk_pct: float = 0.05):
         self.symbols = symbols
         self.risk_pct = risk_pct
 
@@ -314,7 +314,7 @@ class MomentumStrategy:
 class StatArbStrategy:
     name = "statistical_arb"
 
-    def __init__(self, symbols: List[str], risk_pct: float = 0.008):
+    def __init__(self, symbols: List[str], risk_pct: float = 0.05):
         self.symbols = symbols
         self.risk_pct = risk_pct
 
