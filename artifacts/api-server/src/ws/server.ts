@@ -117,6 +117,8 @@ class WsServer {
           ? String(trade.sentiment_multiplier)
           : null,
         zScore: trade.z_score ? String(trade.z_score) : null,
+        session: trade.session ? String(trade.session) : null,
+        entryIndicators: trade.entry_indicators ?? null,
       }).returning();
       logger.info({ id: saved.id, symbol: saved.symbol }, "Bot trade saved to DB");
       this.broadcast("trade_opened", { trade: saved });

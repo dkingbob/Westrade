@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { tradesTable } from "@workspace/db";
+import { tradesTable, analyticsReportsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { GetTimeBreakdownQueryParams } from "@workspace/api-zod";
 
@@ -217,6 +217,44 @@ router.get("/analytics/strategy-breakdown", async (req, res): Promise<void> => {
   });
 
   res.json(result);
+});
+
+// ── Brain Gym endpoints ───────────────────────────────────────────────────────
+
+router.post("/analytics/brain-gym/report", async (req, res): Promise<void> => {
+  const { lookback, report, tradeCount } = req.body ?? {};
+  if (!lookback || !report) {
+    res.status(400).json({ error: "lookback and report are required" });
+    return;
+  }
+  const [saved] = await db.insert(analyticsReportsTable).values({
+    lookback: String(lookback),
+    report,
+    tradeCount: String(tradeCount ?? "0"),
+  }).returning();
+  res.status(201).json(saved);
+});
+
+router.get("/analytics/brain-gym/reports", async (req, res): Promise<void> => {
+  const reports = await db
+    .select()
+    .from(analyticsReportsTable)
+    .orderBy(desc(analyticsReportsTable.createdAt))
+    .limit(20);
+  res.json(reports);
+});
+
+router.get("/analytics/brain-gym/latest", async (req, res): Promise<void> => {
+  const [latest] = await db
+    .select()
+    .from(analyticsReportsTable)
+    .orderBy(desc(analyticsReportsTable.createdAt))
+    .limit(1);
+  if (!latest) {
+    res.status(404).json({ error: "No reports yet" });
+    return;
+  }
+  res.json(latest);
 });
 
 export default router;

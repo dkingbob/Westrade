@@ -229,12 +229,15 @@ def build_indicator_snapshot(symbol: str) -> dict:
     ema50 = ema(prices, 50) if len(prices) >= 50 else ema20
     at    = atr(highs, lows, prices)
     z     = z_score(prices)
+    adx_val = adx(highs, lows, prices)
     last  = prices[-1]
     last10 = [round(p, 5) for p in prices[-10:]]
+    bb_pct = round((last - lower) / (upper - lower) * 100, 1) if upper != lower else 50.0
     return {
         "price": round(last, 5),
         "last_10_h1_closes": last10,
         "rsi_14": round(r, 2),
+        "adx": round(adx_val, 2),
         "macd_line": round(macd_line, 6),
         "macd_signal": round(sig_line, 6),
         "macd_hist": round(hist, 6),
@@ -244,7 +247,7 @@ def build_indicator_snapshot(symbol: str) -> dict:
         "bb_upper": round(upper, 5),
         "bb_mid": round(mid, 5),
         "bb_lower": round(lower, 5),
-        "bb_position_pct": round((last - lower) / (upper - lower) * 100, 1) if upper != lower else 50.0,
+        "bb_position_pct": bb_pct,
         "atr": round(at, 6),
         "z_score": round(z, 3),
     }

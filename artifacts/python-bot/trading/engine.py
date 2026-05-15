@@ -11,11 +11,22 @@ from typing import Optional
 
 import trading.strategies as strategies_module
 from trading.auto_tuner import AutoTuner
+from trading.brain_gym import BrainGym
 
 log = logging.getLogger("algodesk.engine")
 
 TICK_INTERVAL = 2  # seconds between strategy evaluations
 CONFIG_POLL_INTERVAL = 60  # seconds between config polls
+
+
+def _detect_session(hour: int) -> str:
+    if 13 <= hour < 17:
+        return "ny_london_overlap"
+    if 7 <= hour < 13:
+        return "london"
+    if 13 <= hour < 22:
+        return "ny"
+    return "asian"
 
 
 class TradingEngine:
@@ -66,6 +77,7 @@ class TradingEngine:
         self.ai_enabled: bool = True          # False = skip AI entirely, auto-approve all signals
         self._new_trades_this_tick: int = 0   # cap new positions per scan cycle
         self.max_new_trades_per_tick: int = 2  # never open more than 2 positions per 60s scan
+        self._brain_gym_ran_this_weekend: bool = False  # run once per weekend downtime window
 
         # Push sentiment API status into ws_client so heartbeat reports it
         self.ws.sentiment_api_status = self.sentiment.get_api_status()
@@ -445,6 +457,9 @@ class TradingEngine:
                 self.open_positions.clear()
                 log.info(f"Mode switched to {self.mode.upper()} — open_positions cleared")
                 await self._emit_log("scan", f"Switched to {self.mode.upper()} mode — {'simulated fills, no real MT5 orders' if self.mode == 'paper' else 'real MT5 orders'}")
+        if config.get("triggerBrainGym"):
+            lookback = config.get("brainGymLookback", "7d")
+            asyncio.create_task(self._run_brain_gym(lookback=lookback))
         log.info("Config updated from dashboard")
 
     async def _check_interval(self) -> bool:
@@ -670,6 +685,22 @@ class TradingEngine:
                 self.in_warning_zone = False
                 log.info("Exited warning zone — new trades allowed again")
 
+    async def _run_brain_gym(self, lookback: str = "7d"):
+        """Run Brain Gym analytics offline. Called automatically on weekends or on-demand."""
+        await self._emit_log("brain_gym", f"Brain Gym starting — lookback={lookback}")
+        try:
+            gym = BrainGym(api_url=self.ws.api_url)
+            report = await gym.run(lookback=lookback, emit_log=self._emit_log)
+            if report:
+                summary = report.get("summary", {})
+                await self._emit_log("brain_gym",
+                    f"Brain Gym done — {report['total_trades']} trades | "
+                    f"win_rate={summary.get('win_rate', 0):.0%} | "
+                    f"PnL=${summary.get('total_pnl', 0):.2f}")
+        except Exception as e:
+            log.error(f"Brain Gym error: {e}")
+            await self._emit_log("brain_gym", f"Brain Gym error: {e}", "warn")
+
     async def _execute_trade(self, signal: dict):
         """Execute a trade signal (paper or live MT5)."""
         symbol = signal["symbol"]
@@ -743,6 +774,7 @@ class TradingEngine:
         if self.max_position_usd is not None:
             position_size = min(position_size, self.max_position_usd)
 
+        now_utc = datetime.utcnow()
         trade = {
             "symbol": symbol,
             "side": signal["side"],
@@ -751,8 +783,17 @@ class TradingEngine:
             "quantity": round(position_size / signal["price"], 4),
             "sentiment_multiplier": round(sentiment_multiplier, 4),
             "z_score": signal.get("z_score"),
-            "atr": signal.get("indicators", {}).get("atr"),
-            "timestamp": datetime.utcnow().isoformat(),
+            "atr": indicators.get("atr"),
+            "session": _detect_session(now_utc.hour),
+            "entry_indicators": {
+                "rsi_14": indicators.get("rsi_14"),
+                "adx": indicators.get("adx"),
+                "bb_position_pct": indicators.get("bb_position_pct"),
+                "macd_hist": indicators.get("macd_hist"),
+                "atr": indicators.get("atr"),
+                "trend": indicators.get("trend"),
+            },
+            "timestamp": now_utc.isoformat(),
             "mode": self.mode,
         }
 
@@ -924,8 +965,15 @@ class TradingEngine:
                         f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}")
 
             if market_closed:
+                # Trigger Brain Gym once per weekend when market closes
+                if not self._brain_gym_ran_this_weekend:
+                    self._brain_gym_ran_this_weekend = True
+                    asyncio.create_task(self._run_brain_gym())
                 await asyncio.sleep(TICK_INTERVAL)
                 continue
+
+            # Market open — reset flag so Brain Gym runs again next weekend
+            self._brain_gym_ran_this_weekend = False
 
             can_trade = not self.kill_switch_active and await self._check_interval()
             self._new_trades_this_tick = 0

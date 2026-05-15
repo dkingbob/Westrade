@@ -22,6 +22,7 @@ import Settings from "@/pages/settings";
 import AiActivity from "@/pages/ai-activity";
 import AutoTuner from "@/pages/auto-tuner";
 import BotFeed from "@/pages/bot-feed";
+import BrainGym from "@/pages/brain-gym";
 import LandingPage from "@/pages/landing";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -64,6 +65,7 @@ function AppShell() {
         <Route path="/ai-activity" component={AiActivity} />
         <Route path="/auto-tuner" component={AutoTuner} />
         <Route path="/bot-feed" component={BotFeed} />
+        <Route path="/brain-gym" component={BrainGym} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

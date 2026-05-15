@@ -9,7 +9,7 @@ import { UserProfileWidget } from "@/components/UserProfile";
 import {
   LayoutDashboard, BookOpen, PieChart, BarChart2, Cpu, Shield, Brain,
   Activity, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Plug,
-  HelpCircle, Layers, Settings2, Sparkles, Sun, Moon, Menu, X, Bot, Terminal,
+  HelpCircle, Layers, Settings2, Sparkles, Sun, Moon, Menu, X, Bot, Terminal, Dumbbell,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -24,6 +24,7 @@ const navItems = [
   { path: "/ai-activity", label: "AI Activity", icon: Sparkles },
   { path: "/auto-tuner", label: "Auto-Tuner", icon: Bot },
   { path: "/bot-feed", label: "Bot Feed", icon: Terminal },
+  { path: "/brain-gym", label: "Brain Gym", icon: Dumbbell },
 ];
 
 const bottomNavItems = [

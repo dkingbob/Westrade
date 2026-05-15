@@ -37,6 +37,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     mt5AccountId, mt5Server, maxPositionUsd,
     dailyLossLimitUsd, dailyProfitTargetUsd, lossBufferUsd, winBufferUsd, sessionHours,
     intervalTradeHours, intervalPauseHours, autoTunerEnabled, autoTunerMode, aiEnabled, paperMode,
+    triggerBrainGym, brainGymLookback,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
@@ -97,6 +98,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     aiEnabled: extra.aiEnabled ?? true,
     autoTunerMode: extra.autoTunerMode ?? "guided",
     paperMode: extra.paperMode ?? false,
+    ...(triggerBrainGym && { triggerBrainGym: true, brainGymLookback: brainGymLookback ?? "7d" }),
   });
 
   res.json(updated);
