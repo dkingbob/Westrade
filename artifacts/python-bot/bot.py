@@ -66,8 +66,8 @@ async def main():
     ws_client = BackendWSClient(WS_URL, API_URL, HEARTBEAT_INTERVAL)
 
     strategies = [
-        MeanReversionStrategy(symbols=["EURUSD", "GBPUSD", "AUDUSD"], risk_pct=0.01, lookback=20, z_threshold=2.0),
-        MomentumStrategy(symbols=["USDJPY", "USDCAD", "NZDUSD"], risk_pct=0.012, rsi_period=14),
+        MeanReversionStrategy(symbols=["EURUSD", "GBPUSD", "AUDUSD"], risk_pct=0.01, z_threshold=2.5),
+        MomentumStrategy(symbols=["USDJPY", "USDCAD", "NZDUSD"], risk_pct=0.012),
         StatArbStrategy(symbols=["EURJPY", "GBPJPY", "EURGBP"], risk_pct=0.008),
     ]
 
@@ -87,10 +87,15 @@ async def main():
             server=os.getenv("MT5_SERVER", ""),
         )
 
-    # Start the bot
+    # Start the bot — give WS a few seconds to connect before engine starts ticking
+    # so AI decisions (emit_trade) don't get dropped into a closed socket
+    async def engine_delayed():
+        await asyncio.sleep(5)
+        await engine.run()
+
     await asyncio.gather(
         ws_client.run(),
-        engine.run(),
+        engine_delayed(),
         sentiment.run(),
     )
 
