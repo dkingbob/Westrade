@@ -37,18 +37,16 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
     .where(eq(tradesTable.status, "closed"));
 
   const { current: mt5Equity, initial: initialEquity, botConnected, hasRealEquity } = await getMt5Equity();
-  let totalPnl = 0;
+
+  // totalPnl = realised P&L from closed trades in DB + unrealised from equity delta
+  const closedPnl = closedTrades.reduce((sum, t) => sum + parseFloat((t.pnl as string) ?? "0"), 0);
+  const unrealisedPnl = (botConnected || hasRealEquity) ? (mt5Equity - initialEquity - closedPnl) : 0;
+  let totalPnl = closedPnl + unrealisedPnl;
   let totalExposure = 0;
 
   for (const trade of openTrades) {
-    const currentPrice = getCurrentPrice(trade.symbol);
     const entryPrice = parseFloat(trade.entryPrice as string);
     const qty = parseFloat(trade.quantity as string);
-    const pnl =
-      trade.side === "long"
-        ? (currentPrice - entryPrice) * qty
-        : (entryPrice - currentPrice) * qty;
-    totalPnl += pnl;
     totalExposure += (entryPrice * qty) / initialEquity;
   }
 

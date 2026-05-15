@@ -534,8 +534,27 @@ class TradingEngine:
                         )
                         # Set re-entry cooldown so bot doesn't immediately re-buy
                         self._symbol_cooldowns[sym] = datetime.utcnow()
-                        asyncio.create_task(self._emit_log("risk",
-                            f"{sym} closed (P&L ${pnl:.2f}) — {self.reentry_cooldown_minutes:.0f}m re-entry cooldown started"))
+                        pnl_sign = "+" if pnl >= 0 else ""
+                        asyncio.create_task(self._emit_log(
+                            "trade" if pnl >= 0 else "warn",
+                            f"{sym} closed — P&L {pnl_sign}${pnl:.2f}",
+                            "info" if pnl >= 0 else "warn",
+                        ))
+                        # Save closed trade P&L to DB so dashboard reflects real results
+                        await self.ws.emit_trade({
+                            "action": "closed",
+                            "trade": {
+                                "symbol": sym,
+                                "side": prev.get("side", "long"),
+                                "pnl": pnl,
+                                "ticket": prev.get("ticket"),
+                                "entry_price": prev.get("entry_price", 0),
+                                "exit_price": prev.get("current_price", 0),
+                                "volume": prev.get("volume", 0),
+                                "strategy": prev.get("strategy", "bot"),
+                                "closedAt": datetime.utcnow().isoformat(),
+                            }
+                        })
             self._last_mt5_positions = pos_list
 
             await self.ws.emit_position_update(pos_list)

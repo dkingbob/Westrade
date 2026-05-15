@@ -79,23 +79,28 @@ function RiskScoreMeter({ score }: { score: number }) {
 }
 
 function SettingField({
-  label, value, onChange, step = 0.001, suffix = "%"
+  label, value, onChange, step = 1, suffix = "%"
 }: {
   label: string; value: number; onChange: (v: number) => void; step?: number; suffix?: string;
 }) {
+  const displayVal = suffix === "%" ? parseFloat((value * 100).toFixed(2)) : value;
+  const maxVal = suffix === "%" ? 50 : undefined;
   return (
     <div className="space-y-0.5">
       <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
       <div className="flex items-center gap-1">
         <Input
           type="number"
-          value={suffix === "%" ? fmt(value * 100, 3) : value}
-          step={suffix === "%" ? step * 100 : step}
+          value={displayVal}
+          step={step}
           min={0}
+          max={maxVal}
           className="h-7 text-xs font-mono bg-background border-border"
           onChange={(e) => {
             const raw = parseFloat(e.target.value);
-            onChange(suffix === "%" ? raw / 100 : raw);
+            if (isNaN(raw)) return;
+            const capped = maxVal !== undefined ? Math.min(raw, maxVal) : raw;
+            onChange(suffix === "%" ? capped / 100 : capped);
           }}
           data-testid={`risk-field-${label.toLowerCase().replace(/\s/g, "-")}`}
         />

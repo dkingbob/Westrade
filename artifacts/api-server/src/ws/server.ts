@@ -124,6 +124,25 @@ class WsServer {
         `New Trade: ${saved.side.toUpperCase()} ${saved.symbol}`,
         `A new trade was opened by the bot.\n\nSymbol: ${saved.symbol}\nSide: ${saved.side}\nEntry: $${saved.entryPrice}\nStrategy: ${saved.strategy}\nTime: ${new Date().toUTCString()}`
       ).catch(() => {});
+    } else if (action === "closed" && trade) {
+      // Find open trade in DB by symbol+side and mark it closed with real MT5 P&L
+      const { eq, and } = await import("drizzle-orm");
+      const open = await db.select().from(tradesTable)
+        .where(and(eq(tradesTable.symbol, String(trade.symbol)), eq(tradesTable.status, "open")))
+        .orderBy(tradesTable.createdAt)
+        .limit(1);
+      if (open.length > 0) {
+        await db.update(tradesTable)
+          .set({
+            status: "closed",
+            pnl: String((trade.pnl as number ?? 0).toFixed(2)),
+            exitPrice: String(trade.exit_price ?? "0"),
+            closedAt: new Date(),
+          })
+          .where(eq(tradesTable.id, open[0].id));
+        logger.info({ symbol: trade.symbol, pnl: trade.pnl }, "Closed trade P&L saved to DB");
+        this.broadcast("trade_closed", { symbol: trade.symbol, pnl: trade.pnl });
+      }
     } else if (action === "session_stopped") {
       const reason = data?.reason as string;
       const pnl = data?.pnl as number;
