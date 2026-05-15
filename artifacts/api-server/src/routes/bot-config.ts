@@ -16,7 +16,13 @@ async function getOrCreateConfig() {
 
 router.get("/bot/config", async (req, res): Promise<void> => {
   const cfg = await getOrCreateConfig();
-  res.json(cfg);
+  const extra = (cfg.botExtra as Record<string, unknown>) ?? {};
+  res.json({
+    ...cfg,
+    aiEnabled: extra.aiEnabled ?? true,
+    autoTunerEnabled: extra.autoTunerEnabled ?? false,
+    autoTunerMode: extra.autoTunerMode ?? "guided",
+  });
 });
 
 router.get("/ai-decisions", (req, res): void => {
