@@ -19,6 +19,7 @@ import sys
 import platform
 import logging
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 
 from trading.engine import TradingEngine
@@ -26,7 +27,7 @@ from trading.strategies import MeanReversionStrategy, MomentumStrategy, StatArbS
 from ws_client import BackendWSClient
 from sentiment.analyzer import SentimentAnalyzer
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 logging.basicConfig(
     level=logging.INFO,

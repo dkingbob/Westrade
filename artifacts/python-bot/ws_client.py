@@ -49,7 +49,7 @@ class BackendWSClient:
                     "mt5AccountId": self.mt5_account_id,
                     "mt5Server": self.mt5_server,
                     "mt5Equity": self.mt5_equity,
-                    "aiValidation": bool(os.getenv("GEMINI_API_KEY")),
+                    "aiValidation": bool(os.getenv("GEMINI_API_KEY") or os.getenv("DEEPSEEK") or os.getenv("DEEPSEEK_API_KEY")),
                     "sentimentApis": self.sentiment_api_status,
                 }
                 async with session.post(
@@ -71,7 +71,7 @@ class BackendWSClient:
                         "mt5AccountId": self.mt5_account_id,
                         "mt5Server": self.mt5_server,
                         "mt5Equity": self.mt5_equity,
-                        "aiValidation": bool(os.getenv("GEMINI_API_KEY")),
+                        "aiValidation": bool(os.getenv("GEMINI_API_KEY") or os.getenv("DEEPSEEK") or os.getenv("DEEPSEEK_API_KEY")),
                         "sentimentApis": self.sentiment_api_status,
                     }
                     async with session.post(

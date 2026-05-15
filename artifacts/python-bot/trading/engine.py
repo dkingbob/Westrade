@@ -68,116 +68,138 @@ class TradingEngine:
         self.ws.on_kill_switch(self._handle_kill_switch)
         self.ws.on_config_update(self._handle_config_update)
 
-    async def _ai_validate_trade(self, trade: dict, signal: dict) -> bool:
-        """Ask Gemini AI whether the trade signal is worth executing. Returns True to allow, False to reject."""
-        import os
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            log.warning("[AI] No GEMINI_API_KEY — trade blocked. Set the key to enable AI validation.")
-            await self.ws.emit_trade({
-                "action": "ai_decision",
-                "symbol": trade["symbol"],
-                "side": trade["side"],
-                "strategy": trade["strategy"],
-                "decision": "NO",
-                "reason": "No GEMINI_API_KEY configured — set it to enable AI trade validation.",
-                "price": trade["entry_price"],
-            })
-            return False
-
-        symbol = trade["symbol"]
-        side = trade["side"]
-        strategy = trade["strategy"]
-        price = trade["entry_price"]
-        indicators = signal.get("indicators", {})
-
-        ind_text = ""
-        if indicators:
-            ind_text = (
-                f"- RSI(14): {indicators.get('rsi_14', 'n/a')}\n"
-                f"- MACD line: {indicators.get('macd_line', 'n/a')}, signal: {indicators.get('macd_signal', 'n/a')}, histogram: {indicators.get('macd_hist', 'n/a')}\n"
-                f"- EMA20: {indicators.get('ema_20', 'n/a')}, EMA50: {indicators.get('ema_50', 'n/a')} → trend: {indicators.get('trend', 'n/a')}\n"
-                f"- Bollinger Bands: upper={indicators.get('bb_upper', 'n/a')}, mid={indicators.get('bb_mid', 'n/a')}, lower={indicators.get('bb_lower', 'n/a')}\n"
-                f"- Price position in BB: {indicators.get('bb_position_pct', 'n/a')}% (0=lower band, 100=upper band)\n"
-                f"- ATR(14): {indicators.get('atr', 'n/a')}\n"
-                f"- Z-score(20): {indicators.get('z_score', 'n/a')}\n"
-                f"- Last 10 H1 closes: {indicators.get('last_10_h1_closes', 'n/a')}\n"
-            )
-        else:
-            r = signal.get("rsi")
-            z = signal.get("z_score")
-            ind_text = f"- RSI: {r}\n- Z-score: {z}\n"
-
-        prompt = (
-            f"You are a professional forex trading risk analyst. A trading bot wants to place this order:\n"
-            f"- Symbol: {symbol}\n"
-            f"- Direction: {side} (long=buy, short=sell)\n"
-            f"- Strategy: {strategy}\n"
-            f"- Entry price: {price}\n\n"
-            f"Technical indicators (H1 timeframe):\n{ind_text}\n"
-            f"Based on the indicators above, does this trade have a reasonable probability of success?\n"
-            f"Consider: trend alignment, momentum confirmation, risk/reward, overbought/oversold conditions.\n"
-            f"Respond with only YES or NO followed by one brief sentence explaining why."
-        )
-
+    async def _call_gemini(self, api_key: str, prompt: str) -> str:
+        """Call Gemini 1.5 Flash. Returns 'YES', 'NO', or 'ERROR'."""
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"maxOutputTokens": 120, "temperature": 0.1},
         }
-
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url,
-                    json=body,
-                    timeout=aiohttp.ClientTimeout(total=8),
-                ) as resp:
+                async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                     if resp.status != 200:
-                        log.warning(f"[AI] Gemini API returned {resp.status} — allowing trade")
-                        return True
+                        log.warning(f"[AI/Gemini] HTTP {resp.status}")
+                        return "ERROR"
                     data = await resp.json()
-                    text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-
-            upper = text.upper()
-            if upper.startswith("YES"):
-                decision = "YES"
-                reason = text[3:].lstrip(" .,—-").strip() or "signal looks reasonable"
-                self.ai_validated += 1
-                log.info(f"[AI] {symbol} {side}: {decision} — {reason}")
-                await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": decision, "reason": reason, "price": price})
-                return True
-            elif upper.startswith("NO"):
-                decision = "NO"
-                reason = text[2:].lstrip(" .,—-").strip() or "signal rejected"
-                self.ai_rejected += 1
-                log.info(f"[AI] {symbol} {side}: {decision} — {reason}")
-                await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": decision, "reason": reason, "price": price})
-                return False
-            else:
-                if "YES" in upper:
-                    self.ai_validated += 1
-                    await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": "YES", "reason": text, "price": price})
-                    return True
-                elif "NO" in upper:
-                    self.ai_rejected += 1
-                    await self.ws.emit_trade({"action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy, "decision": "NO", "reason": text, "price": price})
-                    return False
-                log.info(f"[AI] {symbol} {side}: ambiguous response, allowing trade — {text}")
-                return True
-
+                    text = data["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
+                    if text.startswith("YES") or "YES" in text[:10]:
+                        return "YES"
+                    if text.startswith("NO") or "NO" in text[:10]:
+                        return "NO"
+                    return "YES"  # ambiguous → allow
         except Exception as e:
-            log.warning(f"[AI] Gemini validation error ({symbol} {side}): {e} — allowing trade")
+            log.warning(f"[AI/Gemini] Error: {e}")
+            return "ERROR"
+
+    async def _call_deepseek(self, api_key: str, prompt: str) -> str:
+        """Call DeepSeek Chat. Returns 'YES', 'NO', or 'ERROR'."""
+        url = "https://api.deepseek.com/v1/chat/completions"
+        body = {
+            "model": "deepseek-chat",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 120,
+            "temperature": 0.1,
+        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=body, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status != 200:
+                        log.warning(f"[AI/DeepSeek] HTTP {resp.status}")
+                        return "ERROR"
+                    data = await resp.json()
+                    text = data["choices"][0]["message"]["content"].strip().upper()
+                    if text.startswith("YES") or "YES" in text[:10]:
+                        return "YES"
+                    if text.startswith("NO") or "NO" in text[:10]:
+                        return "NO"
+                    return "YES"
+        except Exception as e:
+            log.warning(f"[AI/DeepSeek] Error: {e}")
+            return "ERROR"
+
+    async def _ai_validate_trade(self, trade: dict, signal: dict) -> bool:
+        """Run Gemini and/or DeepSeek in parallel. Trade only if at least one says YES and none say NO."""
+        import os
+        gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        deepseek_key = (os.environ.get("DEEPSEEK") or os.environ.get("DEEPSEEK_API_KEY") or "").strip()
+
+        symbol = trade["symbol"]
+        side = trade["side"]
+        strategy = trade["strategy"]
+        price = trade["entry_price"]
+
+        if not gemini_key and not deepseek_key:
+            log.warning(f"[AI] No AI keys found (GEMINI_API_KEY / DEEPSEEK). Trade blocked.")
             await self.ws.emit_trade({
-                "action": "ai_decision",
-                "symbol": symbol,
-                "side": side,
-                "strategy": strategy,
-                "decision": "YES",
-                "reason": f"AI validation error ({type(e).__name__}) — trade allowed by default.",
-                "price": price,
+                "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
+                "decision": "NO", "price": price,
+                "reason": "No AI keys configured. Add GEMINI_API_KEY or DEEPSEEK to your .env file.",
             })
-            return True
+            return False
+
+        indicators = signal.get("indicators", {})
+        if indicators:
+            ind_text = (
+                f"- RSI(14): {indicators.get('rsi_14', 'n/a')}\n"
+                f"- MACD line: {indicators.get('macd_line', 'n/a')}, signal: {indicators.get('macd_signal', 'n/a')}, histogram: {indicators.get('macd_hist', 'n/a')}\n"
+                f"- EMA20: {indicators.get('ema_20', 'n/a')}, EMA50: {indicators.get('ema_50', 'n/a')} — trend: {indicators.get('trend', 'n/a')}\n"
+                f"- Bollinger Bands: upper={indicators.get('bb_upper', 'n/a')}, mid={indicators.get('bb_mid', 'n/a')}, lower={indicators.get('bb_lower', 'n/a')}\n"
+                f"- Price position in BB: {indicators.get('bb_position_pct', 'n/a')}% (0=lower, 100=upper)\n"
+                f"- ATR(14): {indicators.get('atr', 'n/a')}, Z-score(20): {indicators.get('z_score', 'n/a')}\n"
+                f"- Last 10 H1 closes: {indicators.get('last_10_h1_closes', 'n/a')}\n"
+            )
+        else:
+            ind_text = f"- RSI: {signal.get('rsi', 'n/a')}\n- Z-score: {signal.get('z_score', 'n/a')}\n"
+
+        prompt = (
+            f"You are a professional forex trading risk analyst. A trading bot wants to place this order:\n"
+            f"- Symbol: {symbol}\n- Direction: {side} (long=buy, short=sell)\n"
+            f"- Strategy: {strategy}\n- Entry price: {price}\n\n"
+            f"Technical indicators (H1 timeframe):\n{ind_text}\n"
+            f"Does this trade have a reasonable probability of success?\n"
+            f"Consider: trend alignment, momentum, risk/reward, overbought/oversold conditions.\n"
+            f"Respond with only YES or NO followed by one brief reason."
+        )
+
+        # Run available AIs in parallel
+        tasks = []
+        labels = []
+        if gemini_key:
+            tasks.append(self._call_gemini(gemini_key, prompt))
+            labels.append("Gemini")
+        if deepseek_key:
+            tasks.append(self._call_deepseek(deepseek_key, prompt))
+            labels.append("DeepSeek")
+
+        results = await asyncio.gather(*tasks)
+        log.info(f"[AI] {symbol} {side} — {', '.join(f'{l}:{r}' for l, r in zip(labels, results))}")
+
+        # Tally votes (ignore errors)
+        valid = [(l, r) for l, r in zip(labels, results) if r != "ERROR"]
+        no_votes = [l for l, r in valid if r == "NO"]
+        yes_votes = [l for l, r in valid if r == "YES"]
+
+        if no_votes:
+            decision = "NO"
+            reason = f"Rejected by {', '.join(no_votes)}"
+            self.ai_rejected += 1
+        elif yes_votes:
+            decision = "YES"
+            reason = f"Approved by {', '.join(yes_votes)}"
+            self.ai_validated += 1
+        else:
+            # All errored — allow with note
+            decision = "YES"
+            reason = "AI services unavailable — trade allowed by default"
+            self.ai_validated += 1
+
+        await self.ws.emit_trade({
+            "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
+            "decision": decision, "reason": reason, "price": price,
+        })
+        return decision == "YES"
 
     async def connect_mt5(self, account: int, password: str, server: str):
         """Initialize MT5 connection (Windows only, live mode)."""
