@@ -108,7 +108,7 @@ export default function LoginPage() {
       if (!ok) {
         toast({ title: "Error", description: data.error ?? "Invalid credentials", variant: "destructive" });
       } else {
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }
     } catch {
       toast({ title: "Error", description: "Network error", variant: "destructive" });
@@ -201,7 +201,7 @@ export default function LoginPage() {
       if (!ok) {
         toast({ title: "Error", description: data.error ?? "Invalid code", variant: "destructive" });
       } else {
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }
     } catch {
       toast({ title: "Error", description: "Network error", variant: "destructive" });

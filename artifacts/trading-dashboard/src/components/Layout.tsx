@@ -13,7 +13,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/trades", label: "Trade Journal", icon: BookOpen },
   { path: "/portfolio", label: "Portfolio", icon: PieChart },
   { path: "/analytics", label: "Analytics", icon: BarChart2 },
@@ -60,7 +60,7 @@ function NavItem({ path, label, icon: Icon, collapsed, location, onNavigate }: {
   path: string; label: string; icon: React.ElementType;
   collapsed: boolean; location: string; onNavigate?: () => void;
 }) {
-  const active = path === "/" ? location === "/" : location.startsWith(path);
+  const active = location === path || (path !== "/" && location.startsWith(path));
   const inner = (
     <Link href={path}>
       <div

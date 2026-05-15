@@ -38,12 +38,12 @@ const Loading = () => (
   </div>
 );
 
-// "/" — shows landing for guests, dashboard for authenticated users
+// "/" — always landing page; redirect authenticated users to /dashboard
 function SmartHome() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <Loading />;
-  if (!isAuthenticated) return <LandingPage />;
-  return <Layout><Dashboard /></Layout>;
+  if (isAuthenticated) return <Redirect to="/dashboard" />;
+  return <LandingPage />;
 }
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -58,6 +58,7 @@ function Router() {
     <Switch>
       <Route path="/" component={SmartHome} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/trades" component={() => <ProtectedRoute component={Trades} />} />
       <Route path="/portfolio" component={() => <ProtectedRoute component={Portfolio} />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
