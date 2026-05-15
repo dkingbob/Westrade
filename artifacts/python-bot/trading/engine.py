@@ -48,6 +48,13 @@ class TradingEngine:
         self.ai_validated = 0
         self.ai_rejected = 0
 
+        # Interval trading: trade for N hours, pause for M hours, repeat
+        # Both None means continuous trading (no interval)
+        self.interval_trade_hours: Optional[float] = None
+        self.interval_pause_hours: Optional[float] = None
+        self._interval_window_start: Optional[datetime] = None
+        self._interval_paused: bool = False
+
         # Push sentiment API status into ws_client so heartbeat reports it
         self.ws.sentiment_api_status = self.sentiment.get_api_status()
 
@@ -214,7 +221,11 @@ class TradingEngine:
                             self.win_buffer_usd = float(extra["winBufferUsd"])
                         if extra.get("sessionHours") is not None:
                             self.session_hours = float(extra["sessionHours"])
-                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}")
+                        if extra.get("intervalTradeHours") is not None:
+                            self.interval_trade_hours = float(extra["intervalTradeHours"])
+                        if extra.get("intervalPauseHours") is not None:
+                            self.interval_pause_hours = float(extra["intervalPauseHours"])
+                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}, interval={self.interval_trade_hours}h/{self.interval_pause_hours}h")
         except Exception as e:
             log.warning(f"Could not load initial config: {e}")
 
@@ -279,7 +290,46 @@ class TradingEngine:
         if "sessionHours" in config:
             self.session_hours = config["sessionHours"]
             self.session_start_time = datetime.utcnow()  # reset session timer
+        if "intervalTradeHours" in config:
+            self.interval_trade_hours = float(config["intervalTradeHours"]) if config["intervalTradeHours"] else None
+            self._interval_window_start = datetime.utcnow()
+            self._interval_paused = False
+        if "intervalPauseHours" in config:
+            self.interval_pause_hours = float(config["intervalPauseHours"]) if config["intervalPauseHours"] else None
         log.info("Config updated from dashboard")
+
+    async def _check_interval(self) -> bool:
+        """Returns True if the bot is allowed to trade right now based on interval schedule."""
+        if self.interval_trade_hours is None or self.interval_pause_hours is None:
+            return True  # no interval configured — always trade
+
+        if self._interval_window_start is None:
+            self._interval_window_start = datetime.utcnow()
+
+        elapsed = (datetime.utcnow() - self._interval_window_start).total_seconds() / 3600
+
+        if not self._interval_paused:
+            if elapsed >= self.interval_trade_hours:
+                self._interval_paused = True
+                self._interval_window_start = datetime.utcnow()
+                log.info(f"[INTERVAL] Trading window ended ({self.interval_trade_hours}h) — pausing for {self.interval_pause_hours}h")
+                await self.ws.emit_trade({
+                    "action": "interval_update",
+                    "state": "paused",
+                    "resumesInHours": self.interval_pause_hours,
+                })
+            return True  # currently in trade window
+        else:
+            if elapsed >= self.interval_pause_hours:
+                self._interval_paused = False
+                self._interval_window_start = datetime.utcnow()
+                log.info(f"[INTERVAL] Pause ended — resuming trading for {self.interval_trade_hours}h")
+                await self.ws.emit_trade({
+                    "action": "interval_update",
+                    "state": "trading",
+                    "windowHours": self.interval_trade_hours,
+                })
+            return False  # currently in pause window
 
     async def _close_all_mt5_positions(self):
         """Close all open MT5 positions (live mode kill switch)."""
@@ -556,7 +606,8 @@ class TradingEngine:
         while self.running:
             self.tick_count += 1
 
-            if not self.kill_switch_active:
+            can_trade = not self.kill_switch_active and await self._check_interval()
+            if can_trade:
                 for strategy in self.strategies:
                     try:
                         signals = await strategy.generate_signals()

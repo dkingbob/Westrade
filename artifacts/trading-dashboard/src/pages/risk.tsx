@@ -152,6 +152,8 @@ export default function Risk() {
   const [lossBufferUsd, setLossBufferUsd] = useState<number | null>(null);
   const [winBufferUsd, setWinBufferUsd] = useState<number | null>(null);
   const [sessionHours, setSessionHours] = useState<number | null>(null);
+  const [intervalTradeHours, setIntervalTradeHours] = useState<number | null>(null);
+  const [intervalPauseHours, setIntervalPauseHours] = useState<number | null>(null);
 
   const sessionInitialized = useRef(false);
   useEffect(() => {
@@ -164,6 +166,8 @@ export default function Risk() {
     if (extra.lossBufferUsd != null) setLossBufferUsd(Number(extra.lossBufferUsd));
     if (extra.winBufferUsd != null) setWinBufferUsd(Number(extra.winBufferUsd));
     if (extra.sessionHours != null) setSessionHours(Number(extra.sessionHours));
+    if (extra.intervalTradeHours != null) setIntervalTradeHours(Number(extra.intervalTradeHours));
+    if (extra.intervalPauseHours != null) setIntervalPauseHours(Number(extra.intervalPauseHours));
   }, [botConfig]);
 
   const eff = {
@@ -186,6 +190,8 @@ export default function Risk() {
     if (lossBufferUsd !== null) extra.lossBufferUsd = lossBufferUsd <= 0 ? null : lossBufferUsd;
     if (winBufferUsd !== null) extra.winBufferUsd = winBufferUsd <= 0 ? null : winBufferUsd;
     if (sessionHours !== null) extra.sessionHours = sessionHours <= 0 ? 24 : sessionHours;
+    if (intervalTradeHours !== null) extra.intervalTradeHours = intervalTradeHours <= 0 ? null : intervalTradeHours;
+    if (intervalPauseHours !== null) extra.intervalPauseHours = intervalPauseHours <= 0 ? null : intervalPauseHours;
     if (Object.keys(extra).length > 0) {
       await fetch("/api/bot/config", {
         method: "PUT",
@@ -426,6 +432,26 @@ export default function Risk() {
                 className="h-7 text-xs font-mono bg-background border-border"
                 onChange={(e) => setSessionHours(e.target.value === "" ? null : Math.min(168, Math.max(1, parseFloat(e.target.value))))} />
               <p className="text-[9px] font-mono text-muted-foreground">Session resets after this many hours (max 168 = 1 week)</p>
+            </div>
+            <div className="col-span-2 border-t border-border pt-3">
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Interval Trading (optional)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Trade Window (hours)</label>
+                  <Input type="number" value={intervalTradeHours ?? ""} step={0.5} min={0} placeholder="e.g. 3 (disabled if empty)"
+                    className="h-7 text-xs font-mono bg-background border-border"
+                    onChange={(e) => setIntervalTradeHours(e.target.value === "" ? null : Math.max(0.5, parseFloat(e.target.value)))} />
+                  <p className="text-[9px] font-mono text-muted-foreground">How long the bot actively trades</p>
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Pause Window (hours)</label>
+                  <Input type="number" value={intervalPauseHours ?? ""} step={0.5} min={0} placeholder="e.g. 1 (disabled if empty)"
+                    className="h-7 text-xs font-mono bg-background border-border"
+                    onChange={(e) => setIntervalPauseHours(e.target.value === "" ? null : Math.max(0.5, parseFloat(e.target.value)))} />
+                  <p className="text-[9px] font-mono text-muted-foreground">How long the bot pauses before next window</p>
+                </div>
+              </div>
+              <p className="text-[9px] font-mono text-muted-foreground mt-1">Example: 3h trade / 1h pause → bot trades 3h, rests 1h, repeats. Leave both empty to trade continuously.</p>
             </div>
           </div>
           <Button

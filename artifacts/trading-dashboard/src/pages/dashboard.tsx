@@ -273,6 +273,22 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Session summary bar */}
+      {positions && positions.length > 0 && (() => {
+        const totalNotional = positions.reduce((sum: number, p: any) => sum + (Number(p.entry_price ?? 0) * Number(p.quantity ?? 0)), 0);
+        const totalPnl = positions.reduce((sum: number, p: any) => sum + Number(p.pnl ?? 0), 0);
+        const pnlUp = totalPnl >= 0;
+        return (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-3 py-2 rounded border border-border bg-card text-[10px] font-mono text-muted-foreground">
+            <span className="font-semibold text-foreground uppercase tracking-wider">Open Exposure</span>
+            <span>Positions: <span className="text-foreground">{positions.length}</span></span>
+            <span>Total Notional: <span className="text-foreground">${totalNotional.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span></span>
+            <span>Unrealised P&L: <span className={pnlUp ? "text-green-400" : "text-red-400"}>{pnlUp ? "+" : ""}{fmtUsd(totalPnl)}</span></span>
+            <span>Avg per trade: <span className="text-foreground">{fmtUsd(totalPnl / positions.length)}</span></span>
+          </div>
+        );
+      })()}
+
       {/* Open Positions & Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Open Positions */}
