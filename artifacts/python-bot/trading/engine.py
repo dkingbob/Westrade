@@ -69,8 +69,8 @@ class TradingEngine:
         self.ws.on_config_update(self._handle_config_update)
 
     async def _call_gemini(self, api_key: str, prompt: str) -> str:
-        """Call Gemini 1.5 Flash. Returns 'YES', 'NO', or 'ERROR'."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        """Call Gemini 2.0 Flash. Returns 'YES', 'NO', or 'ERROR'."""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"maxOutputTokens": 120, "temperature": 0.1},
