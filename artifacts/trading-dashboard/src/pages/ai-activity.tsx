@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Brain, CheckCircle2, XCircle, Trash2, Cpu, Zap, ToggleLeft, ToggleRight } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useGetBotConfig, getGetBotConfigQueryKey } from "@workspace/api-client-react";
 
 interface AiDecision {
   id: string;
@@ -103,7 +102,12 @@ export default function AiActivity() {
   const items = useAiDecisions();
   const approved = items.filter(d => d.decision === "YES").length;
   const rejected = items.filter(d => d.decision === "NO").length;
-  const { data: cfg } = useGetBotConfig({ query: { queryKey: getGetBotConfigQueryKey() } });
+
+  const { data: cfg } = useQuery({
+    queryKey: ["bot-config-ai"],
+    queryFn: () => fetch("/api/bot/config", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 10000,
+  });
   const aiEnabled = (cfg as any)?.aiEnabled ?? true;
 
   const toggleAi = useMutation({
@@ -113,7 +117,7 @@ export default function AiActivity() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ aiEnabled: enabled }),
       }).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: getGetBotConfigQueryKey() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bot-config-ai"] }),
   });
 
   return (
