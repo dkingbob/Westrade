@@ -224,4 +224,66 @@ router.delete("/trades/reset", async (req, res): Promise<void> => {
   res.json({ success: true });
 });
 
+// Bulk upsert of real MT5 closed trade history sent by the bot on startup.
+// Skips trades already present by mt5TicketId. Also purges obviously-wrong
+// paper test data (|pnl| > $50,000 with no mt5TicketId).
+router.post("/trades/sync-history", async (req, res): Promise<void> => {
+  const incoming: Array<{
+    mt5_ticket_id: string;
+    symbol: string;
+    side: string;
+    strategy: string;
+    entry_price: string;
+    exit_price: string;
+    quantity: string;
+    pnl: string;
+    fees: string;
+    opened_at: string;
+    closed_at: string;
+  }> = req.body?.trades ?? [];
+
+  if (!incoming.length) {
+    res.json({ inserted: 0, purged: 0 });
+    return;
+  }
+
+  // Remove existing bad paper trades (no mt5TicketId and impossible PnL)
+  const allTrades = await db.select({ id: tradesTable.id, pnl: tradesTable.pnl, mt5TicketId: tradesTable.mt5TicketId }).from(tradesTable);
+  const badIds = allTrades
+    .filter(t => !t.mt5TicketId && Math.abs(parseFloat((t.pnl as string) ?? "0")) > 50_000)
+    .map(t => t.id);
+  if (badIds.length) {
+    for (const id of badIds) await db.delete(tradesTable).where(eq(tradesTable.id, id));
+  }
+
+  // Find which ticket IDs are already in the DB
+  const existing = await db.select({ mt5TicketId: tradesTable.mt5TicketId }).from(tradesTable);
+  const existingTickets = new Set(existing.map(r => r.mt5TicketId).filter(Boolean));
+
+  const toInsert = incoming.filter(t => !existingTickets.has(t.mt5_ticket_id));
+  if (toInsert.length) {
+    await db.insert(tradesTable).values(
+      toInsert.map(t => ({
+        symbol: t.symbol,
+        side: t.side as "long" | "short",
+        status: "closed" as const,
+        strategy: t.strategy || "mt5",
+        orderType: "market" as const,
+        entryPrice: t.entry_price,
+        exitPrice: t.exit_price,
+        quantity: t.quantity,
+        pnl: t.pnl,
+        fees: t.fees || "0",
+        slippage: "0",
+        tags: ["mt5", "history"],
+        mt5TicketId: t.mt5_ticket_id,
+        openedAt: new Date(t.opened_at),
+        closedAt: new Date(t.closed_at),
+      }))
+    );
+  }
+
+  res.json({ inserted: toInsert.length, purged: badIds.length, total: incoming.length });
+});
+
 export default router;

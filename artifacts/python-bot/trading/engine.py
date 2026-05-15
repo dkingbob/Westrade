@@ -6,7 +6,7 @@ import asyncio
 import logging
 import json
 import aiohttp
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import trading.strategies as strategies_module
@@ -922,6 +922,71 @@ class TradingEngine:
             log.error(f"MT5 order error: {e}")
             return None
 
+    async def _sync_mt5_history(self, days: int = 90):
+        """Sync last N days of real MT5 closed positions into the journal DB."""
+        if self._mt5 is None or self.mode != "live":
+            return
+        mt5 = self._mt5
+        try:
+            from datetime import timezone
+            date_from = datetime.utcnow() - timedelta(days=days)
+            deals = mt5.history_deals_get(date_from, datetime.utcnow())
+            if not deals:
+                log.info("MT5 history sync: no deals found")
+                return
+
+            # Group deals by position_id to pair entries with exits
+            by_position: dict = {}
+            for d in deals:
+                if d.type not in (0, 1):   # 0=BUY 1=SELL — skip deposits, balance ops
+                    continue
+                by_position.setdefault(d.position_id, []).append(d)
+
+            trades = []
+            for pid, deal_list in by_position.items():
+                entries = [d for d in deal_list if d.entry == 0]
+                exits   = [d for d in deal_list if d.entry == 1]
+                if not entries or not exits:
+                    continue
+                entry      = entries[0]
+                exit_deal  = exits[-1]
+                pnl        = round(sum(d.profit + d.swap + d.commission for d in exits), 2)
+                fees       = round(abs(sum(d.commission for d in exits)), 2)
+                strategy   = (entry.comment or "").replace("AlgoDesk/", "").strip() or "mt5"
+                trades.append({
+                    "mt5_ticket_id": str(pid),
+                    "symbol":        entry.symbol,
+                    "side":          "long" if entry.type == 0 else "short",
+                    "strategy":      strategy,
+                    "entry_price":   str(entry.price),
+                    "exit_price":    str(exit_deal.price),
+                    "quantity":      str(entry.volume),
+                    "pnl":           str(pnl),
+                    "fees":          str(fees),
+                    "opened_at":     datetime.utcfromtimestamp(entry.time).isoformat() + "Z",
+                    "closed_at":     datetime.utcfromtimestamp(exit_deal.time).isoformat() + "Z",
+                })
+
+            if not trades:
+                return
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.ws.api_url}/trades/sync-history",
+                    json={"trades": trades},
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as resp:
+                    result = await resp.json()
+                    inserted = result.get("inserted", 0)
+                    purged   = result.get("purged", 0)
+                    log.info(f"MT5 history sync: {inserted}/{len(trades)} new trades added, {purged} bad paper trades purged")
+                    if inserted > 0 or purged > 0:
+                        await self._emit_log("scan",
+                            f"MT5 history synced — {inserted} trades added to journal"
+                            + (f", {purged} bad paper trades cleaned up" if purged else ""))
+        except Exception as e:
+            log.error(f"MT5 history sync error: {e}")
+
     async def run(self):
         """Main engine loop — ticks strategies every TICK_INTERVAL seconds."""
         self.running = True
@@ -933,6 +998,9 @@ class TradingEngine:
 
         # Start config polling in background
         asyncio.create_task(self._poll_config())
+
+        # Sync real MT5 closed trade history into the journal DB on startup
+        asyncio.create_task(self._sync_mt5_history())
 
         # Refresh H1 bars once per hour (3600 / TICK_INTERVAL ticks)
         h1_refresh_interval = max(1, 3600 // TICK_INTERVAL)

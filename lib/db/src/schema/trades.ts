@@ -35,6 +35,7 @@ export const tradesTable = pgTable("trades", {
   sentimentMultiplier: numeric("sentiment_multiplier", { precision: 10, scale: 6 }),
   session: text("session"),                 // asian | london | ny | off
   entryIndicators: jsonb("entry_indicators"), // {rsi, adx, bb_pct, macd_hist, atr, ema_trend}
+  mt5TicketId: text("mt5_ticket_id"),         // MT5 position_id — used for dedup on history sync
   openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
   closedAt: timestamp("closed_at", { withTimezone: true }),
 });
