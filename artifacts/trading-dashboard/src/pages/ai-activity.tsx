@@ -127,7 +127,7 @@ export default function AiActivity() {
       <div className="flex items-center gap-3 px-3 py-2 rounded border border-border/40 bg-card">
         <Cpu size={10} className="text-muted-foreground shrink-0" />
         <span className="text-[9px] font-mono text-muted-foreground">Active models:</span>
-        <span className="text-[9px] font-mono text-blue-300">✦ Gemini 2.0 Flash</span>
+        <span className="text-[9px] font-mono text-blue-300">✦ Gemini 2.5 Flash</span>
         <span className="text-[9px] font-mono text-purple-300">◈ DeepSeek Chat</span>
         <span className="text-[9px] font-mono text-muted-foreground/60 ml-auto">Any NO blocks · All error = allow</span>
       </div>

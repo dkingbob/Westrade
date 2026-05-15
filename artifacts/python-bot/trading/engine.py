@@ -69,8 +69,8 @@ class TradingEngine:
         self.ws.on_config_update(self._handle_config_update)
 
     async def _call_gemini(self, api_key: str, prompt: str) -> str:
-        """Call Gemini 2.0 Flash. Returns 'YES', 'NO', or 'ERROR'."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        """Call Gemini 2.5 Flash. Returns 'YES', 'NO', or 'ERROR'."""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"maxOutputTokens": 120, "temperature": 0.1},
@@ -78,6 +78,9 @@ class TradingEngine:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 429:
+                        log.warning("[AI/Gemini] Rate limit hit (free tier: 20 req/day). Consider upgrading at aistudio.google.com")
+                        return "ERROR"
                     if resp.status != 200:
                         log.warning(f"[AI/Gemini] HTTP {resp.status}")
                         return "ERROR"
@@ -93,7 +96,7 @@ class TradingEngine:
             return "ERROR"
 
     async def _call_deepseek(self, api_key: str, prompt: str) -> str:
-        """Call DeepSeek Chat. Returns 'YES', 'NO', or 'ERROR'."""
+        """Call DeepSeek Chat API. Returns 'YES', 'NO', or 'ERROR'."""
         url = "https://api.deepseek.com/v1/chat/completions"
         body = {
             "model": "deepseek-chat",
@@ -105,6 +108,9 @@ class TradingEngine:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=body, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 402:
+                        log.warning("[AI/DeepSeek] HTTP 402 — API requires paid credits (add balance at platform.deepseek.com). Using Gemini only.")
+                        return "ERROR"
                     if resp.status != 200:
                         log.warning(f"[AI/DeepSeek] HTTP {resp.status}")
                         return "ERROR"
