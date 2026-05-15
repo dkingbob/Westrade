@@ -689,7 +689,7 @@ class TradingEngine:
         """Run Brain Gym analytics offline. Called automatically on weekends or on-demand."""
         await self._emit_log("brain_gym", f"Brain Gym starting — lookback={lookback}")
         try:
-            gym = BrainGym(api_url=self.ws.api_url)
+            gym = BrainGym(api_url=self.ws.api_url, mt5=self._mt5)
             report = await gym.run(lookback=lookback, emit_log=self._emit_log)
             if report:
                 summary = report.get("summary", {})

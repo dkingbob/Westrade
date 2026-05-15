@@ -470,6 +470,27 @@ router.get("/analytics/brain-gym/reports", async (req, res): Promise<void> => {
   res.json(reports);
 });
 
+router.get("/analytics/brain-gym/progress", async (req, res): Promise<void> => {
+  const lookback = String(req.query.lookback ?? "7d");
+  const cutoffs: Record<string, number> = { "30d": 30, "7d": 7, "1d": 1 };
+  const days = cutoffs[lookback];
+  const cutoff = days ? new Date(Date.now() - days * 86_400_000) : null;
+
+  const trades = await db.select({
+    id: tradesTable.id,
+    analyzedAt: tradesTable.analyzedAt,
+  }).from(tradesTable).where(
+    cutoff
+      ? and(eq(tradesTable.status, "closed"), gte(tradesTable.openedAt, cutoff))
+      : eq(tradesTable.status, "closed")
+  );
+
+  const total = trades.length;
+  const analyzed = trades.filter(t => t.analyzedAt !== null).length;
+  const pct = total > 0 ? Math.round((analyzed / total) * 100) : 0;
+  res.json({ total, analyzed, pct, lookback });
+});
+
 router.get("/analytics/brain-gym/latest", async (req, res): Promise<void> => {
   const [latest] = await db
     .select()

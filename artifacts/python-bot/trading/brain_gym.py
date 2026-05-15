@@ -314,10 +314,41 @@ def _derive_thresholds(wins: List[Dict]) -> List[str]:
 
 # ── Main engine ───────────────────────────────────────────────────────────────
 
+def _pip_size(symbol: str) -> float:
+    if "JPY" in symbol or "XAU" in symbol or "XAG" in symbol:
+        return 0.01
+    return 0.0001
+
+
+def _ema(values: List[float], period: int) -> float:
+    if len(values) < period:
+        return values[-1] if values else 0.0
+    k = 2 / (period + 1)
+    ema = sum(values[:period]) / period
+    for v in values[period:]:
+        ema = v * k + ema * (1 - k)
+    return ema
+
+
+def _rsi(closes: List[float], period: int = 14) -> float:
+    if len(closes) < period + 1:
+        return 50.0
+    deltas = [closes[i] - closes[i-1] for i in range(1, len(closes))]
+    gains = [max(d, 0) for d in deltas[-period:]]
+    losses = [abs(min(d, 0)) for d in deltas[-period:]]
+    avg_gain = sum(gains) / period
+    avg_loss = sum(losses) / period
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return round(100 - (100 / (1 + rs)), 1)
+
+
 class BrainGym:
-    def __init__(self, api_url: str):
+    def __init__(self, api_url: str, mt5=None):
         self.api_url = api_url.rstrip("/")
         self.analytics_lookback_window: str = "7d"  # all_time | 30d | 7d | 1d
+        self.mt5 = mt5  # MetaTrader5 module — enables deep per-trade bar analysis
 
     async def _fetch_trades(self, lookback: str) -> List[Dict]:
         """Fetch closed trades from the API server."""
@@ -356,6 +387,158 @@ class BrainGym:
             except Exception:
                 filtered.append(t)
         return filtered
+
+    async def _post_trade_analysis(self, trade_id: int, analysis: Dict) -> bool:
+        """Store deep analysis for a single trade."""
+        url = f"{self.api_url}/trades/{trade_id}/deep-analysis"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.patch(
+                    url,
+                    json={"analysis": analysis},
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    return resp.status == 200
+        except Exception as e:
+            log.warning(f"Brain Gym: failed to save trade {trade_id} analysis: {e}")
+            return False
+
+    def _deep_analyze_trade_sync(self, trade: Dict) -> Optional[Dict]:
+        """
+        Fetch real MT5 H1 bars for a trade and compute:
+          - Real MAE / MFE in pips from actual bar data
+          - Trend at entry (uptrend / downtrend / sideways)
+          - Whether entry was WITH or AGAINST the trend
+          - RSI, EMA200 state at entry
+          - What price did after exit (reversed or continued against us?)
+          - Plain-language verdict on why the trade won or lost
+        """
+        if self.mt5 is None:
+            return None
+
+        mt5 = self.mt5
+        symbol = trade.get("symbol", "")
+        side   = trade.get("side", "long")
+        pnl    = _safe_float(trade.get("pnl"))
+
+        try:
+            opened_str = trade.get("openedAt") or trade.get("opened_at") or ""
+            closed_str = trade.get("closedAt") or trade.get("closed_at") or ""
+            opened_at  = datetime.fromisoformat(opened_str.replace("Z", "+00:00")).replace(tzinfo=None)
+            closed_at  = datetime.fromisoformat(closed_str.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            return None
+
+        # Fetch H1 bars: 72h before entry → 24h after exit (gives enough pre-history for indicators)
+        from_dt = opened_at - timedelta(hours=72)
+        to_dt   = closed_at + timedelta(hours=24)
+
+        bars = mt5.copy_rates_range(symbol, mt5.TIMEFRAME_H1, from_dt, to_dt)
+        if bars is None or len(bars) < 5:
+            return None
+
+        bar_times = [datetime.utcfromtimestamp(int(b["time"])) for b in bars]
+        closes    = [float(b["close"]) for b in bars]
+        highs     = [float(b["high"])  for b in bars]
+        lows      = [float(b["low"])   for b in bars]
+
+        # Locate entry and exit bars
+        entry_idx = next((i for i, t in enumerate(bar_times) if t >= opened_at), len(bars) - 1)
+        exit_idx  = next((i for i, t in enumerate(bar_times) if t >= closed_at), len(bars) - 1)
+
+        entry_price = _safe_float(trade.get("entryPrice") or trade.get("entry_price"))
+        pip = _pip_size(symbol)
+
+        # Real MAE / MFE from actual trade bars
+        trade_highs = highs[entry_idx : exit_idx + 1]
+        trade_lows  = lows[entry_idx  : exit_idx + 1]
+        if trade_highs and trade_lows:
+            if side == "long":
+                mae_pips = round((min(trade_lows)  - entry_price) / pip, 1)
+                mfe_pips = round((max(trade_highs) - entry_price) / pip, 1)
+            else:
+                mae_pips = round((entry_price - max(trade_highs)) / pip, 1)
+                mfe_pips = round((entry_price - min(trade_lows))  / pip, 1)
+        else:
+            mae_pips = mfe_pips = 0.0
+
+        # Pre-entry context — last 20 H1 bars
+        pre_closes = closes[max(0, entry_idx - 20) : entry_idx]
+        trend = "sideways"
+        if len(pre_closes) >= 5:
+            slope = pre_closes[-1] - pre_closes[0]
+            threshold = pip * 15  # 15 pips to call a trend
+            if slope > threshold:
+                trend = "uptrend"
+            elif slope < -threshold:
+                trend = "downtrend"
+
+        # EMA200 at entry
+        ema200_str = "unknown"
+        pre200 = closes[max(0, entry_idx - 200) : entry_idx + 1]
+        if len(pre200) >= 20:
+            ema200_val = _ema(pre200, min(200, len(pre200)))
+            ema200_str = "above_ema200" if entry_price > ema200_val else "below_ema200"
+
+        # RSI at entry
+        rsi_at_entry = _rsi(closes[max(0, entry_idx - 30) : entry_idx + 1])
+
+        # Entry alignment with trend
+        if trend == "uptrend" and side == "long":
+            alignment = "with_trend"
+        elif trend == "downtrend" and side == "short":
+            alignment = "with_trend"
+        elif trend in ("uptrend", "downtrend"):
+            alignment = "against_trend"
+        else:
+            alignment = "neutral"
+
+        # Post-exit: did price continue against us or reverse?
+        post_closes = closes[exit_idx : min(exit_idx + 6, len(closes))]
+        post_move = None
+        if len(post_closes) >= 2:
+            delta = post_closes[-1] - post_closes[0]
+            if side == "long":
+                post_move = "reversed_up"   if delta > 0 else "continued_down"
+            else:
+                post_move = "reversed_down" if delta < 0 else "continued_up"
+
+        # Duration
+        duration_h = round((closed_at - opened_at).total_seconds() / 3600, 1)
+
+        # Verdict — plain English reasons
+        reasons = []
+        if alignment == "against_trend":
+            reasons.append(f"entered {side} into a {trend} — trading against momentum")
+        if mae_pips < -30:
+            reasons.append(f"price moved {abs(mae_pips):.0f} pips against us immediately after entry")
+        if mfe_pips > 0 and mae_pips < 0 and abs(mae_pips) > mfe_pips * 1.5:
+            reasons.append("adverse excursion was much larger than favorable — entry timing was poor")
+        if post_move in ("reversed_up", "reversed_down") and pnl < 0:
+            reasons.append("price reversed in our direction after we were stopped — premature exit or SL too tight")
+        if mfe_pips > 20 and pnl < 0:
+            reasons.append(f"trade reached +{mfe_pips:.0f} pips in profit before reversing — missed TP or exit too early")
+        if not reasons:
+            if pnl > 0:
+                reasons.append("conditions aligned, trade followed the signal correctly")
+            else:
+                reasons.append("market moved against the signal without clear structural trigger")
+
+        verdict = ("WIN" if pnl > 0 else "LOSS") + ": " + "; ".join(reasons)
+
+        return {
+            "mae_pips":        mae_pips,
+            "mfe_pips":        mfe_pips,
+            "duration_hours":  duration_h,
+            "trend_at_entry":  trend,
+            "entry_alignment": alignment,
+            "ema200":          ema200_str,
+            "rsi_at_entry":    rsi_at_entry,
+            "post_exit_move":  post_move,
+            "bars_analyzed":   len(bars),
+            "verdict":         verdict,
+            "analyzed_at":     datetime.utcnow().isoformat() + "Z",
+        }
 
     async def _post_report(self, report: Dict) -> bool:
         """Save the report to the API server."""
@@ -460,4 +643,26 @@ class BrainGym:
         _log(f"Brain Gym complete — win_rate={report['summary']['win_rate']:.0%}, "
              f"profit_factor={report['summary']['profit_factor']}, "
              f"report {'saved' if saved else 'FAILED to save'}")
+
+        # ── Deep per-trade analysis (only when running inside the bot with MT5) ──
+        if self.mt5 is not None:
+            unanalyzed = [t for t in trades if not t.get("analyzedAt") and not t.get("analyzed_at") and t.get("id")]
+            total_un = len(unanalyzed)
+            if total_un > 0:
+                _log(f"Deep analysis starting — {total_un} trades to examine")
+                done = 0
+                for t in unanalyzed:
+                    analysis = await asyncio.get_event_loop().run_in_executor(
+                        None, self._deep_analyze_trade_sync, t
+                    )
+                    if analysis:
+                        await self._post_trade_analysis(int(t["id"]), analysis)
+                    done += 1
+                    pct = round(done / total_un * 100)
+                    if done % 5 == 0 or done == total_un:
+                        _log(f"Deep analysis: {done}/{total_un} trades ({pct}%)")
+                _log(f"Deep analysis complete — all {total_un} trades dissected")
+            else:
+                _log("Deep analysis: all trades already analyzed — nothing to do")
+
         return report

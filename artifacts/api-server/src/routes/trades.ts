@@ -214,6 +214,18 @@ router.patch("/trades/:id/notes", async (req, res): Promise<void> => {
   });
 });
 
+router.patch("/trades/:id/deep-analysis", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "invalid id" }); return; }
+  const analysis = req.body?.analysis;
+  if (!analysis) { res.status(400).json({ error: "analysis required" }); return; }
+  await db.update(tradesTable).set({
+    deepAnalysis: analysis,
+    analyzedAt: new Date(),
+  }).where(eq(tradesTable.id, id));
+  res.json({ ok: true });
+});
+
 router.delete("/trades/reset", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized" });

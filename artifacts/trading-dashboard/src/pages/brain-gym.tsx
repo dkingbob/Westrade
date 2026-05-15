@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2, Microscope } from "lucide-react";
 
 type Lookback = "1d" | "7d" | "30d" | "all_time";
 
@@ -117,7 +118,15 @@ export default function BrainGymPage() {
       if (!r.ok) return null;
       return r.json();
     }),
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
+  });
+
+  const { data: progress } = useQuery<{ total: number; analyzed: number; pct: number; lookback: string }>({
+    queryKey: ["brain-gym-progress", triggerLookback],
+    queryFn: () =>
+      fetch(`/api/analytics/brain-gym/progress?lookback=${triggerLookback}`, { credentials: "include" })
+        .then(r => r.json()),
+    refetchInterval: 5_000,
   });
 
   const trigger = useMutation({
@@ -184,6 +193,38 @@ export default function BrainGymPage() {
             <p className="text-sm text-muted-foreground">No reports yet.</p>
             <p className="text-xs text-muted-foreground">
               Brain Gym runs automatically on weekends, or click "Run Now" above.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Deep Analysis Progress Bar ── */}
+      {progress && (
+        <Card className={progress.pct === 100 ? "border-emerald-500/30 bg-emerald-500/5" : "border-border"}>
+          <CardContent className="py-3 px-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Microscope size={13} className={progress.pct === 100 ? "text-emerald-400" : "text-primary"} />
+                <span className="text-xs font-medium text-foreground">
+                  Deep Analysis — {LOOKBACK_LABELS[triggerLookback]}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-mono">
+                  {progress.analyzed} / {progress.total} trades
+                </span>
+                <span className={`text-xs font-bold font-mono ${progress.pct === 100 ? "text-emerald-400" : "text-primary"}`}>
+                  {progress.pct}%
+                </span>
+              </div>
+            </div>
+            <Progress value={progress.pct} className="h-2" />
+            <p className="text-[10px] text-muted-foreground">
+              {progress.pct === 100
+                ? "✓ All trades fully dissected — MAE/MFE, trend context, entry alignment, verdicts complete. Will update when new trades are added."
+                : progress.analyzed === 0
+                  ? "Restart the bot to begin deep per-trade bar analysis (requires MT5 connection)."
+                  : `Bot is analyzing trades in the background using real MT5 bar data — MAE/MFE, trend, entry alignment, verdict per trade.`}
             </p>
           </CardContent>
         </Card>
