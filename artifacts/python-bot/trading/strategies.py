@@ -27,7 +27,7 @@ _current_price: Dict[str, float] = {}
 
 # Cooldown: track when the last signal was *generated* per symbol (unix timestamp)
 _last_signal_time: Dict[str, float] = {}
-SIGNAL_COOLDOWN_SECONDS = 4 * 3600  # 4 hours minimum between signals per symbol
+SIGNAL_COOLDOWN_SECONDS = 2 * 3600  # 2 hours minimum between signals per symbol
 
 MIN_BARS = 50  # minimum H1 bars before any strategy fires
 
@@ -213,7 +213,7 @@ def build_indicator_snapshot(symbol: str) -> dict:
 class MeanReversionStrategy:
     name = "mean_reversion"
 
-    def __init__(self, symbols: List[str], risk_pct: float = 0.01, z_threshold: float = 2.5):
+    def __init__(self, symbols: List[str], risk_pct: float = 0.01, z_threshold: float = 1.8):
         self.symbols = symbols
         self.risk_pct = risk_pct
         self.z_threshold = z_threshold
@@ -238,8 +238,8 @@ class MeanReversionStrategy:
             ema20 = ema(prices, 20)
             ema50 = ema(prices, 50) if len(prices) >= 50 else ema20
 
-            # Long: strongly stretched down + RSI oversold + MACD histogram positive (turning up)
-            if z < -self.z_threshold and r < 35 and macd_hist > 0:
+            # Long: stretched down + RSI oversold + MACD turning up
+            if z < -self.z_threshold and r < 42 and macd_hist > 0:
                 log.info(f"[{self.name}] LONG signal {symbol}: z={z:.2f}, rsi={r:.1f}, macd_hist={macd_hist:.6f}")
                 _set_cooldown(symbol)
                 signals.append({
@@ -249,8 +249,8 @@ class MeanReversionStrategy:
                     "indicators": build_indicator_snapshot(symbol),
                 })
 
-            # Short: strongly stretched up + RSI overbought + MACD histogram negative (turning down)
-            elif z > self.z_threshold and r > 65 and macd_hist < 0:
+            # Short: stretched up + RSI overbought + MACD turning down
+            elif z > self.z_threshold and r > 58 and macd_hist < 0:
                 log.info(f"[{self.name}] SHORT signal {symbol}: z={z:.2f}, rsi={r:.1f}, macd_hist={macd_hist:.6f}")
                 _set_cooldown(symbol)
                 signals.append({
@@ -287,8 +287,8 @@ class MomentumStrategy:
             ema20 = ema(prices, 20)
             ema50 = ema(prices, 50) if len(prices) >= 50 else ema20
 
-            # Long: RSI recovering from deep oversold + MACD positive crossover + price above EMA20
-            if r < 30 and macd_hist > 0 and macd_line > sig_line and price > ema20:
+            # Long: RSI oversold + MACD positive crossover + price above EMA20
+            if r < 38 and macd_hist > 0 and macd_line > sig_line and price > ema20:
                 log.info(f"[{self.name}] LONG signal {symbol}: rsi={r:.1f}, macd_hist={macd_hist:.6f}")
                 _set_cooldown(symbol)
                 signals.append({
@@ -298,8 +298,8 @@ class MomentumStrategy:
                     "indicators": build_indicator_snapshot(symbol),
                 })
 
-            # Short: RSI falling from deep overbought + MACD negative crossover + price below EMA20
-            elif r > 70 and macd_hist < 0 and macd_line < sig_line and price < ema20:
+            # Short: RSI overbought + MACD negative crossover + price below EMA20
+            elif r > 62 and macd_hist < 0 and macd_line < sig_line and price < ema20:
                 log.info(f"[{self.name}] SHORT signal {symbol}: rsi={r:.1f}, macd_hist={macd_hist:.6f}")
                 _set_cooldown(symbol)
                 signals.append({
@@ -339,8 +339,8 @@ class StatArbStrategy:
             _, _, macd_hist = macd(prices)
             atr_pct = at / mid if mid > 0 else 0
 
-            # Long: price at/below lower BB + RSI 25-42 + not extreme volatility + MACD turning up
-            if price <= lower * 1.0005 and 25 < r < 42 and atr_pct < 0.006 and macd_hist > 0:
+            # Long: price at/below lower BB + RSI 25-48 + not extreme volatility + MACD turning up
+            if price <= lower * 1.002 and 25 < r < 48 and atr_pct < 0.008 and macd_hist > 0:
                 log.info(f"[{self.name}] LONG signal {symbol}: price={price:.5f}, lower={lower:.5f}, rsi={r:.1f}")
                 _set_cooldown(symbol)
                 signals.append({
@@ -351,8 +351,8 @@ class StatArbStrategy:
                     "indicators": build_indicator_snapshot(symbol),
                 })
 
-            # Short: price at/above upper BB + RSI 58-75 + not extreme volatility + MACD turning down
-            elif price >= upper * 0.9995 and 58 < r < 75 and atr_pct < 0.006 and macd_hist < 0:
+            # Short: price at/above upper BB + RSI 52-75 + not extreme volatility + MACD turning down
+            elif price >= upper * 0.998 and 52 < r < 75 and atr_pct < 0.008 and macd_hist < 0:
                 log.info(f"[{self.name}] SHORT signal {symbol}: price={price:.5f}, upper={upper:.5f}, rsi={r:.1f}")
                 _set_cooldown(symbol)
                 signals.append({
