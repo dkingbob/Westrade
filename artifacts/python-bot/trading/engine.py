@@ -153,13 +153,37 @@ class TradingEngine:
         else:
             ind_text = f"- RSI: {signal.get('rsi', 'n/a')}\n- Z-score: {signal.get('z_score', 'n/a')}\n"
 
+        # Fetch Depth of Market from MT5 if connected — gives AI real order flow data
+        dom_text = ""
+        if self._mt5 is not None:
+            try:
+                mt5 = self._mt5
+                mt5.market_book_add(symbol)
+                book = mt5.market_book_get(symbol)
+                if book and len(book) > 0:
+                    asks = sorted([(b.price, b.volume) for b in book if b.type in (1, 2)], key=lambda x: x[0])[:5]
+                    bids = sorted([(b.price, b.volume) for b in book if b.type in (-1, -2)], key=lambda x: -x[0])[:5]
+                    if asks or bids:
+                        dom_text = "\nDepth of Market (live order book):\n"
+                        dom_text += f"  Asks: {', '.join(f'{p:.5f}×{v:.2f}' for p, v in asks)}\n"
+                        dom_text += f"  Bids: {', '.join(f'{p:.5f}×{v:.2f}' for p, v in bids)}\n"
+                        total_ask_vol = sum(v for _, v in asks)
+                        total_bid_vol = sum(v for _, v in bids)
+                        if total_ask_vol > 0 and total_bid_vol > 0:
+                            ratio = total_bid_vol / total_ask_vol
+                            sentiment = "buyers dominating" if ratio > 1.1 else "sellers dominating" if ratio < 0.9 else "balanced"
+                            dom_text += f"  Bid/Ask vol ratio: {ratio:.2f} ({sentiment})\n"
+            except Exception:
+                pass
+
         prompt = (
             f"You are a professional forex trading risk analyst. A trading bot wants to place this order:\n"
             f"- Symbol: {symbol}\n- Direction: {side} (long=buy, short=sell)\n"
             f"- Strategy: {strategy}\n- Entry price: {price}\n\n"
-            f"Technical indicators (H1 timeframe):\n{ind_text}\n"
+            f"Technical indicators (H1 timeframe):\n{ind_text}"
+            f"{dom_text}\n"
             f"Does this trade have a reasonable probability of success?\n"
-            f"Consider: trend alignment, momentum, risk/reward, overbought/oversold conditions.\n"
+            f"Consider: trend alignment, momentum, risk/reward, overbought/oversold conditions, and order flow if available.\n"
             f"Respond with only YES or NO followed by one brief reason."
         )
 
@@ -601,6 +625,7 @@ class TradingEngine:
             "quantity": round(position_size / signal["price"], 4),
             "sentiment_multiplier": round(sentiment_multiplier, 4),
             "z_score": signal.get("z_score"),
+            "atr": signal.get("indicators", {}).get("atr"),
             "timestamp": datetime.utcnow().isoformat(),
             "mode": self.mode,
         }
@@ -642,18 +667,41 @@ class TradingEngine:
             volume = round(round(raw_lots / vol_step) * vol_step, 2)
             volume = max(vol_min, min(vol_max, volume))
 
+            digits = info.digits if info else 5
+            point = info.point if info else 0.00001
+            atr = trade.get("atr")
+
+            # SL/TP: prefer ATR-based levels, fall back to 20/40 pip fixed
+            if atr and atr > 0:
+                sl_dist = atr * 1.5
+                tp_dist = atr * 2.5
+            else:
+                pip = point * 10
+                sl_dist = pip * 20
+                tp_dist = pip * 40
+
+            if trade["side"] == "long":
+                sl_price = round(price - sl_dist, digits)
+                tp_price = round(price + tp_dist, digits)
+            else:
+                sl_price = round(price + sl_dist, digits)
+                tp_price = round(price - tp_dist, digits)
+
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
                 "symbol": symbol,
                 "volume": volume,
                 "type": order_type,
                 "price": price,
+                "sl": sl_price,
+                "tp": tp_price,
                 "deviation": 10,
                 "magic": 202500,
                 "comment": f"AlgoDesk/{trade['strategy']}",
                 "type_time": mt5.ORDER_TIME_GTC,
                 "type_filling": mt5.ORDER_FILLING_FOK,
             }
+            log.info(f"[MT5] SL={sl_price:.{digits}f} TP={tp_price:.{digits}f} (ATR={atr})")
             result = mt5.order_send(request)
             if result.retcode != mt5.TRADE_RETCODE_DONE:
                 log.error(f"MT5 order failed: {result.comment}")

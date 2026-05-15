@@ -181,7 +181,7 @@ export default function Connections() {
               <div className="space-y-1">
                 <p className="text-[9px] font-mono text-muted-foreground">Step 1 — Edit your API keys (.env file)</p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-[10px] font-mono text-yellow-300 bg-background rounded px-2 py-1.5 border border-border break-all">
+                  <code className="flex-1 text-[10px] font-mono text-orange-400 bg-background rounded px-2 py-1.5 border border-orange-500/30 break-all">
                     {'notepad C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot\\.env'}
                   </code>
                   <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] font-mono shrink-0"
