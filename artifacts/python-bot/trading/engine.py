@@ -60,7 +60,17 @@ class TradingEngine:
         import os
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            return True
+            log.warning("[AI] No GEMINI_API_KEY — trade blocked. Set the key to enable AI validation.")
+            await self.ws.emit_trade({
+                "action": "ai_decision",
+                "symbol": trade["symbol"],
+                "side": trade["side"],
+                "strategy": trade["strategy"],
+                "decision": "NO",
+                "reason": "No GEMINI_API_KEY configured — set it to enable AI trade validation.",
+                "price": trade["entry_price"],
+            })
+            return False
 
         symbol = trade["symbol"]
         side = trade["side"]
@@ -539,6 +549,10 @@ class TradingEngine:
         # Start config polling in background
         asyncio.create_task(self._poll_config())
 
+        # Refresh H1 bars once per hour (3600 / TICK_INTERVAL ticks)
+        h1_refresh_interval = max(1, 3600 // TICK_INTERVAL)
+        all_symbols = list({s for strat in self.strategies for s in strat.symbols})
+
         while self.running:
             self.tick_count += 1
 
@@ -558,5 +572,10 @@ class TradingEngine:
                 else:
                     positions = list(self.open_positions.values())
                     await self.ws.emit_position_update(positions)
+
+            # Refresh H1 bars from MT5 every hour so indicators stay current
+            if self.tick_count % h1_refresh_interval == 0 and self._mt5 is not None:
+                strategies_module.refresh_latest_h1(all_symbols)
+                log.debug("H1 bar cache refreshed")
 
             await asyncio.sleep(TICK_INTERVAL)
