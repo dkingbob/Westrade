@@ -108,15 +108,18 @@ async def main():
             except Exception as e:
                 log.warning(f"MT5 symbol discovery failed, using defaults: {e}")
 
-    # Gemini API key check
+    # AI key checks
     gemini_key = os.getenv("GEMINI_API_KEY")
-    if not gemini_key:
-        log.warning("=" * 60)
-        log.warning("  !! NO GEMINI_API_KEY SET — AI validation DISABLED !!")
-        log.warning("  Create a .env file with: GEMINI_API_KEY=your_key_here")
-        log.warning("=" * 60)
-    else:
+    deepseek_key = os.getenv("DEEPSEEK") or os.getenv("DEEPSEEK_API_KEY")
+    if gemini_key:
         log.info(f"Gemini API key loaded (ends ...{gemini_key[-6:]})")
+    if deepseek_key:
+        log.info(f"DeepSeek API key loaded (ends ...{deepseek_key[-6:]})")
+    if not gemini_key and not deepseek_key:
+        log.warning("=" * 60)
+        log.warning("  !! NO AI KEYS SET — AI validation DISABLED !!")
+        log.warning("  Add GEMINI_API_KEY and/or DEEPSEEK to your .env file")
+        log.warning("=" * 60)
 
     # Start the bot — give WS a few seconds to connect before engine starts ticking
     # so AI decisions (emit_trade) don't get dropped into a closed socket
