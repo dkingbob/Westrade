@@ -195,10 +195,10 @@ export default function Connections() {
                 <p className="text-[9px] font-mono text-muted-foreground">Step 2 — Start the bot (in PowerShell)</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border break-all">
-                    {'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git checkout -- .; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py'}
+                    {'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git reset --hard HEAD; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py'}
                   </code>
                   <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] font-mono shrink-0"
-                    onClick={() => { navigator.clipboard.writeText('cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git checkout -- .; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py'); toast({ title: "Copied!" }); }}>
+                    onClick={() => { navigator.clipboard.writeText('cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git reset --hard HEAD; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py'); toast({ title: "Copied!" }); }}>
                     Copy
                   </Button>
                 </div>
