@@ -34,6 +34,7 @@ class AutoTuner:
         self.strategies = strategies
         self.api_url = api_url
         self.enabled = False
+        self.mode = "guided"  # "guided" | "autonomous"
 
         # Rolling window of closed trade outcomes
         # Each entry: {strategy, side, pnl, entry_indicators, timestamp}
@@ -112,26 +113,31 @@ class AutoTuner:
             # ── Threshold tuning ──────────────────────────────────────────────
             if hasattr(strategy, "z_threshold"):
                 old_z = strategy.z_threshold
-                if win_rate < 0.35 and avg_pnl < 0:
+                autonomous = self.mode == "autonomous"
+                tighten_threshold = 0.45 if autonomous else 0.35
+                tighten_step = 0.25 if autonomous else 0.15
+                relax_step = 0.10 if autonomous else 0.05
+                if win_rate < tighten_threshold and avg_pnl < 0:
                     # Losing → tighten entry (require stronger signal)
-                    new_z = min(3.5, old_z + 0.15)
+                    new_z = min(3.5, old_z + tighten_step)
                     strategy.z_threshold = round(new_z, 2)
                     changes["z_threshold"] = {"from": old_z, "to": strategy.z_threshold}
                     reasons.append(f"win rate {win_rate:.0%} → tightening z threshold")
                 elif win_rate > 0.60 and avg_pnl > 0:
                     # Winning well → slightly relax to catch more signals
-                    new_z = max(1.8, old_z - 0.05)
+                    new_z = max(1.8, old_z - relax_step)
                     strategy.z_threshold = round(new_z, 2)
                     changes["z_threshold"] = {"from": old_z, "to": strategy.z_threshold}
                     reasons.append(f"win rate {win_rate:.0%} → relaxing z threshold slightly")
 
             # ── Kelly position sizing ──────────────────────────────────────────
+            kelly_fraction = 0.40 if self.mode == "autonomous" else KELLY_FRACTION
             old_risk = strategy.risk_pct
             if win_rate > 0 and avg_loss > 0:
                 win_loss_ratio = avg_win / avg_loss if avg_loss > 0 else 1
                 kelly = win_rate - (1 - win_rate) / win_loss_ratio
                 kelly = max(0, kelly)  # Kelly can be negative — clamp to 0
-                optimal_risk = kelly * KELLY_FRACTION
+                optimal_risk = kelly * kelly_fraction
                 optimal_risk = max(MIN_RISK_PCT, min(MAX_RISK_PCT, optimal_risk))
                 new_risk = round(optimal_risk, 4)
                 if abs(new_risk - old_risk) > 0.0005:  # only log if meaningful change
@@ -181,6 +187,7 @@ class AutoTuner:
     def get_state(self) -> dict:
         return {
             "enabled": self.enabled,
+            "mode": self.mode,
             "totalTradesEvaluated": len(self._closed_trades),
             "currentParams": self.get_current_params(),
             "log": self.log[:30],  # last 30 entries for UI

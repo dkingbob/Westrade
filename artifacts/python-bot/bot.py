@@ -65,10 +65,20 @@ async def main():
     sentiment = SentimentAnalyzer()
     ws_client = BackendWSClient(WS_URL, API_URL, HEARTBEAT_INTERVAL)
 
+    # All symbols the bot can consider — in live mode these are supplemented by MT5 discovery
+    _FOREX_POOL = [
+        "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
+        "EURGBP", "EURJPY", "EURCHF", "EURAUD", "EURCAD", "EURNZD",
+        "GBPJPY", "GBPCHF", "GBPAUD", "GBPCAD", "GBPNZD",
+        "AUDJPY", "AUDCHF", "AUDCAD", "AUDNZD",
+        "CADJPY", "CADCHF", "NZDJPY", "NZDCHF",
+        "XAUUSD", "XAGUSD",
+    ]
+
     strategies = [
-        MeanReversionStrategy(symbols=["EURUSD", "GBPUSD", "AUDUSD"], risk_pct=0.01, z_threshold=2.5),
-        MomentumStrategy(symbols=["USDJPY", "USDCAD", "NZDUSD"], risk_pct=0.012),
-        StatArbStrategy(symbols=["EURJPY", "GBPJPY", "EURGBP"], risk_pct=0.008),
+        MeanReversionStrategy(symbols=_FOREX_POOL, risk_pct=0.01, z_threshold=2.5),
+        MomentumStrategy(symbols=_FOREX_POOL[:14], risk_pct=0.012),
+        StatArbStrategy(symbols=_FOREX_POOL[6:22], risk_pct=0.008),
     ]
 
     engine = TradingEngine(
@@ -81,11 +91,31 @@ async def main():
 
     # Connect MT5 if available
     if MT5_AVAILABLE and BOT_MODE == "live":
-        await engine.connect_mt5(
+        connected = await engine.connect_mt5(
             account=int(os.getenv("MT5_ACCOUNT", "0")),
             password=os.getenv("MT5_PASSWORD", ""),
             server=os.getenv("MT5_SERVER", ""),
         )
+        if connected:
+            try:
+                all_mt5 = mt5.symbols_get() or []
+                discovered = [s.name for s in all_mt5 if s.visible and len(s.name) <= 8]
+                if len(discovered) > 10:
+                    for strat in strategies:
+                        strat.symbols = discovered
+                    log.info(f"Auto-discovered {len(discovered)} symbols from MT5 broker")
+            except Exception as e:
+                log.warning(f"MT5 symbol discovery failed, using defaults: {e}")
+
+    # Gemini API key check
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key:
+        log.warning("=" * 60)
+        log.warning("  !! NO GEMINI_API_KEY SET — AI validation DISABLED !!")
+        log.warning("  Create a .env file with: GEMINI_API_KEY=your_key_here")
+        log.warning("=" * 60)
+    else:
+        log.info(f"Gemini API key loaded (ends ...{gemini_key[-6:]})")
 
     # Start the bot — give WS a few seconds to connect before engine starts ticking
     # so AI decisions (emit_trade) don't get dropped into a closed socket

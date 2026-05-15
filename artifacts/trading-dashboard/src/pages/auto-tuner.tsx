@@ -37,11 +37,13 @@ export default function AutoTuner() {
   const serverEnabled = Boolean(extra.autoTunerEnabled);
 
   const [enabled, setEnabled] = useState(serverEnabled);
+  const [mode, setMode] = useState<"guided" | "autonomous">("guided");
   const initialized = useRef(false);
   useEffect(() => {
     if (!botConfig || initialized.current) return;
     initialized.current = true;
     setEnabled(serverEnabled);
+    setMode((extra.autoTunerMode as "guided" | "autonomous") ?? "guided");
   }, [botConfig]);
 
   const toggle = async () => {
@@ -110,6 +112,58 @@ export default function AutoTuner() {
             Position sizing uses fractional Kelly Criterion (25%) based on actual win/loss ratios.
             Needs at least <span className="text-foreground">5 closed trades</span> per strategy to start adjusting.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Learning Mode */}
+      <Card className="bg-card border-card-border">
+        <CardHeader className="py-2 px-3 border-b border-border">
+          <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            Learning Mode
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 space-y-2">
+          {[
+            {
+              key: "guided",
+              label: "Guided",
+              desc: "Adjusts thresholds and position sizing within your configured risk limits. Safe for live trading.",
+            },
+            {
+              key: "autonomous",
+              label: "Autonomous",
+              desc: "Full freedom — bot experiments aggressively, can override any parameter to maximize performance. Best for paper trading.",
+            },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => {
+                const next = opt.key as "guided" | "autonomous";
+                setMode(next);
+                fetch("/api/bot/config", {
+                  method: "PUT",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ autoTunerMode: next }),
+                }).then(() => qc.invalidateQueries({ queryKey: ["bot-config"] }));
+              }}
+              className={cn(
+                "w-full text-left px-3 py-2 rounded border text-[10px] font-mono transition-colors",
+                mode === opt.key
+                  ? "border-purple-400/50 bg-purple-400/10 text-foreground"
+                  : "border-border bg-background/50 text-muted-foreground hover:border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-2 h-2 rounded-full shrink-0",
+                  mode === opt.key ? "bg-purple-400" : "bg-muted-foreground/40"
+                )} />
+                <span className="font-bold text-[11px]">{opt.label}</span>
+              </div>
+              <p className="mt-0.5 pl-4 text-[9px] text-muted-foreground">{opt.desc}</p>
+            </button>
+          ))}
         </CardContent>
       </Card>
 

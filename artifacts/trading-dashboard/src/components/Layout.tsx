@@ -3,7 +3,8 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useTheme } from "@/hooks/use-theme";
-import { useGetEngineStatus, useGetTicker, getGetEngineStatusQueryKey, getGetTickerQueryKey } from "@workspace/api-client-react";
+import { useGetEngineStatus, useGetTicker, useGetRiskState, useTriggerKillSwitch, getGetEngineStatusQueryKey, getGetTickerQueryKey, getGetRiskStateQueryKey } from "@workspace/api-client-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserProfileWidget } from "@/components/UserProfile";
 import {
   LayoutDashboard, BookOpen, PieChart, BarChart2, Cpu, Shield, Brain,
@@ -91,6 +92,61 @@ function NavItem({ path, label, icon: Icon, collapsed, location, onNavigate }: {
   return inner;
 }
 
+function KillSwitchWidget({ collapsed }: { collapsed: boolean }) {
+  const qc = useQueryClient();
+  const { data: riskState } = useGetRiskState({
+    query: { queryKey: getGetRiskStateQueryKey(), refetchInterval: 3000 },
+  });
+  const isActive = riskState?.killSwitchActive ?? false;
+
+  const toggle = useMutation({
+    mutationFn: () =>
+      fetch("/api/bot/kill-switch", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !isActive }),
+      }).then((r) => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: getGetRiskStateQueryKey() }),
+  });
+
+  const inner = (
+    <button
+      onClick={() => toggle.mutate()}
+      disabled={toggle.isPending}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 w-full transition-colors text-xs font-mono",
+        collapsed && "justify-center",
+        isActive
+          ? "text-red-400 hover:bg-red-400/10"
+          : "text-green-400 hover:bg-green-400/10"
+      )}
+    >
+      <div className={cn(
+        "w-2 h-2 rounded-full shrink-0",
+        isActive ? "bg-red-500 animate-pulse" : "bg-green-400"
+      )} />
+      {!collapsed && (
+        <span className="font-bold tracking-wider uppercase text-[10px]">
+          {isActive ? "PAUSED — Resume" : "Running — Pause"}
+        </span>
+      )}
+    </button>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>{inner}</TooltipTrigger>
+        <TooltipContent side="right" className="text-[10px] font-mono">
+          {isActive ? "Bot paused — click to resume" : "Bot running — click to pause"}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return inner;
+}
+
 function SidebarContent({ collapsed, location, onNavigate, mode, setMode }: {
   collapsed: boolean; location: string; onNavigate?: () => void;
   mode: string; setMode: (m: "dark" | "light") => void;
@@ -115,6 +171,8 @@ function SidebarContent({ collapsed, location, onNavigate, mode, setMode }: {
           </div>
         </div>
       )}
+
+      <KillSwitchWidget collapsed={collapsed} />
 
       {/* Main Nav */}
       <nav className="flex-1 py-2 overflow-y-auto">
@@ -217,6 +275,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Menu size={18} />
           </button>
           <span className="text-xs font-mono font-bold text-foreground tracking-widest uppercase flex-1">Westrade</span>
+          <KillSwitchWidget collapsed={true} />
           <button onClick={() => setMode(mode === "dark" ? "light" : "dark")} className="text-muted-foreground hover:text-foreground">
             {mode === "dark" ? <Sun size={14} /> : <Moon size={14} />}
           </button>

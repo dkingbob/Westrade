@@ -32,6 +32,7 @@ class TradingEngine:
         self.open_positions = {}
         self.equity = 100_000.0
         self.max_position_usd = None
+        self.max_open_positions: Optional[int] = None
         self.tick_count = 0
         self._mt5 = None
 
@@ -241,7 +242,8 @@ class TradingEngine:
                             self.interval_pause_hours = float(extra["intervalPauseHours"])
                         if extra.get("autoTunerEnabled") is not None:
                             self.tuner.enabled = bool(extra["autoTunerEnabled"])
-                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}, interval={self.interval_trade_hours}h/{self.interval_pause_hours}h, autoTuner={self.tuner.enabled}")
+                        self.tuner.mode = extra.get("autoTunerMode", "guided")
+                        log.info(f"Loaded config: killSwitch={self.kill_switch_active}, lossLimit=${self.daily_loss_limit_usd}, profitTarget=${self.daily_profit_target_usd}, interval={self.interval_trade_hours}h/{self.interval_pause_hours}h, autoTuner={self.tuner.enabled}, tunerMode={self.tuner.mode}")
         except Exception as e:
             log.warning(f"Could not load initial config: {e}")
 
@@ -257,7 +259,8 @@ class TradingEngine:
                         rpt = risk.get("riskPerTradePct", 0.01)
                         for s in self.strategies:
                             s.risk_pct = rpt
-                        log.info(f"Loaded risk settings: riskPerTrade={rpt}")
+                        self.max_open_positions = int(risk.get("maxOpenPositions", 5))
+                        log.info(f"Loaded risk settings: riskPerTrade={rpt}, maxOpenPositions={self.max_open_positions}")
         except Exception as e:
             log.warning(f"Could not load risk settings: {e}")
 
@@ -271,9 +274,7 @@ class TradingEngine:
         """React to kill switch from dashboard."""
         self.kill_switch_active = True
         self.running = False
-        log.warning("Kill switch activated — bot stopped")
-        if self.mode == "live" and self._mt5 is not None:
-            await self._close_all_mt5_positions()
+        log.warning("Kill switch activated — bot stopped (existing positions left open)")
 
     async def _handle_config_update(self, config: dict):
         """Apply config updates from the dashboard."""
@@ -288,6 +289,9 @@ class TradingEngine:
                 self.kill_switch_active = False
                 self.running = True
                 log.info("Kill switch deactivated — trading resumed")
+        if "riskPerTradePct" in config:
+            for s in self.strategies:
+                s.risk_pct = float(config["riskPerTradePct"])
         if "riskSettings" in config:
             rpt = config["riskSettings"].get("riskPerTradePct", 0.01)
             for s in self.strategies:
@@ -315,6 +319,9 @@ class TradingEngine:
         if "autoTunerEnabled" in config:
             self.tuner.enabled = bool(config["autoTunerEnabled"])
             log.info(f"AutoTuner {'enabled' if self.tuner.enabled else 'disabled'}")
+        if "autoTunerMode" in config:
+            self.tuner.mode = config["autoTunerMode"]
+            log.info(f"AutoTuner mode set to: {self.tuner.mode}")
         log.info("Config updated from dashboard")
 
     async def _check_interval(self) -> bool:
@@ -525,6 +532,16 @@ class TradingEngine:
         if symbol in self.paused_symbols or symbol in self.restricted_assets:
             log.info(f"Symbol {symbol} is paused/restricted — skipping")
             return
+
+        # Enforce maxOpenPositions limit
+        if self.max_open_positions is not None:
+            if self.mode == "live" and self._mt5 is not None:
+                open_count = len(self._mt5.positions_get() or [])
+            else:
+                open_count = len(self.open_positions)
+            if open_count >= self.max_open_positions:
+                log.debug(f"Max open positions ({self.max_open_positions}) reached — skipping {symbol}")
+                return
 
         # AI trade validation — build a minimal trade dict for context
         _pre_trade = {
