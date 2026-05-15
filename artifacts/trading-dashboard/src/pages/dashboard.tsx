@@ -12,7 +12,7 @@ import {
   getGetPositionsQueryKey,
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -193,6 +193,22 @@ export default function Dashboard() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const { data: botCfg } = useQuery({
+    queryKey: ["bot-config-dash"],
+    queryFn: () => fetch("/api/bot/config", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 10000,
+  });
+  const paperMode = (botCfg as any)?.paperMode ?? false;
+  const toggleMode = useMutation({
+    mutationFn: (paper: boolean) =>
+      fetch("/api/bot/config", {
+        method: "PUT", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paperMode: paper }),
+      }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bot-config-dash"] }),
+  });
+
   const unreviewedAlerts = alerts?.filter((a) => !a.acknowledged) ?? [];
   const dailyUp = (summary?.dailyPnl ?? 0) >= 0;
   const totalUp = (summary?.totalPnl ?? 0) >= 0;
@@ -243,7 +259,21 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-green-500/30 bg-green-500/5">
           <Bot size={12} className="text-green-400 shrink-0" />
           <span className="text-[10px] font-mono text-green-400 font-semibold">Python Bot ONLINE</span>
-          <span className="text-[10px] font-mono text-muted-foreground">— trading via MT5</span>
+          <span className="text-[10px] font-mono text-muted-foreground">
+            — {paperMode ? "PAPER MODE (simulated, works on weekends)" : "LIVE MODE (real MT5 orders)"}
+          </span>
+          <button
+            onClick={() => toggleMode.mutate(!paperMode)}
+            disabled={toggleMode.isPending}
+            className={cn(
+              "ml-auto text-[9px] font-mono px-2 py-0.5 rounded border transition-colors",
+              paperMode
+                ? "border-blue-400/40 text-blue-400 hover:bg-blue-400/10"
+                : "border-green-400/40 text-green-400 hover:bg-green-400/10"
+            )}
+          >
+            Switch to {paperMode ? "LIVE" : "PAPER"}
+          </button>
         </div>
       )}
 

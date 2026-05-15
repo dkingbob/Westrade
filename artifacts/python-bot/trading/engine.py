@@ -438,6 +438,13 @@ class TradingEngine:
         if "autoTunerMode" in config:
             self.tuner.mode = config["autoTunerMode"]
             log.info(f"AutoTuner mode set to: {self.tuner.mode}")
+        if "paperMode" in config:
+            new_mode = "paper" if config["paperMode"] else "live"
+            if new_mode != self.mode:
+                self.mode = new_mode
+                self.open_positions.clear()
+                log.info(f"Mode switched to {self.mode.upper()} — open_positions cleared")
+                await self._emit_log("scan", f"Switched to {self.mode.upper()} mode — {'simulated fills, no real MT5 orders' if self.mode == 'paper' else 'real MT5 orders'}")
         log.info("Config updated from dashboard")
 
     async def _check_interval(self) -> bool:
@@ -894,9 +901,10 @@ class TradingEngine:
             self.tick_count += 1
 
             # Weekend check — forex is closed Fri 22:00 UTC → Sun 22:00 UTC
+            # Paper mode bypasses this so you can train/test on weekends
             now_utc = datetime.utcnow()
             wday = now_utc.weekday()  # Mon=0 ... Fri=4, Sat=5, Sun=6
-            market_closed = (
+            market_closed = self.mode == "live" and (
                 wday == 5 or                                      # all Saturday
                 (wday == 6 and now_utc.hour < 22) or             # Sunday before 22:00
                 (wday == 4 and now_utc.hour >= 22)               # Friday after 22:00

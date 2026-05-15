@@ -22,6 +22,7 @@ router.get("/bot/config", async (req, res): Promise<void> => {
     aiEnabled: extra.aiEnabled ?? true,
     autoTunerEnabled: extra.autoTunerEnabled ?? false,
     autoTunerMode: extra.autoTunerMode ?? "guided",
+    paperMode: extra.paperMode ?? false,
   });
 });
 
@@ -35,7 +36,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     newsHaltMode, longTermMode, pausedSymbols, restrictedAssets,
     mt5AccountId, mt5Server, maxPositionUsd,
     dailyLossLimitUsd, dailyProfitTargetUsd, lossBufferUsd, winBufferUsd, sessionHours,
-    intervalTradeHours, intervalPauseHours, autoTunerEnabled, autoTunerMode, aiEnabled,
+    intervalTradeHours, intervalPauseHours, autoTunerEnabled, autoTunerMode, aiEnabled, paperMode,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
@@ -53,6 +54,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     ...(autoTunerEnabled !== undefined && { autoTunerEnabled: Boolean(autoTunerEnabled) }),
     ...(autoTunerMode !== undefined && { autoTunerMode: String(autoTunerMode) }),
     ...(aiEnabled !== undefined && { aiEnabled: Boolean(aiEnabled) }),
+    ...(paperMode !== undefined && { paperMode: Boolean(paperMode) }),
   };
 
   const [updated] = await db
@@ -94,6 +96,7 @@ router.put("/bot/config", async (req, res): Promise<void> => {
     autoTunerEnabled: extra.autoTunerEnabled ?? false,
     aiEnabled: extra.aiEnabled ?? true,
     autoTunerMode: extra.autoTunerMode ?? "guided",
+    paperMode: extra.paperMode ?? false,
   });
 
   res.json(updated);
