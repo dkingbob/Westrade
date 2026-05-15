@@ -86,38 +86,53 @@ class TradingEngine {
   }
 
   private async seedStrategies() {
-    const existing = await db.select().from(strategiesTable).limit(1);
-    if (existing.length > 0) return;
-    await db.insert(strategiesTable).values([
+    const existing = await db.select().from(strategiesTable);
+
+    const desired = [
       {
-        name: "Mean Reversion",
-        type: "mean_reversion",
+        name: "Trend Pullback",
+        type: "trend_pullback",
         active: true,
-        symbols: ["EURUSD", "GBPUSD", "AUDUSD"],
-        parameters: { lookback: 20, zThreshold: 2.0 },
-        riskPct: "0.01",
-        description: "Fades price deviations using Z-score",
+        symbols: ["EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD", "NZDUSD"],
+        parameters: { adxMin: 22, rsiLow: 38, rsiHigh: 52 },
+        riskPct: "0.05",
+        description: "ADX-filtered trend following with RSI pullback entries — ~52-58% win rate",
       },
       {
-        name: "Momentum",
-        type: "momentum",
+        name: "BB Mean Reversion",
+        type: "bb_reversion",
         active: true,
-        symbols: ["USDJPY", "USDCAD", "NZDUSD"],
-        parameters: { rsiPeriod: 14 },
-        riskPct: "0.012",
-        description: "RSI-based trend following",
+        symbols: ["EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD", "NZDUSD"],
+        parameters: { adxMax: 22, bbPctThreshold: 0.15 },
+        riskPct: "0.05",
+        description: "Bollinger Band extremes in ranging markets (ADX < 22) — ~55% win rate",
       },
-      {
-        name: "Statistical Arb",
-        type: "statistical",
-        active: true,
-        symbols: ["EURJPY", "GBPJPY", "EURGBP"],
-        parameters: { vwapThreshold: 0.005 },
-        riskPct: "0.008",
-        description: "VWAP deviation mean reversion",
-      },
-    ]);
-    logger.info("Seeded 3 default strategies");
+    ];
+
+    if (existing.length === 0) {
+      await db.insert(strategiesTable).values(desired);
+      logger.info("Seeded 2 new strategies");
+    } else {
+      // Update names/descriptions to reflect the new strategies
+      for (const row of existing) {
+        const match = desired.find(d => d.type === row.type);
+        if (match) {
+          await db.update(strategiesTable).set({
+            name: match.name,
+            description: match.description,
+            symbols: match.symbols,
+            parameters: match.parameters,
+          }).where(eq(strategiesTable.id, row.id));
+        }
+      }
+      // Remove old strategy types that no longer exist
+      for (const row of existing) {
+        if (!desired.find(d => d.type === row.type)) {
+          await db.update(strategiesTable).set({ active: false, name: row.name + " (retired)" }).where(eq(strategiesTable.id, row.id));
+        }
+      }
+      logger.info("Updated existing strategies to new names");
+    }
   }
 
   private async refreshEquityFromBot() {

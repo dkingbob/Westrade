@@ -20,12 +20,16 @@ function fmtUsd(n: number) { return `$${fmt(n)}`; }
 function fmtPct(n: number) { return `${(n * 100).toFixed(2)}%`; }
 
 const TYPE_LABELS: Record<string, string> = {
+  trend_pullback: "Trend Pullback",
+  bb_reversion: "BB Mean Reversion",
   mean_reversion: "Mean Reversion",
   momentum: "Momentum",
   statistical: "Statistical Arb",
 };
 
 const TYPE_COLORS: Record<string, string> = {
+  trend_pullback: "border-green-400/50 text-green-400",
+  bb_reversion: "border-blue-400/50 text-blue-400",
   mean_reversion: "border-blue-400/50 text-blue-400",
   momentum: "border-purple-400/50 text-purple-400",
   statistical: "border-amber-400/50 text-amber-400",

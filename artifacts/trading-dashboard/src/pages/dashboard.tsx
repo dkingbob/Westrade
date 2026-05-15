@@ -13,7 +13,7 @@ import {
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2 } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -184,6 +184,15 @@ export default function Dashboard() {
     qc.invalidateQueries({ queryKey: getGetPortfolioSummaryQueryKey() });
   };
 
+  const [copied, setCopied] = useState(false);
+  const BOT_CMD = 'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git reset --hard HEAD; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py';
+
+  const copyBotCmd = () => {
+    navigator.clipboard.writeText(BOT_CMD);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const unreviewedAlerts = alerts?.filter((a) => !a.acknowledged) ?? [];
   const dailyUp = (summary?.dailyPnl ?? 0) >= 0;
   const totalUp = (summary?.totalPnl ?? 0) >= 0;
@@ -211,9 +220,32 @@ export default function Dashboard() {
           ) : (
             <Power size={12} className="mr-1" />
           )}
-          {engineStatus?.running ? "STOP ENGINE" : "START ENGINE"}
+          {engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}
         </Button>
       </div>
+
+      {/* Python Bot banner */}
+      {!botOnline && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded border border-amber-500/40 bg-amber-500/5">
+          <Bot size={12} className="text-amber-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] font-mono text-amber-300 font-semibold">Python Bot OFFLINE</span>
+            <span className="text-[10px] font-mono text-muted-foreground ml-2">— Open PowerShell on your PC and paste:</span>
+            <code className="block text-[9px] font-mono text-primary mt-0.5 truncate">{BOT_CMD}</code>
+          </div>
+          <Button size="sm" variant="outline" className="h-6 px-2 text-[9px] font-mono shrink-0 border-amber-500/40 text-amber-400"
+            onClick={copyBotCmd}>
+            <Copy size={9} className="mr-1" />{copied ? "Copied!" : "Copy"}
+          </Button>
+        </div>
+      )}
+      {botOnline && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-green-500/30 bg-green-500/5">
+          <Bot size={12} className="text-green-400 shrink-0" />
+          <span className="text-[10px] font-mono text-green-400 font-semibold">Python Bot ONLINE</span>
+          <span className="text-[10px] font-mono text-muted-foreground">— trading via MT5</span>
+        </div>
+      )}
 
       {/* Key metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
