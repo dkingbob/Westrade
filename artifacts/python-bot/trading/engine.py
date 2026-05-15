@@ -813,6 +813,7 @@ class TradingEngine:
 
         # Load config from API before first tick
         await self.load_initial_config()
+        await self._emit_log("scan", f"Engine online — {self.mode} mode | {len(self.strategies)} strategies loaded | {len({s for strat in self.strategies for s in strat.symbols})} symbols")
 
         # Start config polling in background
         asyncio.create_task(self._poll_config())
@@ -831,7 +832,7 @@ class TradingEngine:
                     total_syms = len({s for strat in self.strategies for s in strat.symbols})
                     await self._emit_log("scan",
                         f"Scanning {total_syms} symbols across {len(self.strategies)} strategies | "
-                        f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}", "debug")
+                        f"equity=${self.equity:,.2f} | positions={len(self._last_mt5_positions)}")
                 for strategy in self.strategies:
                     try:
                         signals = await strategy.generate_signals()
