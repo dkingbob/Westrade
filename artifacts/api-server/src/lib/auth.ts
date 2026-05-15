@@ -4,7 +4,8 @@ import { db, sessionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 export const SESSION_COOKIE = "sid";
-export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
+export const SESSION_TTL = 24 * 60 * 60 * 1000;
+export const SESSION_REMEMBER_TTL = 30 * 24 * 60 * 60 * 1000;
 
 export interface AuthUser {
   id: string;
@@ -21,12 +22,12 @@ export interface SessionData {
   expires_at?: number;
 }
 
-export async function createSession(data: SessionData): Promise<string> {
+export async function createSession(data: SessionData, ttl = SESSION_TTL): Promise<string> {
   const sid = crypto.randomBytes(32).toString("hex");
   await db.insert(sessionsTable).values({
     sid,
     sess: data as unknown as Record<string, unknown>,
-    expire: new Date(Date.now() + SESSION_TTL),
+    expire: new Date(Date.now() + ttl),
   });
   return sid;
 }

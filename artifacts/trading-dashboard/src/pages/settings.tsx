@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme, type ThemeStyle } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
-import { User, Palette, Bell, LogOut, Check, Plus, X, Terminal, Copy, CheckCheck } from "lucide-react";
+import { User, Palette, Bell, LogOut, Check, Plus, X, Terminal, Copy, CheckCheck, CreditCard } from "lucide-react";
 
 function api(path: string, opts?: RequestInit) {
   return fetch(path, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
@@ -31,7 +31,7 @@ export default function Settings() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { style, setStyle } = useTheme();
-  const [tab, setTab] = useState<"profile" | "appearance" | "notifications" | "setup">("profile");
+  const [tab, setTab] = useState<"profile" | "appearance" | "notifications" | "setup" | "plan">("profile");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const copyCmd = (text: string, idx: number) => {
@@ -103,6 +103,7 @@ export default function Settings() {
     { key: "appearance", label: "Appearance", icon: Palette },
     { key: "notifications", label: "Email Alerts", icon: Bell },
     { key: "setup", label: "Bot Setup", icon: Terminal },
+    { key: "plan", label: "Plan", icon: CreditCard },
   ] as const;
 
   return (
@@ -361,6 +362,133 @@ export default function Settings() {
                 </ul>
               </CardContent>
             </Card>
+          </div>
+        );
+      })()}
+
+      {/* Plan tab */}
+      {tab === "plan" && (() => {
+        const plans = [
+          {
+            name: "Starter",
+            price: "Free",
+            tagline: "For individual traders getting started",
+            features: [
+              "1 trading strategy",
+              "Paper trading only",
+              "Basic analytics dashboard",
+              "Community support",
+            ],
+            current: true,
+          },
+          {
+            name: "Pro",
+            price: "$29",
+            period: "/mo",
+            tagline: "For active traders who want an edge",
+            features: [
+              "Unlimited strategies",
+              "Live MT5 trading",
+              "AI trade validation (Gemini)",
+              "Advanced analytics & risk engine",
+              "Email alerts",
+              "Priority support",
+            ],
+            highlight: true,
+            current: false,
+          },
+          {
+            name: "Elite",
+            price: "$99",
+            period: "/mo",
+            tagline: "For professional & institutional traders",
+            features: [
+              "Everything in Pro",
+              "Multi-account support",
+              "Custom strategy builder",
+              "White-label dashboard",
+              "Dedicated account manager",
+              "SLA uptime guarantee",
+            ],
+            current: false,
+          },
+        ];
+        return (
+          <div className="space-y-3">
+            <Card className="bg-card border-card-border">
+              <CardHeader className="py-2 px-4 border-b border-border">
+                <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <CreditCard size={11} /> Current Plan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-xs font-mono font-semibold text-foreground">Starter — Free</p>
+                    <p className="text-[10px] font-mono text-muted-foreground mt-0.5">You are on the free plan. Upgrade to unlock live trading and AI features.</p>
+                  </div>
+                  <Badge variant="outline" className="text-[9px] font-mono border-primary/40 text-primary shrink-0">Active</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {plans.map((plan) => (
+                <div
+                  key={plan.name}
+                  className={cn(
+                    "relative rounded border p-4 space-y-3 transition-all",
+                    plan.highlight
+                      ? "border-primary/60 bg-primary/5"
+                      : "border-border bg-card"
+                  )}
+                >
+                  {plan.highlight && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[9px] font-mono font-bold uppercase px-3 py-0.5 rounded-full tracking-widest">
+                      Most Popular
+                    </div>
+                  )}
+                  {plan.current && (
+                    <div className="absolute -top-3 right-3 bg-green-500/20 text-green-400 text-[9px] font-mono px-2 py-0.5 rounded-full border border-green-500/30">
+                      Current
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{plan.name}</p>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-xl font-bold font-mono text-foreground">{plan.price}</span>
+                      {plan.period && <span className="text-[10px] font-mono text-muted-foreground">{plan.period}</span>}
+                    </div>
+                    <p className="text-[10px] font-mono text-muted-foreground mt-1">{plan.tagline}</p>
+                  </div>
+
+                  <Separator />
+
+                  <ul className="space-y-1.5">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-1.5 text-[10px] font-mono text-muted-foreground">
+                        <Check size={10} className="text-primary shrink-0 mt-0.5" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    size="sm"
+                    variant={plan.highlight ? "default" : "outline"}
+                    className="w-full h-7 text-[10px] font-mono"
+                    disabled={plan.current}
+                  >
+                    {plan.current ? "Current Plan" : "Upgrade — Coming Soon"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[10px] font-mono text-muted-foreground text-center">
+              Payment processing coming soon. Plans are for display only.
+            </p>
           </div>
         );
       })()}
