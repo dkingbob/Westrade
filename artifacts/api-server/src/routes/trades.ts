@@ -247,10 +247,16 @@ router.post("/trades/sync-history", async (req, res): Promise<void> => {
     return;
   }
 
-  // Remove existing bad paper trades (no mt5TicketId and impossible PnL)
-  const allTrades = await db.select({ id: tradesTable.id, pnl: tradesTable.pnl, mt5TicketId: tradesTable.mt5TicketId }).from(tradesTable);
+  // Purge ALL trades that are clearly old test/paper data:
+  // - no mt5TicketId (never came from a real MT5 sync)
+  // - OR retired strategy name that no longer exists
+  const RETIRED_STRATEGIES = new Set([
+    "momentum", "mean_reversion", "statistical_arb", "statistical",
+    "Momentum", "MeanReversion", "StatArb", "Statist", "Momentu", "Mean_re",
+  ]);
+  const allTrades = await db.select({ id: tradesTable.id, strategy: tradesTable.strategy, mt5TicketId: tradesTable.mt5TicketId }).from(tradesTable);
   const badIds = allTrades
-    .filter(t => !t.mt5TicketId && Math.abs(parseFloat((t.pnl as string) ?? "0")) > 50_000)
+    .filter(t => !t.mt5TicketId || RETIRED_STRATEGIES.has(t.strategy))
     .map(t => t.id);
   if (badIds.length) {
     for (const id of badIds) await db.delete(tradesTable).where(eq(tradesTable.id, id));

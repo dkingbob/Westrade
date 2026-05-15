@@ -803,6 +803,7 @@ class TradingEngine:
                 strategies_module.confirm_cooldown(symbol)  # lock symbol after successful order
                 trade["entry_price"] = fill["price"]
                 trade["volume"] = fill["volume"]
+                trade["mt5_ticket_id"] = str(fill.get("ticket", ""))
                 await self.ws.emit_trade({"action": "open", "trade": trade})
                 await self._emit_log("trade",
                     f"✅ {symbol} {signal['side'].upper()} placed @ {fill['price']:.5f} | {fill['volume']} lots | #{fill.get('ticket','?')}")

@@ -119,6 +119,7 @@ class WsServer {
         zScore: trade.z_score ? String(trade.z_score) : null,
         session: trade.session ? String(trade.session) : null,
         entryIndicators: trade.entry_indicators ?? null,
+        mt5TicketId: trade.mt5_ticket_id ? String(trade.mt5_ticket_id) : null,
       }).returning();
       logger.info({ id: saved.id, symbol: saved.symbol }, "Bot trade saved to DB");
       this.broadcast("trade_opened", { trade: saved });
