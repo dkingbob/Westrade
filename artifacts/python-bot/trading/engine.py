@@ -198,6 +198,7 @@ class TradingEngine:
         await self.ws.emit_trade({
             "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
             "decision": decision, "reason": reason, "price": price,
+            "votes": {label: result for label, result in zip(labels, results)},
         })
         return decision == "YES"
 
@@ -451,6 +452,8 @@ class TradingEngine:
                     "entry_price": pos.price_open,
                     "current_price": current_price,
                     "pnl": pnl,
+                    "sl": pos.sl if pos.sl else None,
+                    "tp": pos.tp if pos.tp else None,
                     "strategy": pos.comment.replace("AlgoDesk/", "") if pos.comment else "bot",
                 })
 

@@ -40,6 +40,8 @@ BOT_MODE = os.getenv("BOT_MODE", "paper")
 WS_URL = os.getenv("ALGODESK_WS_URL", "ws://localhost:80/api/ws")
 API_URL = os.getenv("ALGODESK_API_URL", "http://localhost:80/api")
 HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "10"))
+# Risk per trade as a fraction of account equity (default 1%). Set higher to trade bigger.
+RISK_PCT = float(os.getenv("RISK_PER_TRADE_PCT", "0.01"))
 IS_WINDOWS = platform.system() == "Windows"
 
 MT5_AVAILABLE = False
@@ -77,9 +79,9 @@ async def main():
     ]
 
     strategies = [
-        MeanReversionStrategy(symbols=_FOREX_POOL, risk_pct=0.01, z_threshold=2.5),
-        MomentumStrategy(symbols=_FOREX_POOL[:14], risk_pct=0.012),
-        StatArbStrategy(symbols=_FOREX_POOL[6:22], risk_pct=0.008),
+        MeanReversionStrategy(symbols=_FOREX_POOL, risk_pct=RISK_PCT, z_threshold=2.5),
+        MomentumStrategy(symbols=_FOREX_POOL[:14], risk_pct=RISK_PCT * 1.2),
+        StatArbStrategy(symbols=_FOREX_POOL[6:22], risk_pct=RISK_PCT * 0.8),
     ]
 
     engine = TradingEngine(

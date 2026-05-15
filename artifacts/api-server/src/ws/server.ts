@@ -14,6 +14,7 @@ interface AiDecisionRecord {
   reason: string;
   price: number;
   timestamp: string;
+  votes?: Record<string, string>;
 }
 
 class WsServer {
@@ -78,6 +79,7 @@ class WsServer {
         reason: data.reason as string,
         price: data.price as number,
         timestamp: new Date().toISOString(),
+        votes: data.votes as Record<string, string> | undefined,
       };
       // Keep last 200 decisions in memory so late-connecting browsers can catch up
       this.aiDecisions.unshift(record);
@@ -137,6 +139,8 @@ class WsServer {
       for (const trade of openTrades) {
         await db.update(tradesTable).set({
           pnl: pos.pnl != null ? String(pos.pnl) : trade.pnl,
+          ...(pos.sl != null ? { stopLoss: String(pos.sl) } : {}),
+          ...(pos.tp != null ? { takeProfit: String(pos.tp) } : {}),
         }).where(eq(tradesTable.id, trade.id));
       }
     }

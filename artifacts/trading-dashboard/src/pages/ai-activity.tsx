@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Brain, CheckCircle2, XCircle, Trash2 } from "lucide-react";
+import { Brain, CheckCircle2, XCircle, Trash2, Cpu, Zap } from "lucide-react";
 
 interface AiDecision {
   id: string;
@@ -14,20 +14,18 @@ interface AiDecision {
   reason: string;
   price: number;
   timestamp: string;
+  votes?: Record<string, string>;
 }
 
-// Module-level store — decisions survive navigation (WS pushes add here in real-time)
 const wsDecisions = new Map<string, AiDecision>();
 let listeners = new Set<() => void>();
 
 function notify() { listeners.forEach(fn => fn()); }
 
-// Called from use-websocket.ts when bot sends an ai_decision
 export function ingestAiDecision(data: Omit<AiDecision, "id">) {
   const id = `${data.timestamp}-${data.symbol}-${data.strategy}`;
   if (!wsDecisions.has(id)) {
     wsDecisions.set(id, { ...data, id });
-    // Keep last 200
     if (wsDecisions.size > 200) {
       const oldest = wsDecisions.keys().next().value;
       if (oldest) wsDecisions.delete(oldest);
@@ -46,7 +44,6 @@ function useAiDecisions() {
     return () => { listeners.delete(refresh); };
   }, []);
 
-  // Poll server every 3s to catch decisions that happened before WS connected
   useEffect(() => {
     let cancelled = false;
     const poll = async () => {
@@ -73,6 +70,29 @@ function useAiDecisions() {
 
   return Array.from(wsDecisions.values()).sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+}
+
+function VoteChip({ name, vote }: { name: string; vote: string | undefined }) {
+  const icon = name === "Gemini" ? "✦" : "◈";
+  if (!vote || vote === "ERROR") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/30 text-[9px] font-mono text-muted-foreground">
+        {icon} {name} <span className="text-muted-foreground/50">—</span>
+      </span>
+    );
+  }
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[9px] font-mono font-bold",
+      vote === "YES"
+        ? "border-green-500/50 bg-green-500/10 text-green-400"
+        : "border-red-500/50 bg-red-500/10 text-red-400"
+    )}>
+      {icon} {name}
+      {vote === "YES" ? <CheckCircle2 size={8} /> : <XCircle size={8} />}
+      {vote}
+    </span>
   );
 }
 
@@ -103,47 +123,72 @@ export default function AiActivity() {
         </div>
       </div>
 
+      {/* AI Models legend */}
+      <div className="flex items-center gap-3 px-3 py-2 rounded border border-border/40 bg-card">
+        <Cpu size={10} className="text-muted-foreground shrink-0" />
+        <span className="text-[9px] font-mono text-muted-foreground">Active models:</span>
+        <span className="text-[9px] font-mono text-blue-300">✦ Gemini 1.5 Flash</span>
+        <span className="text-[9px] font-mono text-purple-300">◈ DeepSeek Chat</span>
+        <span className="text-[9px] font-mono text-muted-foreground/60 ml-auto">Any NO blocks · All error = allow</span>
+      </div>
+
       {items.length === 0 ? (
         <Card className="bg-card border-card-border">
           <CardContent className="p-8 flex flex-col items-center gap-3 text-center">
             <Brain size={28} className="text-muted-foreground/40" />
             <p className="text-xs font-mono text-muted-foreground">No decisions yet this session.</p>
             <p className="text-[10px] font-mono text-muted-foreground">
-              Decisions appear live as the bot evaluates signals. Start the bot with <span className="text-primary">GEMINI_API_KEY</span> set — each trade Gemini approves or rejects will stream here in real-time.
+              Each trade signal is evaluated in parallel by Gemini and DeepSeek before execution.
+              Results stream here in real-time with full AI reasoning.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-2">
-          {items.map((d) => (
-            <Card key={d.id} className={cn(
-              "bg-card border-l-2",
-              d.decision === "YES" ? "border-l-green-500 border-card-border" : "border-l-red-500 border-card-border"
-            )}>
-              <CardContent className="p-3 flex items-start gap-3">
-                {d.decision === "YES"
-                  ? <CheckCircle2 size={14} className="text-green-400 mt-0.5 shrink-0" />
-                  : <XCircle size={14} className="text-red-400 mt-0.5 shrink-0" />}
-                <div className="flex-1 min-w-0">
+          {items.map((d) => {
+            const geminiVote = d.votes?.["Gemini"] ?? d.votes?.["gemini"];
+            const deepseekVote = d.votes?.["DeepSeek"] ?? d.votes?.["deepseek"];
+            return (
+              <Card key={d.id} className={cn(
+                "bg-card border-l-2",
+                d.decision === "YES" ? "border-l-green-500 border-card-border" : "border-l-red-500 border-card-border"
+              )}>
+                <CardContent className="p-3 space-y-2">
+                  {/* Header row */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-mono font-bold text-foreground">{d.symbol}</span>
+                    {d.decision === "YES"
+                      ? <CheckCircle2 size={13} className="text-green-400 shrink-0" />
+                      : <XCircle size={13} className="text-red-400 shrink-0" />}
+                    <span className="text-[12px] font-mono font-bold text-foreground">{d.symbol}</span>
                     <Badge variant={d.side === "long" ? "default" : "destructive"} className="text-[9px] px-1 h-4">
                       {d.side.toUpperCase()}
                     </Badge>
                     <span className="text-[10px] font-mono text-muted-foreground">{d.strategy}</span>
                     <span className="text-[10px] font-mono text-muted-foreground">@ {Number(d.price).toFixed(4)}</span>
-                    <span className={cn("text-[10px] font-mono font-bold ml-auto", d.decision === "YES" ? "text-green-400" : "text-red-400")}>
+                    <span className={cn(
+                      "text-[10px] font-mono font-bold ml-auto",
+                      d.decision === "YES" ? "text-green-400" : "text-red-400"
+                    )}>
                       {d.decision === "YES" ? "APPROVED" : "REJECTED"}
                     </span>
                   </div>
-                  <p className="text-[10px] font-mono text-muted-foreground mt-0.5 italic">"{d.reason}"</p>
-                  <p className="text-[9px] font-mono text-muted-foreground/50 mt-0.5">
+
+                  {/* AI votes row */}
+                  <div className="flex items-center gap-2 flex-wrap pl-5">
+                    <Zap size={8} className="text-muted-foreground/50 shrink-0" />
+                    <VoteChip name="Gemini" vote={geminiVote} />
+                    <VoteChip name="DeepSeek" vote={deepseekVote} />
+                  </div>
+
+                  {/* Reason */}
+                  <p className="text-[10px] font-mono text-muted-foreground pl-5 italic">"{d.reason}"</p>
+                  <p className="text-[9px] font-mono text-muted-foreground/50 pl-5">
                     {new Date(d.timestamp).toLocaleTimeString()}
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -174,35 +174,45 @@ export default function Connections() {
               <StatusBadge connected={status?.pythonBot.connected ?? false} label={status?.pythonBot.connected ? "ALIVE" : "OFFLINE"} />
             </div>
 
-            {/* Launch command */}
+            {/* Launch commands */}
             <div className="p-3 rounded border border-border bg-muted/10 space-y-3">
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Start up Westrade</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">How to start the bot</p>
 
               <div className="space-y-1">
-                <p className="text-[9px] font-mono text-muted-foreground">Gemini API + Launch Python</p>
-                <div className="flex items-start gap-2">
-                  <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border break-all">
-                    {'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; $env:GEMINI_API_KEY="AIzaSyAZnOZfJ3cvmDzX3GCaVHy3CPHX2HBbW1s"; python bot.py'}
+                <p className="text-[9px] font-mono text-muted-foreground">Step 1 — Edit your API keys (.env file)</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-[10px] font-mono text-yellow-300 bg-background rounded px-2 py-1.5 border border-border break-all">
+                    {'notepad C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot\\.env'}
                   </code>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 px-2 text-[10px] font-mono shrink-0 mt-0.5"
-                    onClick={() => {
-                      navigator.clipboard.writeText('cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; $env:GEMINI_API_KEY="AIzaSyAZnOZfJ3cvmDzX3GCaVHy3CPHX2HBbW1s"; python bot.py');
-                      toast({ title: "Command copied!" });
-                    }}
-                  >
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] font-mono shrink-0"
+                    onClick={() => { navigator.clipboard.writeText('notepad C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot\\.env'); toast({ title: "Copied!" }); }}>
                     Copy
                   </Button>
                 </div>
               </div>
+
+              <div className="space-y-1">
+                <p className="text-[9px] font-mono text-muted-foreground">Step 2 — Start the bot (in PowerShell)</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border break-all">
+                    {'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git pull; python bot.py'}
+                  </code>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] font-mono shrink-0"
+                    onClick={() => { navigator.clipboard.writeText('cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git pull; python bot.py'); toast({ title: "Copied!" }); }}>
+                    Copy
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-[9px] font-mono text-muted-foreground/70">
+                Keys load from .env automatically. Run git pull first to get latest bot updates.
+              </p>
             </div>
 
             <div className="space-y-1">
               {[
                 { label: "Heartbeat", value: status?.pythonBot.heartbeatAge ? `${Math.floor(status.pythonBot.heartbeatAge / 1000)}s ago` : "—" },
-                { label: "AI Validation", value: status?.aiValidation ? "Gemini enabled" : "Not configured" },
+                { label: "AI Validation", value: status?.aiValidation ? "Gemini + DeepSeek" : "Not configured" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-[10px] font-mono text-muted-foreground">{label}</span>
