@@ -328,7 +328,14 @@ class BrainGym:
                     if resp.status != 200:
                         log.warning(f"Brain Gym: failed to fetch trades — HTTP {resp.status}")
                         return []
-                    trades = await resp.json()
+                    data = await resp.json()
+                    # Trades endpoint returns {"trades": [...], "total": N}
+                    if isinstance(data, dict):
+                        trades = data.get("trades", [])
+                    elif isinstance(data, list):
+                        trades = data
+                    else:
+                        trades = []
         except Exception as e:
             log.error(f"Brain Gym: could not fetch trades: {e}")
             return []

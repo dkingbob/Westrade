@@ -205,7 +205,7 @@ export default function Connections() {
               </div>
 
               <p className="text-[9px] font-mono text-muted-foreground/70">
-                Keys load from .env automatically. <span className="text-orange-400">git checkout -- . discards local conflicts before pulling.</span>
+                Or just double-click <span className="text-primary">start_bot.bat</span> in the python-bot folder — same thing.
               </p>
             </div>
 
