@@ -111,7 +111,7 @@ export default function Connections() {
               <div className="p-3 rounded border border-amber-500/30 bg-amber-500/5 flex items-start gap-2">
                 <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
                 <p className="text-[10px] font-mono text-amber-300">
-                  Start the Python bot on your Windows machine with MT5 open to connect.
+                  MT5 requires Windows + MetaTrader 5 terminal. The Python bot must be running on your local machine with MT5 installed and connected here via WebSocket.
                 </p>
               </div>
             )}
@@ -173,42 +173,18 @@ export default function Connections() {
               </div>
               <StatusBadge connected={status?.pythonBot.connected ?? false} label={status?.pythonBot.connected ? "ALIVE" : "OFFLINE"} />
             </div>
-
-            {/* Launch commands */}
-            <div className="p-3 rounded border border-border bg-muted/10 space-y-3">
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">How to start the bot</p>
-
-              <div className="space-y-1">
-                <p className="text-[9px] font-mono text-muted-foreground">Step 1 — Edit your API keys (.env file)</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-[10px] font-mono text-orange-400 bg-background rounded px-2 py-1.5 border border-orange-500/30 break-all">
-                    {'notepad C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot\\.env'}
-                  </code>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] font-mono shrink-0"
-                    onClick={() => { navigator.clipboard.writeText('notepad C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot\\.env'); toast({ title: "Copied!" }); }}>
-                    Copy
-                  </Button>
+            {!status?.pythonBot.connected && (
+              <div className="p-3 rounded border border-border bg-muted/10 space-y-2">
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Setup Instructions</p>
+                <div className="space-y-1 text-[10px] font-mono text-muted-foreground">
+                  <p>1. Navigate to <span className="text-primary">artifacts/python-bot/</span></p>
+                  <p>2. Run: <span className="text-primary">pip install -r requirements.txt</span></p>
+                  <p>3. Configure <span className="text-primary">.env</span> with MT5 credentials</p>
+                  <p>4. Run: <span className="text-primary">python bot.py</span></p>
+                  <p>5. Bot auto-connects to this dashboard via WebSocket</p>
                 </div>
               </div>
-
-              <div className="space-y-1">
-                <p className="text-[9px] font-mono text-muted-foreground">Step 2 — Start the bot (in PowerShell)</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-[10px] font-mono text-primary bg-background rounded px-2 py-1.5 border border-border break-all">
-                    {'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git reset --hard HEAD; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py'}
-                  </code>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] font-mono shrink-0"
-                    onClick={() => { navigator.clipboard.writeText('cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git reset --hard HEAD; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py'); toast({ title: "Copied!" }); }}>
-                    Copy
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-[9px] font-mono text-muted-foreground/70">
-                Or just double-click <span className="text-primary">start_bot.bat</span> in the python-bot folder — same thing.
-              </p>
-            </div>
-
+            )}
             <div className="space-y-1">
               {[
                 { label: "Heartbeat", value: status?.pythonBot.heartbeatAge ? `${Math.floor(status.pythonBot.heartbeatAge / 1000)}s ago` : "—" },
@@ -260,7 +236,7 @@ export default function Connections() {
                 { label: "WS Endpoint", value: `${window.location.origin}/api/ws` },
                 { label: "REST Base", value: `${window.location.origin}/api` },
                 { label: "Status", value: "Connected", ok: true },
-                { label: "Auth", value: "Replit OIDC / Session cookie" },
+                { label: "Auth", value: "Session cookie" },
                 { label: "Reconnect", value: "Auto (3s backoff)" },
               ].map(({ label, value, ok }) => (
                 <div key={label} className="flex justify-between items-center">

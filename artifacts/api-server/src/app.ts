@@ -36,12 +36,9 @@ app.use(authMiddleware);
 
 app.use("/api", router);
 
-// Serve frontend static files
-// __dirname is set by the esbuild banner to the dist directory of the API server
-// The frontend is built relative to the repo root
-const frontendDist = path.resolve(__dirname, "../../trading-dashboard/dist/public");
+const frontendDist = path.resolve(process.cwd(), "artifacts/trading-dashboard/dist/public");
 app.use(express.static(frontendDist));
-app.use((_req, res) => {
+app.get("/{*path}", (_req, res) => {
   res.sendFile(path.join(frontendDist, "index.html"));
 });
 

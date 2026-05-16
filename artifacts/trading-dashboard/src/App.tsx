@@ -35,17 +35,21 @@ const queryClient = new QueryClient({
   },
 });
 
-const Loading = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <div className="text-muted-foreground text-sm font-mono">Loading…</div>
-  </div>
-);
-
-// Layout mounts once here — only the inner page swaps on navigation
-function AppShell() {
+function ProtectedRouter() {
   const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return <Loading />;
-  if (!isAuthenticated) return <Redirect to="/login" />;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
   return (
     <Layout>
       <Switch>
@@ -76,7 +80,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route component={AppShell} />
+      <Route component={ProtectedRouter} />
     </Switch>
   );
 }
@@ -90,7 +94,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/,  "")}>
           <Router />
         </WouterRouter>
         <Toaster />

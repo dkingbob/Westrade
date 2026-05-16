@@ -22,7 +22,7 @@ export interface SessionData {
   expires_at?: number;
 }
 
-export async function createSession(data: SessionData, ttl = SESSION_TTL): Promise<string> {
+export async function createSession(data: SessionData): Promise<string> {
   const sid = crypto.randomBytes(32).toString("hex");
   await db.insert(sessionsTable).values({
     sid,
