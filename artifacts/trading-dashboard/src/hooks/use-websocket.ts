@@ -15,8 +15,14 @@ export function useWebSocket() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const wsUrl = `${protocol}://${window.location.host}/api/ws`;
+    // VITE_WS_URL lets Vercel deployments point WebSocket at the Render API server.
+    // Falls back to same-host (works when frontend and API are served together).
+    const wsUrl =
+      import.meta.env.VITE_WS_URL ||
+      (() => {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        return `${protocol}://${window.location.host}/api/ws`;
+      })();
     let ws: WebSocket;
     let reconnectTimer: number;
 
