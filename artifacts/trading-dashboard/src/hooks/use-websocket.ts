@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { 
+import {
   getGetPortfolioSummaryQueryKey,
   getGetPositionsQueryKey,
   getGetRiskStateQueryKey,
@@ -8,13 +8,21 @@ import {
   getGetEngineStatusQueryKey,
   getGetAlertsQueryKey
 } from "@workspace/api-client-react";
+import { ingestAiDecision } from "@/pages/ai-activity";
+import { ingestBotLog } from "@/pages/bot-feed";
 
 export function useWebSocket() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const wsUrl = `${protocol}://${window.location.host}/api/ws`;
+    // VITE_WS_URL lets Vercel deployments point WebSocket at the Render API server.
+    // Falls back to same-host (works when frontend and API are served together).
+    const wsUrl =
+      import.meta.env.VITE_WS_URL ||
+      (() => {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        return `${protocol}://${window.location.host}/api/ws`;
+      })();
     let ws: WebSocket;
     let reconnectTimer: number;
 
@@ -50,6 +58,12 @@ export function useWebSocket() {
             case "kill_switch":
               queryClient.invalidateQueries({ queryKey: getGetRiskStateQueryKey() });
               queryClient.invalidateQueries({ queryKey: getGetEngineStatusQueryKey() });
+              break;
+            case "ai_decision":
+              ingestAiDecision(data.data);
+              break;
+            case "bot_log":
+              ingestBotLog(data.data);
               break;
           }
         } catch (e) {
