@@ -103,7 +103,7 @@ function MetricCard({ label, value, sub, up, loading }: { label: string; value: 
 function PositionRow({ pos }: { pos: any }) {
   const up = pos.pnl >= 0;
   return (
-    <div className="flex items-center gap-3 py-1.5 border-b border-border/50 last:border-0 text-xs font-mono" data-testid={`position-row-${pos.id}`}>
+    <div className="flex items-center gap-3 py-1.5 border-b border-border/50 last:border-0 text-xs font-mono min-w-[540px]" data-testid={`position-row-${pos.id}`}>
       <div className="w-16 font-bold text-foreground">{pos.symbol}</div>
       <Badge variant={pos.side === "long" ? "default" : "destructive"} className="text-[10px] px-1 py-0 h-4">
         {pos.side.toUpperCase()}
@@ -229,25 +229,26 @@ export default function Dashboard() {
           onClick={toggleEngine}
           disabled={startEngine.isPending || stopEngine.isPending}
           data-testid="engine-toggle-btn"
-          className="font-mono text-xs h-7 px-3"
+          className="font-mono text-xs h-7 px-3 shrink-0"
         >
           {startEngine.isPending || stopEngine.isPending ? (
             <Loader2 size={12} className="animate-spin mr-1" />
           ) : (
             <Power size={12} className="mr-1" />
           )}
-          {engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}
+          <span className="hidden sm:inline">{engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}</span>
+          <span className="sm:hidden">{engineStatus?.running ? "STOP" : "START"}</span>
         </Button>
       </div>
 
       {/* Python Bot banner */}
       {!botOnline && (
-        <div className="flex items-center gap-3 px-3 py-2 rounded border border-amber-500/40 bg-amber-500/5">
-          <Bot size={12} className="text-amber-400 shrink-0" />
+        <div className="flex flex-wrap items-start gap-3 px-3 py-2 rounded border border-amber-500/40 bg-amber-500/5">
+          <Bot size={12} className="text-amber-400 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-mono text-amber-300 font-semibold">Python Bot OFFLINE</span>
-            <span className="text-[10px] font-mono text-muted-foreground ml-2">— Open PowerShell on your PC and paste:</span>
-            <code className="block text-[9px] font-mono text-primary mt-0.5 truncate">{BOT_CMD}</code>
+            <span className="text-[10px] font-mono text-muted-foreground ml-2 hidden sm:inline">— Open PowerShell on your PC and paste:</span>
+            <code className="block text-[9px] font-mono text-primary mt-0.5 break-all">{BOT_CMD}</code>
           </div>
           <Button size="sm" variant="outline" className="h-6 px-2 text-[9px] font-mono shrink-0 border-amber-500/40 text-amber-400"
             onClick={copyBotCmd}>
@@ -256,11 +257,11 @@ export default function Dashboard() {
         </div>
       )}
       {botOnline && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-green-500/30 bg-green-500/5">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 rounded border border-green-500/30 bg-green-500/5">
           <Bot size={12} className="text-green-400 shrink-0" />
           <span className="text-[10px] font-mono text-green-400 font-semibold">Python Bot ONLINE</span>
-          <span className="text-[10px] font-mono text-muted-foreground">
-            — {paperMode ? "PAPER MODE (simulated, works on weekends)" : "LIVE MODE (real MT5 orders)"}
+          <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">
+            — {paperMode ? "PAPER MODE (simulated)" : "LIVE MODE (real MT5 orders)"}
           </span>
           <button
             onClick={() => toggleMode.mutate(!paperMode)}
@@ -272,7 +273,7 @@ export default function Dashboard() {
                 : "border-green-400/40 text-green-400 hover:bg-green-400/10"
             )}
           >
-            Switch to {paperMode ? "LIVE" : "PAPER"}
+            {paperMode ? "→ LIVE" : "→ PAPER"}
           </button>
         </div>
       )}
@@ -375,18 +376,20 @@ export default function Dashboard() {
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-6 w-full" />)}
                 </div>
               ) : positions && positions.length > 0 ? (
-                <div className="pt-3">
-                  <div className="flex items-center gap-3 pb-1 border-b border-border/30 text-[10px] font-mono text-muted-foreground">
-                    <div className="w-16">SYMBOL</div>
-                    <div className="w-10">SIDE</div>
-                    <div className="flex-1">QTY</div>
-                    <div className="text-right">ENTRY</div>
-                    <div className="w-16 text-right">CURRENT</div>
-                    <div className="w-20 text-right">P&L $</div>
-                    <div className="w-14 text-right">P&L %</div>
-                    <div className="w-28 text-right">STRATEGY</div>
+                <div className="pt-3 overflow-x-auto">
+                  <div className="min-w-[540px]">
+                    <div className="flex items-center gap-3 pb-1 border-b border-border/30 text-[10px] font-mono text-muted-foreground">
+                      <div className="w-16">SYMBOL</div>
+                      <div className="w-10">SIDE</div>
+                      <div className="flex-1">QTY</div>
+                      <div className="text-right">ENTRY</div>
+                      <div className="w-16 text-right">CURRENT</div>
+                      <div className="w-20 text-right">P&L $</div>
+                      <div className="w-14 text-right">P&L %</div>
+                      <div className="w-28 text-right">STRATEGY</div>
+                    </div>
+                    {positions.map((pos) => <PositionRow key={pos.id} pos={pos} />)}
                   </div>
-                  {positions.map((pos) => <PositionRow key={pos.id} pos={pos} />)}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-16 text-[11px] font-mono text-muted-foreground">
@@ -427,7 +430,7 @@ export default function Dashboard() {
 
       {/* Engine stats */}
       {engineStatus && (
-        <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground border border-border rounded px-3 py-2 bg-card">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-muted-foreground border border-border rounded px-3 py-2 bg-card">
           <span className={cn("flex items-center gap-1", engineStatus.running ? "text-green-400" : "text-red-400")}>
             <span className={cn("w-1.5 h-1.5 rounded-full", engineStatus.running ? "bg-green-400" : "bg-red-400")} />
             {engineStatus.running ? "ENGINE RUNNING" : "ENGINE STOPPED"}

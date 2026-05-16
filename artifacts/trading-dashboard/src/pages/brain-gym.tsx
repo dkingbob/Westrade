@@ -197,9 +197,9 @@ export default function BrainGymPage() {
   const summary = report?.summary;
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <Dumbbell size={20} className="text-primary" />
           <div>
@@ -209,9 +209,9 @@ export default function BrainGymPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Select value={triggerLookback} onValueChange={v => setTriggerLookback(v as Lookback)}>
-            <SelectTrigger className="h-8 w-36 text-xs">
+            <SelectTrigger className="h-8 w-32 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -285,14 +285,14 @@ export default function BrainGymPage() {
       {briefing && (
         <Card className="border-violet-500/30 bg-violet-500/5">
           <CardHeader className="py-3 px-4 pb-0">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <BrainCircuit size={14} className="text-violet-400" />
+            <CardTitle className="text-sm flex flex-wrap items-center gap-2">
+              <BrainCircuit size={14} className="text-violet-400 shrink-0" />
               Pre-Market Briefing
-              <Badge variant="outline" className="ml-auto text-[10px] border-violet-500/40 text-violet-400 flex items-center gap-1">
+              <Badge variant="outline" className="text-[10px] border-violet-500/40 text-violet-400 flex items-center gap-1">
                 <Sparkles size={9} />
                 Gemini
               </Badge>
-              <span className="text-[10px] font-normal text-muted-foreground">
+              <span className="text-[10px] font-normal text-muted-foreground ml-auto">
                 {new Date(briefing.generatedAt).toLocaleString()}
               </span>
             </CardTitle>
