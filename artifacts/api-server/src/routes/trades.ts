@@ -214,6 +214,25 @@ router.patch("/trades/:id/notes", async (req, res): Promise<void> => {
   });
 });
 
+// Export oldest N trades as JSON and delete them from DB (called by bot when count > 500)
+router.post("/trades/archive-oldest", async (req, res): Promise<void> => {
+  const keep = parseInt(String(req.body?.keep ?? 400));
+  const all = await db.select({ id: tradesTable.id }).from(tradesTable)
+    .orderBy(tradesTable.openedAt)
+  const total = all.length;
+  if (total <= keep) {
+    res.json({ archived: 0, remaining: total, trades: [] });
+    return;
+  }
+  const toArchiveIds = all.slice(0, total - keep).map(r => r.id);
+  const archived = await db.select().from(tradesTable)
+    .where(sql`${tradesTable.id} = ANY(${toArchiveIds})`);
+  for (const id of toArchiveIds) {
+    await db.delete(tradesTable).where(eq(tradesTable.id, id));
+  }
+  res.json({ archived: archived.length, remaining: keep, trades: archived });
+});
+
 router.patch("/trades/:id/deep-analysis", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "invalid id" }); return; }

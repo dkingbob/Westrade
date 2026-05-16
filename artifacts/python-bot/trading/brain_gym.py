@@ -10,11 +10,17 @@ MAE/MFE are approximated from H1 OHLC bars (honest limitation noted in report).
 """
 
 import asyncio
+import json
 import logging
 import math
+import os
 import aiohttp
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Any
+
+# Archive directory — three levels up from this file = westrade project root
+_THIS_DIR    = os.path.dirname(os.path.abspath(__file__))
+_ARCHIVE_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "trade_archives")
 
 log = logging.getLogger("algodesk.brain_gym")
 
@@ -540,6 +546,61 @@ class BrainGym:
             "analyzed_at":     datetime.utcnow().isoformat() + "Z",
         }
 
+    async def _maybe_archive_trades(self, emit_log=None) -> None:
+        """
+        If the trade journal exceeds 500 records, archive the oldest batch
+        to trade_archives/archive_YYYYMMDD_HHMMSS.json in the westrade folder,
+        then delete them from the DB so Brain Gym stays fast.
+        """
+        KEEP = 400          # keep this many in the DB after archiving
+        TRIGGER = 500       # start archiving when total exceeds this
+
+        def _log(msg):
+            log.info(f"[brain_gym] {msg}")
+            if emit_log:
+                asyncio.ensure_future(emit_log("brain_gym", msg))
+
+        url = f"{self.api_url}/trades/archive-oldest"
+        try:
+            async with aiohttp.ClientSession() as session:
+                # First: check total count
+                check = await session.get(
+                    f"{self.api_url}/trades?status=closed&limit=1",
+                    timeout=aiohttp.ClientTimeout(total=10)
+                )
+                data = await check.json()
+                total = data.get("total", 0) if isinstance(data, dict) else 0
+                if total <= TRIGGER:
+                    return
+
+                _log(f"Trade journal has {total} records — archiving oldest {total - KEEP} to file")
+
+                async with session.post(
+                    url,
+                    json={"keep": KEEP},
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as resp:
+                    result = await resp.json()
+
+                archived_trades = result.get("trades", [])
+                if not archived_trades:
+                    return
+
+                # Save to local file
+                os.makedirs(_ARCHIVE_DIR, exist_ok=True)
+                ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                filename = os.path.join(_ARCHIVE_DIR, f"archive_{ts}.json")
+                with open(filename, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "archived_at": datetime.utcnow().isoformat() + "Z",
+                        "trade_count": len(archived_trades),
+                        "trades": archived_trades,
+                    }, f, indent=2, default=str)
+
+                _log(f"Archived {len(archived_trades)} trades → trade_archives/archive_{ts}.json")
+        except Exception as e:
+            log.error(f"Brain Gym archive error: {e}")
+
     async def _post_report(self, report: Dict) -> bool:
         """Save the report to the API server."""
         url = f"{self.api_url}/analytics/brain-gym/report"
@@ -567,6 +628,9 @@ class BrainGym:
             log.info(f"[brain_gym] {msg}")
             if emit_log:
                 asyncio.ensure_future(emit_log("brain_gym", msg))
+
+        # Archive oldest trades if journal is getting large (> 500)
+        await self._maybe_archive_trades(emit_log=emit_log)
 
         _log(f"Starting Brain Gym analysis — lookback={lb}")
         trades = await self._fetch_trades(lb)
@@ -657,10 +721,22 @@ class BrainGym:
                     )
                     if analysis:
                         await self._post_trade_analysis(int(t["id"]), analysis)
+                        # Per-trade terminal summary
+                        pnl_val = _safe_float(t.get("pnl"))
+                        outcome = "WIN  ✅" if pnl_val > 0 else "LOSS ❌"
+                        trend_arrow = {"uptrend": "↑", "downtrend": "↓", "sideways": "→"}.get(analysis["trend_at_entry"], "?")
+                        align = {"with_trend": "WITH trend", "against_trend": "AGAINST trend", "neutral": "neutral"}.get(analysis["entry_alignment"], "?")
+                        _log(
+                            f"  [{t.get('symbol','?')} {(t.get('side') or '?').upper()}] {outcome} | "
+                            f"{analysis['trend_at_entry']}{trend_arrow} | {align} | "
+                            f"MAE {analysis['mae_pips']:+.0f}p  MFE {analysis['mfe_pips']:+.0f}p | "
+                            f"RSI {analysis.get('rsi_at_entry', '?')} | "
+                            f"{analysis['verdict'].split(': ', 1)[-1]}"
+                        )
                     done += 1
                     pct = round(done / total_un * 100)
-                    if done % 5 == 0 or done == total_un:
-                        _log(f"Deep analysis: {done}/{total_un} trades ({pct}%)")
+                    if done % 10 == 0 or done == total_un:
+                        _log(f"  Progress: {done}/{total_un} ({pct}%)")
                 _log(f"Deep analysis complete — all {total_un} trades dissected")
             else:
                 _log("Deep analysis: all trades already analyzed — nothing to do")
