@@ -8,15 +8,10 @@ import {
   getGetEngineStatusQueryKey,
   getGetAlertsQueryKey
 } from "@workspace/api-client-react";
-import { ingestAiDecision } from "@/pages/ai-activity";
-import { ingestBotLog } from "@/pages/bot-feed";
-
 export function useWebSocket() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // VITE_WS_URL lets Vercel deployments point WebSocket at the Render API server.
-    // Falls back to same-host (works when frontend and API are served together).
     const wsUrl =
       import.meta.env.VITE_WS_URL ||
       (() => {
@@ -60,10 +55,7 @@ export function useWebSocket() {
               queryClient.invalidateQueries({ queryKey: getGetEngineStatusQueryKey() });
               break;
             case "ai_decision":
-              ingestAiDecision(data.data);
-              break;
             case "bot_log":
-              ingestBotLog(data.data);
               break;
           }
         } catch (e) {
