@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,22 +6,38 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { TrendingUp } from "lucide-react";
 
+const STORAGE_KEY = "westrade_remembered";
+
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [regUsername, setRegUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const { email: e, password: p } = JSON.parse(saved);
+        setEmail(e ?? "");
+        setPassword(p ?? "");
+        setRemember(true);
+      } catch { /* ignore */ }
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
-    const body: Record<string, string> = { username, password };
-    if (mode === "register" && email) body.email = email;
+    const body: Record<string, string> = mode === "login"
+      ? { username: email, password }
+      : { username: regUsername || email.split("@")[0], email, password };
 
     try {
       const res = await fetch(endpoint, {
@@ -36,6 +52,11 @@ export default function LoginPage() {
       if (!res.ok) {
         toast({ title: "Error", description: data.error ?? "Something went wrong", variant: "destructive" });
       } else {
+        if (remember) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ email, password }));
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
         setLocation("/");
         window.location.reload();
       }
@@ -61,26 +82,28 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your_username"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               required
-              minLength={mode === "register" ? 3 : 1}
+              autoComplete="email"
             />
           </div>
 
           {mode === "register" && (
             <div className="space-y-2">
-              <Label htmlFor="email">Email (optional)</Label>
+              <Label htmlFor="regUsername">Username</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                id="regUsername"
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
+                placeholder="your_username"
+                minLength={3}
+                autoComplete="username"
               />
             </div>
           )}
@@ -95,8 +118,24 @@ export default function LoginPage() {
               placeholder={mode === "register" ? "At least 8 characters" : "••••••••"}
               required
               minLength={mode === "register" ? 8 : 1}
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
           </div>
+
+          {mode === "login" && (
+            <div className="flex items-center gap-2">
+              <input
+                id="remember"
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+              />
+              <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer select-none">
+                Remember me
+              </label>
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
