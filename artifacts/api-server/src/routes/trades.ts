@@ -66,6 +66,9 @@ router.get("/trades", async (req, res): Promise<void> => {
     takeProfit: t.takeProfit ? parseFloat(t.takeProfit as string) : null,
     zScore: t.zScore ? parseFloat(t.zScore as string) : null,
     sentimentMultiplier: t.sentimentMultiplier ? parseFloat(t.sentimentMultiplier as string) : null,
+    session: t.session ?? null,
+    deepAnalysis: t.deepAnalysis ?? null,
+    analyzedAt: t.analyzedAt ? t.analyzedAt.toISOString() : null,
   }));
 
   res.json({ trades: serialized, total });

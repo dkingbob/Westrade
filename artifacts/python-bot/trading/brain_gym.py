@@ -721,22 +721,10 @@ class BrainGym:
                     )
                     if analysis:
                         await self._post_trade_analysis(int(t["id"]), analysis)
-                        # Per-trade terminal summary
-                        pnl_val = _safe_float(t.get("pnl"))
-                        outcome = "WIN  ✅" if pnl_val > 0 else "LOSS ❌"
-                        trend_arrow = {"uptrend": "↑", "downtrend": "↓", "sideways": "→"}.get(analysis["trend_at_entry"], "?")
-                        align = {"with_trend": "WITH trend", "against_trend": "AGAINST trend", "neutral": "neutral"}.get(analysis["entry_alignment"], "?")
-                        _log(
-                            f"  [{t.get('symbol','?')} {(t.get('side') or '?').upper()}] {outcome} | "
-                            f"{analysis['trend_at_entry']}{trend_arrow} | {align} | "
-                            f"MAE {analysis['mae_pips']:+.0f}p  MFE {analysis['mfe_pips']:+.0f}p | "
-                            f"RSI {analysis.get('rsi_at_entry', '?')} | "
-                            f"{analysis['verdict'].split(': ', 1)[-1]}"
-                        )
                     done += 1
                     pct = round(done / total_un * 100)
                     if done % 10 == 0 or done == total_un:
-                        _log(f"  Progress: {done}/{total_un} ({pct}%)")
+                        _log(f"Deep analysis: {done}/{total_un} ({pct}%) — see Brain Gym page for per-trade verdicts")
                 _log(f"Deep analysis complete — all {total_un} trades dissected")
             else:
                 _log("Deep analysis: all trades already analyzed — nothing to do")

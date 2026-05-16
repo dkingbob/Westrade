@@ -68,6 +68,32 @@ const LOOKBACK_LABELS: Record<string, string> = {
   "all_time": "All time",
 };
 
+interface DeepAnalysis {
+  mae_pips: number;
+  mfe_pips: number;
+  duration_hours: number;
+  trend_at_entry: string;
+  entry_alignment: string;
+  ema200: string;
+  rsi_at_entry: number;
+  post_exit_move: string | null;
+  verdict: string;
+  analyzed_at: string;
+}
+
+interface TradeWithAnalysis {
+  id: number;
+  symbol: string;
+  side: string;
+  strategy: string;
+  pnl: number | null;
+  openedAt: string;
+  closedAt: string | null;
+  session: string | null;
+  deepAnalysis: DeepAnalysis | null;
+  analyzedAt: string | null;
+}
+
 function fmt(v: number | undefined | null, decimals = 2) {
   if (v == null || isNaN(v)) return "—";
   return v.toFixed(decimals);
@@ -127,6 +153,16 @@ export default function BrainGymPage() {
       fetch(`/api/analytics/brain-gym/progress?lookback=${triggerLookback}`, { credentials: "include" })
         .then(r => r.json()),
     refetchInterval: 5_000,
+  });
+
+  const [verdictFilter, setVerdictFilter] = useState<"all" | "loss" | "win">("all");
+
+  const { data: tradesData } = useQuery<{ trades: TradeWithAnalysis[]; total: number }>({
+    queryKey: ["brain-gym-trades", triggerLookback],
+    queryFn: () =>
+      fetch(`/api/trades?status=closed&limit=200`, { credentials: "include" })
+        .then(r => r.json()),
+    refetchInterval: 15_000,
   });
 
   const trigger = useMutation({
@@ -447,6 +483,145 @@ export default function BrainGymPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* ── Per-Trade Verdicts ── */}
+          {(() => {
+            const allTrades = (tradesData?.trades ?? []).filter(t => t.deepAnalysis);
+            const filtered = verdictFilter === "win"
+              ? allTrades.filter(t => (t.pnl ?? 0) > 0)
+              : verdictFilter === "loss"
+                ? allTrades.filter(t => (t.pnl ?? 0) <= 0)
+                : allTrades;
+            const sorted = [...filtered].sort((a, b) => (a.pnl ?? 0) - (b.pnl ?? 0)); // worst first
+
+            return (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Microscope size={14} className="text-primary" />
+                      Per-Trade Deep Analysis
+                      {allTrades.length > 0 && (
+                        <span className="text-[10px] font-normal text-muted-foreground">
+                          {allTrades.length} trades dissected
+                        </span>
+                      )}
+                    </CardTitle>
+                    <div className="flex gap-1">
+                      {(["all", "loss", "win"] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setVerdictFilter(f)}
+                          className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase transition-colors ${
+                            verdictFilter === f
+                              ? f === "win" ? "bg-emerald-500/20 text-emerald-400" : f === "loss" ? "bg-red-500/20 text-red-400" : "bg-primary/20 text-primary"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {f === "all" ? `All (${allTrades.length})` : f === "win" ? `Wins (${allTrades.filter(t => (t.pnl ?? 0) > 0).length})` : `Losses (${allTrades.filter(t => (t.pnl ?? 0) <= 0).length})`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {sorted.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">
+                      {allTrades.length === 0
+                        ? "No trades analyzed yet — restart the bot to run deep analysis"
+                        : "No trades match this filter"}
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                      {sorted.map(trade => {
+                        const da = trade.deepAnalysis!;
+                        const win = (trade.pnl ?? 0) > 0;
+                        const alignColor = da.entry_alignment === "with_trend"
+                          ? "text-emerald-400" : da.entry_alignment === "against_trend"
+                            ? "text-red-400" : "text-muted-foreground";
+                        const trendIcon = da.trend_at_entry === "uptrend" ? "↑" : da.trend_at_entry === "downtrend" ? "↓" : "→";
+                        const verdict = da.verdict.split(": ").slice(1).join(": ") || da.verdict;
+
+                        return (
+                          <div
+                            key={trade.id}
+                            className={`rounded border p-3 space-y-2 text-xs ${
+                              win ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"
+                            }`}
+                          >
+                            {/* Top row */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold font-mono text-sm ${win ? "text-emerald-400" : "text-red-400"}`}>
+                                  {win ? "WIN" : "LOSS"}
+                                </span>
+                                <span className="font-mono font-semibold text-foreground">{trade.symbol}</span>
+                                <span className="text-muted-foreground uppercase text-[10px]">{trade.side}</span>
+                                <span className="text-muted-foreground text-[10px]">{trade.strategy}</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-[10px] font-mono">
+                                <span className={win ? "text-emerald-400" : "text-red-400"}>
+                                  {(trade.pnl ?? 0) >= 0 ? "+" : ""}${(trade.pnl ?? 0).toFixed(2)}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {new Date(trade.openedAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Stats row */}
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
+                              <span>
+                                <span className="text-muted-foreground">Trend </span>
+                                <span className="font-mono">{da.trend_at_entry}{trendIcon}</span>
+                              </span>
+                              <span>
+                                <span className="text-muted-foreground">Entry </span>
+                                <span className={`font-mono font-medium ${alignColor}`}>
+                                  {da.entry_alignment === "with_trend" ? "WITH trend" : da.entry_alignment === "against_trend" ? "AGAINST trend" : "neutral"}
+                                </span>
+                              </span>
+                              <span>
+                                <span className="text-muted-foreground">MAE </span>
+                                <span className="font-mono text-red-400">{da.mae_pips > 0 ? "+" : ""}{da.mae_pips.toFixed(0)}p</span>
+                              </span>
+                              <span>
+                                <span className="text-muted-foreground">MFE </span>
+                                <span className="font-mono text-emerald-400">+{da.mfe_pips.toFixed(0)}p</span>
+                              </span>
+                              <span>
+                                <span className="text-muted-foreground">RSI </span>
+                                <span className="font-mono">{da.rsi_at_entry}</span>
+                              </span>
+                              <span>
+                                <span className="text-muted-foreground">{da.ema200.replace("_", " ")}</span>
+                              </span>
+                              <span>
+                                <span className="text-muted-foreground">{da.duration_hours}h held</span>
+                              </span>
+                              {da.post_exit_move && (
+                                <span>
+                                  <span className="text-muted-foreground">After exit: </span>
+                                  <span className={`font-mono ${da.post_exit_move.startsWith("reversed") && !win ? "text-amber-400" : "text-muted-foreground"}`}>
+                                    {da.post_exit_move.replace("_", " ")}
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Verdict */}
+                            <p className={`text-[10px] leading-relaxed ${win ? "text-emerald-300/80" : "text-red-300/80"}`}>
+                              {verdict}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </>
       )}
     </div>
