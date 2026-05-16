@@ -78,6 +78,7 @@ class TradingEngine:
         self._new_trades_this_tick: int = 0   # cap new positions per scan cycle
         self.max_new_trades_per_tick: int = 2  # never open more than 2 positions per 60s scan
         self._brain_gym_ran_this_weekend: bool = False  # run once per weekend downtime window
+        self._brain_gym_done_this_weekend: bool = False  # set when analysis fully completes
 
         # Push sentiment API status into ws_client so heartbeat reports it
         self.ws.sentiment_api_status = self.sentiment.get_api_status()
@@ -697,6 +698,7 @@ class TradingEngine:
                     f"Brain Gym done — {report['total_trades']} trades | "
                     f"win_rate={summary.get('win_rate', 0):.0%} | "
                     f"PnL=${summary.get('total_pnl', 0):.2f}")
+            self._brain_gym_done_this_weekend = True
         except Exception as e:
             log.error(f"Brain Gym error: {e}")
             await self._emit_log("brain_gym", f"Brain Gym error: {e}", "warn")
@@ -1037,12 +1039,33 @@ class TradingEngine:
                 # Trigger Brain Gym once per weekend when market closes
                 if not self._brain_gym_ran_this_weekend:
                     self._brain_gym_ran_this_weekend = True
+                    self._brain_gym_done_this_weekend = False
                     asyncio.create_task(self._run_brain_gym())
-                await asyncio.sleep(TICK_INTERVAL)
+
+                # Once Brain Gym is fully done, sleep in long chunks instead of spinning
+                if self._brain_gym_done_this_weekend:
+                    # Calculate seconds until Sunday 22:00 UTC (market open)
+                    now_utc = datetime.utcnow()
+                    days_until_open = (6 - now_utc.weekday()) % 7  # days until Sunday
+                    if now_utc.weekday() == 6 and now_utc.hour >= 22:
+                        days_until_open = 7  # already past open time, next week
+                    market_open = now_utc.replace(hour=22, minute=0, second=0, microsecond=0)
+                    if days_until_open > 0:
+                        market_open += __import__('datetime').timedelta(days=days_until_open)
+                    secs_remaining = max(60, (market_open - now_utc).total_seconds())
+                    # Emit one final log then sleep until market reopens
+                    if self.tick_count % 60 == 1:
+                        await self._emit_log("scan",
+                            f"WEEKEND — Brain Gym complete. Sleeping until market reopens "
+                            f"({now_utc.strftime('%A %H:%M')} UTC, ~{secs_remaining/3600:.1f}h away)")
+                    await asyncio.sleep(min(300, secs_remaining))  # wake every 5 min max to check
+                else:
+                    await asyncio.sleep(TICK_INTERVAL)
                 continue
 
-            # Market open — reset flag so Brain Gym runs again next weekend
+            # Market open — reset flags so Brain Gym runs again next weekend
             self._brain_gym_ran_this_weekend = False
+            self._brain_gym_done_this_weekend = False
 
             can_trade = not self.kill_switch_active and await self._check_interval()
             self._new_trades_this_tick = 0
