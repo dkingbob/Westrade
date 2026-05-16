@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2, Microscope } from "lucide-react";
+import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2, Microscope, BrainCircuit, Sparkles } from "lucide-react";
 
 type Lookback = "1d" | "7d" | "30d" | "all_time";
 
@@ -157,6 +157,21 @@ export default function BrainGymPage() {
 
   const [verdictFilter, setVerdictFilter] = useState<"all" | "loss" | "win">("all");
 
+  const { data: briefing } = useQuery<{
+    briefing: string;
+    equity: number;
+    symbols: string[];
+    generatedAt: string;
+  } | null>({
+    queryKey: ["market-briefing"],
+    queryFn: () =>
+      fetch("/api/analytics/market-briefing", { credentials: "include" }).then(r => {
+        if (r.status === 404) return null;
+        return r.json();
+      }),
+    refetchInterval: 30_000,
+  });
+
   const { data: tradesData } = useQuery<{ trades: TradeWithAnalysis[]; total: number }>({
     queryKey: ["brain-gym-trades", triggerLookback],
     queryFn: () =>
@@ -261,6 +276,33 @@ export default function BrainGymPage() {
                 : progress.analyzed === 0
                   ? "Restart the bot to begin deep per-trade bar analysis (requires MT5 connection)."
                   : `Bot is analyzing trades in the background using real MT5 bar data — MAE/MFE, trend, entry alignment, verdict per trade.`}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Pre-Market Briefing (Gemini) ── */}
+      {briefing && (
+        <Card className="border-violet-500/30 bg-violet-500/5">
+          <CardHeader className="py-3 px-4 pb-0">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BrainCircuit size={14} className="text-violet-400" />
+              Pre-Market Briefing
+              <Badge variant="outline" className="ml-auto text-[10px] border-violet-500/40 text-violet-400 flex items-center gap-1">
+                <Sparkles size={9} />
+                Gemini
+              </Badge>
+              <span className="text-[10px] font-normal text-muted-foreground">
+                {new Date(briefing.generatedAt).toLocaleString()}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 py-3">
+            <div className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed font-mono bg-background/40 rounded p-3 max-h-80 overflow-y-auto border border-violet-500/10">
+              {briefing.briefing}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              Generated at startup using Gemini AI — account equity ${briefing.equity?.toLocaleString()} | {briefing.symbols?.length} pairs
             </p>
           </CardContent>
         </Card>
@@ -483,6 +525,24 @@ export default function BrainGymPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* ── Gemini Strategy Recommendations ── */}
+          {(report as any).strategy_recommendations && (
+            <Card className="border-violet-500/30 bg-violet-500/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Sparkles size={14} className="text-violet-400" />
+                  Strategy Improvement Recommendations
+                  <Badge variant="outline" className="ml-1 text-[10px] border-violet-500/40 text-violet-400">Gemini AI</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed font-mono bg-background/40 rounded p-3 max-h-72 overflow-y-auto border border-violet-500/10">
+                  {(report as any).strategy_recommendations}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* ── Per-Trade Verdicts ── */}
           {(() => {

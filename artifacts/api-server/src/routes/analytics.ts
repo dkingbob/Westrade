@@ -504,4 +504,35 @@ router.get("/analytics/brain-gym/latest", async (req, res): Promise<void> => {
   res.json(latest);
 });
 
+// In-memory store for the latest market briefing (no DB needed — refreshes each session)
+let latestMarketBriefing: {
+  briefing: string;
+  equity: number;
+  symbols: string[];
+  generatedAt: string;
+} | null = null;
+
+router.post("/analytics/market-briefing", async (req, res): Promise<void> => {
+  const { briefing, equity, symbols } = req.body ?? {};
+  if (!briefing) {
+    res.status(400).json({ error: "briefing required" });
+    return;
+  }
+  latestMarketBriefing = {
+    briefing: String(briefing),
+    equity: parseFloat(equity ?? 0),
+    symbols: symbols ?? [],
+    generatedAt: new Date().toISOString(),
+  };
+  res.json({ ok: true });
+});
+
+router.get("/analytics/market-briefing", async (req, res): Promise<void> => {
+  if (!latestMarketBriefing) {
+    res.status(404).json({ error: "No briefing yet — start the bot to generate one" });
+    return;
+  }
+  res.json(latestMarketBriefing);
+});
+
 export default router;

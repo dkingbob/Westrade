@@ -355,6 +355,140 @@ class BrainGym:
         self.api_url = api_url.rstrip("/")
         self.analytics_lookback_window: str = "7d"  # all_time | 30d | 7d | 1d
         self.mt5 = mt5  # MetaTrader5 module — enables deep per-trade bar analysis
+        self._gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        self._gemini_models = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-preview-05-20",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-latest",
+        ]
+
+    async def _call_gemini_raw(self, prompt: str, timeout: int = 60) -> Optional[str]:
+        """Call Gemini with a free-form prompt and return the raw text response."""
+        if not self._gemini_key:
+            return None
+        for model in self._gemini_models:
+            try:
+                url = (
+                    f"https://generativelanguage.googleapis.com/v1beta/models/"
+                    f"{model}:generateContent?key={self._gemini_key}"
+                )
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1024},
+                }
+                async with aiohttp.ClientSession() as sess:
+                    async with sess.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        if resp.status == 404:
+                            continue
+                        if resp.status == 429:
+                            log.warning("[Brain Gym/Gemini] Rate limited — waiting 65s")
+                            await asyncio.sleep(65)
+                            continue
+                        log.warning(f"[Brain Gym/Gemini] HTTP {resp.status} from {model}")
+            except Exception as e:
+                log.warning(f"[Brain Gym/Gemini] {model} error: {e}")
+        return None
+
+    async def _gemini_analyze_trade(self, trade: dict, metrics: dict) -> Optional[str]:
+        """
+        Send real bar metrics to Gemini and get a professional quant-level verdict.
+        Returns a multi-section analysis string, or None if Gemini is unavailable.
+        """
+        symbol   = trade.get("symbol", "?")
+        side     = trade.get("side", "long")
+        pnl      = _safe_float(trade.get("pnl"))
+        strategy = trade.get("strategy", "?")
+        outcome  = "WIN" if pnl > 0 else "LOSS"
+
+        entry_ind = trade.get("entryIndicators") or {}
+
+        prompt = f"""You are a senior quantitative analyst at a top-tier $1B algorithmic trading firm.
+Your job is to do a ruthless, professional post-mortem on individual trades.
+
+TRADE #{trade.get('id')} — {outcome}
+Symbol: {symbol} | Side: {side} ({('bought' if side == 'long' else 'sold')}) | Strategy: {strategy}
+Entry: {trade.get('entryPrice')} | Exit: {trade.get('exitPrice')} | P&L: ${pnl:.2f}
+Opened: {trade.get('openedAt', '')[:19]} UTC | Closed: {trade.get('closedAt', '')[:19]} UTC
+Duration: {metrics.get('duration_hours')}h
+
+TECHNICAL CONTEXT (from real H1 bar data, {metrics.get('bars_analyzed')} bars):
+  Trend at entry:       {metrics.get('trend_at_entry')}
+  Entry vs trend:       {metrics.get('entry_alignment')}
+  RSI at entry:         {metrics.get('rsi_at_entry'):.1f}
+  vs EMA200:            {metrics.get('ema200')}
+  Max Adverse Excursion (worst drawdown): {metrics.get('mae_pips'):.1f} pips
+  Max Favorable Excursion (best run-up):  {metrics.get('mfe_pips'):.1f} pips
+  Post-exit move:       {metrics.get('post_exit_move')} (what price did AFTER we closed)
+
+LIVE INDICATORS at entry time: {entry_ind if entry_ind else '(not recorded)'}
+
+Write a concise professional analysis with exactly these four sections:
+
+WHAT HAPPENED: (2 sentences — describe the market structure and what the trade did)
+ROOT CAUSE: (1 sentence — single primary reason this trade {outcome.lower()}ed)
+WARNING SIGNS: (1–2 bullet points — specific signals the bot should have acted on before entry)
+NEXT TIME: (1 sentence — one concrete, specific parameter or condition to change)
+
+Be direct. Use numbers. No fluff."""
+
+        return await self._call_gemini_raw(prompt, timeout=45)
+
+    async def _gemini_strategy_recommendations(self, report: dict, losses: list, wins: list) -> Optional[str]:
+        """
+        After analyzing all trades, ask Gemini to synthesize the loss patterns
+        into concrete, prioritised strategy improvement recommendations.
+        """
+        loss_count   = len(losses)
+        win_count    = len(wins)
+        win_rate     = report["summary"]["win_rate"]
+        total_pnl    = report["summary"]["total_pnl"]
+        avg_win      = report["summary"]["avg_win"]
+        avg_loss     = report["summary"]["avg_loss"]
+        pf           = report["summary"]["profit_factor"]
+        blacklist    = report.get("blacklisted_conditions", {})
+        session_data = report.get("session_matrix", {})
+
+        # Summarise loss patterns compactly
+        loss_summaries = []
+        for t in losses[:30]:  # cap at 30 to stay within token budget
+            pnl   = _safe_float(t.get("pnl"))
+            da    = t.get("deepAnalysis") or {}
+            trend = da.get("trend_at_entry", "?")
+            align = da.get("entry_alignment", "?")
+            rsi   = da.get("rsi_at_entry", "?")
+            loss_summaries.append(
+                f"  {t.get('symbol')} {t.get('side')} | P&L ${pnl:.2f} | trend={trend} align={align} rsi={rsi}"
+            )
+
+        prompt = f"""You are the chief quant strategist at a $1B forex trading firm reviewing an algorithmic bot.
+
+OVERALL PERFORMANCE ({report.get('lookback', '7d')} window):
+  Trades: {win_count} wins / {loss_count} losses (win rate {win_rate:.0%})
+  Total P&L: ${total_pnl:.2f} | Avg win: ${avg_win:.2f} | Avg loss: ${avg_loss:.2f}
+  Profit Factor: {pf}
+
+BLACKLISTED CONDITIONS DETECTED:
+{blacklist if blacklist else '  None yet'}
+
+SESSION PERFORMANCE:
+{session_data}
+
+SAMPLE OF LOSING TRADES (symbol, side, P&L, trend, alignment, RSI at entry):
+{chr(10).join(loss_summaries) if loss_summaries else '  (no losses)'}
+
+Based on this data, produce a prioritised list of EXACTLY 5 strategy improvement recommendations.
+Format each as:
+  PRIORITY [1-5]: [title]
+  Action: [specific, measurable change — e.g. "block longs when RSI > 68", "avoid NY session on GBPJPY"]
+  Expected impact: [quantified estimate — e.g. "removes ~40% of losing trades"]
+
+Be specific. No generic advice. Every recommendation must reference actual numbers from the data above."""
+
+        return await self._call_gemini_raw(prompt, timeout=60)
 
     async def _fetch_trades(self, lookback: str) -> List[Dict]:
         """Fetch closed trades from the API server."""
@@ -713,20 +847,50 @@ class BrainGym:
             unanalyzed = [t for t in trades if not t.get("analyzedAt") and not t.get("analyzed_at") and t.get("id")]
             total_un = len(unanalyzed)
             if total_un > 0:
-                _log(f"Deep analysis starting — {total_un} trades to examine")
+                has_gemini = bool(self._gemini_key)
+                _log(
+                    f"Deep analysis starting — {total_un} trades to examine"
+                    + (" (Gemini AI enabled — each trade will take a few seconds)" if has_gemini
+                       else " (no Gemini key — using statistical analysis only)")
+                )
                 done = 0
                 for t in unanalyzed:
-                    analysis = await asyncio.get_event_loop().run_in_executor(
+                    symbol = t.get("symbol", "?")
+                    pnl    = _safe_float(t.get("pnl"))
+                    _log(f"  Analysing trade #{t.get('id')} — {symbol} {t.get('side')} P&L ${pnl:.2f}...")
+
+                    # Step 1: compute hard metrics from actual MT5 bar data (blocking, runs in thread)
+                    metrics = await asyncio.get_event_loop().run_in_executor(
                         None, self._deep_analyze_trade_sync, t
                     )
-                    if analysis:
-                        await self._post_trade_analysis(int(t["id"]), analysis)
+
+                    if metrics:
+                        # Step 2: send metrics + bar context to Gemini for real AI analysis
+                        if has_gemini:
+                            ai_verdict = await self._gemini_analyze_trade(t, metrics)
+                            if ai_verdict:
+                                metrics["verdict"] = ai_verdict
+                                metrics["ai_analyzed"] = True
+                            else:
+                                metrics["ai_analyzed"] = False
+                        await self._post_trade_analysis(int(t["id"]), metrics)
+
                     done += 1
                     pct = round(done / total_un * 100)
-                    if done % 10 == 0 or done == total_un:
-                        _log(f"Deep analysis: {done}/{total_un} ({pct}%) — see Brain Gym page for per-trade verdicts")
+                    _log(f"  Done {done}/{total_un} ({pct}%)")
+
                 _log(f"Deep analysis complete — all {total_un} trades dissected")
             else:
                 _log("Deep analysis: all trades already analyzed — nothing to do")
+
+        # ── Gemini strategy recommendations (synthesises all loss patterns) ──
+        if self._gemini_key:
+            _log("Generating strategy improvement recommendations from Gemini...")
+            recommendations = await self._gemini_strategy_recommendations(report, losses, wins)
+            if recommendations:
+                report["strategy_recommendations"] = recommendations
+                _log("Strategy recommendations ready — check Brain Gym page")
+                # Re-save report with recommendations included
+                await self._post_report(report)
 
         return report

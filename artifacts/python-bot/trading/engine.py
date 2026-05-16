@@ -698,10 +698,123 @@ class TradingEngine:
                     f"Brain Gym done — {report['total_trades']} trades | "
                     f"win_rate={summary.get('win_rate', 0):.0%} | "
                     f"PnL=${summary.get('total_pnl', 0):.2f}")
+                if report.get("strategy_recommendations"):
+                    await self._emit_log("brain_gym",
+                        "Strategy recommendations generated — check Brain Gym page for Gemini's advice")
             self._brain_gym_done_this_weekend = True
+            # Terminal stops itself — nothing left to do until market reopens
+            await self._emit_log("brain_gym",
+                "Weekend analysis complete. Bot is shutting down. Restart when you're ready to trade.")
+            await asyncio.sleep(2)
+            self.running = False
         except Exception as e:
             log.error(f"Brain Gym error: {e}")
             await self._emit_log("brain_gym", f"Brain Gym error: {e}", "warn")
+
+    async def _generate_market_briefing(self):
+        """
+        Called on startup (after MT5 connects). Fetches recent price context and
+        the latest Brain Gym report, then asks Gemini for a pre-market briefing
+        that sets the trading agenda for the session.
+        """
+        gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        if not gemini_key:
+            return
+
+        await self._emit_log("brain_gym", "Generating pre-market briefing — Gemini is thinking...")
+        try:
+            # Pull latest Brain Gym report from API
+            bg_report = None
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(
+                    f"{self.ws.api_url}/analytics/brain-gym/latest",
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    if resp.status == 200:
+                        bg_report = await resp.json()
+
+            # Pull current equity + recent MT5 positions
+            equity_str = f"${self.equity:,.2f}" if self.equity else "unknown"
+            all_symbols = list({s for strat in self.strategies for s in strat.symbols})
+
+            # Build recent price context from MT5 if available
+            price_context = ""
+            if self._mt5 is not None:
+                lines = []
+                for sym in all_symbols[:8]:  # cap at 8 to stay concise
+                    tick = self._mt5.symbol_info_tick(sym)
+                    if tick:
+                        lines.append(f"  {sym}: bid={tick.bid:.5f} ask={tick.ask:.5f}")
+                if lines:
+                    price_context = "CURRENT PRICES:\n" + "\n".join(lines)
+
+            # Brain Gym summary
+            bg_summary = ""
+            if bg_report and isinstance(bg_report, dict):
+                report_data = bg_report.get("report") or bg_report
+                if isinstance(report_data, dict):
+                    summ = report_data.get("summary", {})
+                    recs = report_data.get("strategy_recommendations", "")
+                    bg_summary = (
+                        f"LAST BRAIN GYM REPORT ({bg_report.get('lookback', '?')} window):\n"
+                        f"  Win rate: {summ.get('win_rate', 0):.0%} | Profit factor: {summ.get('profit_factor', '?')}\n"
+                        f"  Total P&L: ${summ.get('total_pnl', 0):.2f} | Avg win: ${summ.get('avg_win', 0):.2f} | Avg loss: ${summ.get('avg_loss', 0):.2f}\n"
+                    )
+                    if recs:
+                        bg_summary += f"STRATEGY RECOMMENDATIONS:\n{recs}\n"
+
+            now_utc = datetime.utcnow()
+            prompt = f"""You are the head of trading at a $1B forex hedge fund.
+The algorithmic trading bot is about to start its session. Give a professional pre-market briefing.
+
+TODAY: {now_utc.strftime('%A %d %B %Y, %H:%M UTC')}
+ACCOUNT EQUITY: {equity_str}
+STRATEGIES ACTIVE: {len(self.strategies)} strategies across {len(all_symbols)} pairs: {', '.join(all_symbols[:10])}
+
+{price_context}
+
+{bg_summary}
+
+Write a pre-market briefing with these sections:
+
+SESSION OUTLOOK: (2 sentences — what market conditions to expect today based on day/time)
+KEY LEVELS TO WATCH: (bullet list of 3–5 specific things — price levels, sessions, events)
+RISK WARNINGS: (1–2 specific warnings based on the Brain Gym data above, or general if no data)
+EXECUTION RULES FOR THIS SESSION: (3 bullet points — specific rules the bot should follow today)
+CONFIDENCE RATING: X/10 — one sentence why
+
+Be specific. Reference the Brain Gym data. No generic advice."""
+
+            # Call Gemini
+            for model in ["gemini-2.5-flash", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash", "gemini-1.5-flash-latest"]:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1024},
+                    }
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=45)) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                briefing_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                                # Post to API so dashboard can show it
+                                async with aiohttp.ClientSession() as s2:
+                                    await s2.post(
+                                        f"{self.ws.api_url}/analytics/market-briefing",
+                                        json={"briefing": briefing_text, "equity": self.equity, "symbols": all_symbols},
+                                        timeout=aiohttp.ClientTimeout(total=10)
+                                    )
+                                await self._emit_log("brain_gym",
+                                    f"Pre-market briefing ready — check Brain Gym page\n\n{briefing_text[:400]}...")
+                                return
+                            if resp.status == 404:
+                                continue
+                except Exception as e:
+                    log.warning(f"Briefing Gemini {model} error: {e}")
+        except Exception as e:
+            log.error(f"Market briefing error: {e}")
+            await self._emit_log("brain_gym", f"Could not generate briefing: {e}", "warn")
 
     async def _execute_trade(self, signal: dict):
         """Execute a trade signal (paper or live MT5)."""
@@ -1004,6 +1117,9 @@ class TradingEngine:
 
         # Sync real MT5 closed trade history into the journal DB on startup
         asyncio.create_task(self._sync_mt5_history())
+
+        # Generate Gemini pre-market briefing before first trade
+        asyncio.create_task(self._generate_market_briefing())
 
         # Refresh H1 bars once per hour (3600 / TICK_INTERVAL ticks)
         h1_refresh_interval = max(1, 3600 // TICK_INTERVAL)
