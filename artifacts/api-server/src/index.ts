@@ -24,12 +24,11 @@ wsServer.attach(server);
 server.listen(port, async () => {
   logger.info({ port }, "Server listening");
 
-  // Auto-start trading engine
+  // Initialize trading engine (reset kill switch, seed strategies) — user starts it manually
   try {
-    await tradingEngine.start();
-    logger.info("Trading engine auto-started");
+    await tradingEngine.init();
   } catch (err) {
-    logger.warn({ err }, "Trading engine failed to start on boot");
+    logger.warn({ err }, "Trading engine init failed");
   }
 });
 

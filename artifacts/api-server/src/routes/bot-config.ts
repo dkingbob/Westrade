@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { botConfigTable, tradesTable } from "@workspace/db";
 import { eq, isNull } from "drizzle-orm";
+import { wsServer } from "../ws/server";
+import { sendAlertEmail } from "./notifications";
 
 const router: IRouter = Router();
 
@@ -14,18 +16,48 @@ async function getOrCreateConfig() {
 
 router.get("/bot/config", async (req, res): Promise<void> => {
   const cfg = await getOrCreateConfig();
-  res.json(cfg);
+  const extra = (cfg.botExtra as Record<string, unknown>) ?? {};
+  res.json({
+    ...cfg,
+    aiEnabled: extra.aiEnabled ?? true,
+    autoTunerEnabled: extra.autoTunerEnabled ?? false,
+    autoTunerMode: extra.autoTunerMode ?? "guided",
+    paperMode: extra.paperMode ?? false,
+  });
+});
+
+router.get("/ai-decisions", (req, res): void => {
+  res.json(wsServer.getAiDecisions());
 });
 
 router.put("/bot/config", async (req, res): Promise<void> => {
   const {
     limitOrderOnly, waitForPriceEntry, adaptiveSentiment,
     newsHaltMode, longTermMode, pausedSymbols, restrictedAssets,
-    mt5AccountId, mt5Server,
+    mt5AccountId, mt5Server, maxPositionUsd,
+    dailyLossLimitUsd, dailyProfitTargetUsd, lossBufferUsd, winBufferUsd, sessionHours,
+    intervalTradeHours, intervalPauseHours, autoTunerEnabled, autoTunerMode, aiEnabled, paperMode,
+    triggerBrainGym, brainGymLookback,
   } = req.body;
 
   const cfg = await getOrCreateConfig();
-  void cfg;
+  const existingExtra = (cfg.botExtra as Record<string, unknown>) ?? {};
+  const newExtra = {
+    ...existingExtra,
+    ...(maxPositionUsd !== undefined && { maxPositionUsd: maxPositionUsd === null ? null : parseFloat(maxPositionUsd) }),
+    ...(dailyLossLimitUsd !== undefined && { dailyLossLimitUsd: dailyLossLimitUsd === null ? null : parseFloat(dailyLossLimitUsd) }),
+    ...(dailyProfitTargetUsd !== undefined && { dailyProfitTargetUsd: dailyProfitTargetUsd === null ? null : parseFloat(dailyProfitTargetUsd) }),
+    ...(lossBufferUsd !== undefined && { lossBufferUsd: lossBufferUsd === null ? null : parseFloat(lossBufferUsd) }),
+    ...(winBufferUsd !== undefined && { winBufferUsd: winBufferUsd === null ? null : parseFloat(winBufferUsd) }),
+    ...(sessionHours !== undefined && { sessionHours: sessionHours === null ? 24 : parseFloat(sessionHours) }),
+    ...(intervalTradeHours !== undefined && { intervalTradeHours: intervalTradeHours === null ? null : parseFloat(intervalTradeHours) }),
+    ...(intervalPauseHours !== undefined && { intervalPauseHours: intervalPauseHours === null ? null : parseFloat(intervalPauseHours) }),
+    ...(autoTunerEnabled !== undefined && { autoTunerEnabled: Boolean(autoTunerEnabled) }),
+    ...(autoTunerMode !== undefined && { autoTunerMode: String(autoTunerMode) }),
+    ...(aiEnabled !== undefined && { aiEnabled: Boolean(aiEnabled) }),
+    ...(paperMode !== undefined && { paperMode: Boolean(paperMode) }),
+  };
+
   const [updated] = await db
     .update(botConfigTable)
     .set({
@@ -38,9 +70,37 @@ router.put("/bot/config", async (req, res): Promise<void> => {
       ...(restrictedAssets !== undefined && { restrictedAssets }),
       ...(mt5AccountId !== undefined && { mt5AccountId }),
       ...(mt5Server !== undefined && { mt5Server }),
+      botExtra: newExtra,
       updatedAt: new Date(),
     })
     .returning();
+
+  const extra = (updated.botExtra as Record<string, unknown>) ?? {};
+
+  // Broadcast config update to connected bots
+  wsServer.broadcast("config_update", {
+    pausedSymbols: updated.pausedSymbols ?? [],
+    restrictedAssets: updated.restrictedAssets ?? [],
+    killSwitchActive: updated.killSwitchActive,
+    limitOrderOnly: updated.limitOrderOnly,
+    adaptiveSentiment: updated.adaptiveSentiment,
+    newsHaltMode: updated.newsHaltMode,
+    longTermMode: updated.longTermMode,
+    maxPositionUsd: extra.maxPositionUsd ?? null,
+    dailyLossLimitUsd: extra.dailyLossLimitUsd ?? null,
+    dailyProfitTargetUsd: extra.dailyProfitTargetUsd ?? null,
+    lossBufferUsd: extra.lossBufferUsd ?? null,
+    winBufferUsd: extra.winBufferUsd ?? null,
+    sessionHours: extra.sessionHours ?? 24,
+    intervalTradeHours: extra.intervalTradeHours ?? null,
+    intervalPauseHours: extra.intervalPauseHours ?? null,
+    autoTunerEnabled: extra.autoTunerEnabled ?? false,
+    aiEnabled: extra.aiEnabled ?? true,
+    autoTunerMode: extra.autoTunerMode ?? "guided",
+    paperMode: extra.paperMode ?? false,
+    ...(triggerBrainGym && { triggerBrainGym: true, brainGymLookback: brainGymLookback ?? "7d" }),
+  });
+
   res.json(updated);
 });
 
@@ -51,6 +111,15 @@ router.post("/bot/kill-switch", async (req, res): Promise<void> => {
     .update(botConfigTable)
     .set({ killSwitchActive: active ?? true, updatedAt: new Date() })
     .returning();
+
+  // Broadcast to connected bots immediately
+  if (updated.killSwitchActive) {
+    wsServer.broadcast("kill_switch", { reason: "Dashboard kill switch activated" });
+    sendAlertEmail("Kill Switch Activated", `The kill switch was manually activated from the dashboard.\n\nAll trading has been halted and open positions closed.\nTime: ${new Date().toUTCString()}`).catch(() => {});
+  } else {
+    wsServer.broadcast("config_update", { killSwitchActive: false });
+  }
+
   res.json({ success: true, killSwitchActive: updated.killSwitchActive });
 });
 

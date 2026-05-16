@@ -20,6 +20,7 @@ interface ConnectionStatus {
   websocket: { connected: boolean; endpoint: string };
   database: { connected: boolean };
   sentimentApis: { twitter: boolean; reddit: boolean; newsApi: boolean };
+  aiValidation: boolean;
   updatedAt: string;
 }
 
@@ -187,11 +188,11 @@ export default function Connections() {
             <div className="space-y-1">
               {[
                 { label: "Heartbeat", value: status?.pythonBot.heartbeatAge ? `${Math.floor(status.pythonBot.heartbeatAge / 1000)}s ago` : "—" },
-                { label: "Endpoint", value: "/api/connections/bot/heartbeat" },
+                { label: "AI Validation", value: status?.aiValidation ? "Gemini + DeepSeek" : "Not configured" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-[10px] font-mono text-muted-foreground">{label}</span>
-                  <span className="text-[10px] font-mono text-foreground">{value}</span>
+                  <span className={`text-[10px] font-mono ${label === "AI Validation" && status?.aiValidation ? "text-green-400" : "text-foreground"}`}>{value}</span>
                 </div>
               ))}
             </div>
@@ -207,9 +208,9 @@ export default function Connections() {
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-2">
             {[
-              { label: "Twitter / X API", key: "twitter" as const, ok: status?.sentimentApis.twitter ?? false, note: "Configure in Sentiment → Sources" },
-              { label: "Reddit API", key: "reddit" as const, ok: status?.sentimentApis.reddit ?? false, note: "Configure in Sentiment → Sources" },
-              { label: "NewsAPI", key: "newsApi" as const, ok: status?.sentimentApis.newsApi ?? false, note: "Configure in Sentiment → Sources" },
+              { label: "Twitter / X API", key: "twitter" as const, ok: status?.sentimentApis.twitter ?? false, note: "Set TWITTER_BEARER_TOKEN in bot .env" },
+              { label: "Reddit API", key: "reddit" as const, ok: status?.sentimentApis.reddit ?? false, note: "Set REDDIT_CLIENT_ID + SECRET in bot .env" },
+              { label: "NewsAPI", key: "newsApi" as const, ok: status?.sentimentApis.newsApi ?? false, note: "Set NEWS_API_KEY in bot .env" },
             ].map(({ label, ok, note }) => (
               <div key={label} className="flex items-center justify-between p-2 rounded border border-border">
                 <div>

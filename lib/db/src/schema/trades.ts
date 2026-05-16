@@ -6,6 +6,7 @@ import {
   timestamp,
   boolean,
   integer,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -32,6 +33,11 @@ export const tradesTable = pgTable("trades", {
   tags: text("tags").array().notNull().default([]),
   zScore: numeric("z_score", { precision: 10, scale: 6 }),
   sentimentMultiplier: numeric("sentiment_multiplier", { precision: 10, scale: 6 }),
+  session: text("session"),                 // asian | london | ny | off
+  entryIndicators: jsonb("entry_indicators"), // {rsi, adx, bb_pct, macd_hist, atr, ema_trend}
+  mt5TicketId: text("mt5_ticket_id"),         // MT5 position_id — used for dedup on history sync
+  deepAnalysis: jsonb("deep_analysis"),        // per-trade bar-level analysis from Brain Gym
+  analyzedAt: timestamp("analyzed_at", { withTimezone: true }), // when deep analysis ran
   openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
   closedAt: timestamp("closed_at", { withTimezone: true }),
 });

@@ -140,6 +140,304 @@
   --radius: 0.25rem; /* tight 4px radius for precision instrument feel */
 }
 
+/* Light mode overlay — overrides :root dark defaults */
+.light {
+  color-scheme: light;
+  --background: 220 20% 97%;
+  --foreground: 220 15% 10%;
+  --border: 220 15% 85%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 15% 10%;
+  --card-border: 220 15% 88%;
+  --sidebar: 220 20% 94%;
+  --sidebar-foreground: 220 15% 30%;
+  --sidebar-border: 220 15% 85%;
+  --sidebar-accent: 220 20% 90%;
+  --sidebar-accent-foreground: 220 15% 10%;
+  --muted: 220 15% 92%;
+  --muted-foreground: 220 10% 45%;
+  --accent: 220 15% 92%;
+  --accent-foreground: 220 15% 10%;
+  --input: 220 15% 88%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 15% 10%;
+  --popover-border: 220 15% 85%;
+  --secondary: 220 15% 88%;
+  --secondary-foreground: 220 15% 10%;
+  --primary: 210 100% 45%;
+  --primary-foreground: 0 0% 100%;
+}
+
+/* ── Glass ── dark + translucent cards */
+.glass:not(.light) {
+  color-scheme: dark;
+  --background: 230 25% 8%;
+  --foreground: 210 30% 95%;
+  --border: 210 30% 30%;
+  --card: 210 25% 12%;
+  --card-foreground: 210 30% 95%;
+  --card-border: 210 30% 25%;
+  --sidebar: 230 25% 8%;
+  --sidebar-foreground: 210 20% 75%;
+  --sidebar-border: 210 25% 18%;
+  --sidebar-accent: 210 25% 18%;
+  --sidebar-accent-foreground: 210 30% 95%;
+  --muted: 210 20% 15%;
+  --muted-foreground: 210 15% 55%;
+  --accent: 210 25% 18%;
+  --accent-foreground: 210 30% 95%;
+  --input: 210 25% 20%;
+  --popover: 210 25% 12%;
+  --popover-foreground: 210 30% 95%;
+  --popover-border: 210 30% 25%;
+  --secondary: 210 25% 18%;
+  --secondary-foreground: 210 30% 95%;
+  --primary: 200 100% 55%;
+  --primary-foreground: 0 0% 100%;
+}
+.glass .bg-card,
+.glass [class*="bg-card"] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.glass aside {
+  background: rgba(10, 15, 30, 0.7) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.light.glass {
+  color-scheme: light;
+  --background: 210 40% 96%;
+  --foreground: 220 20% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 20% 10%;
+  --card-border: 210 30% 80%;
+  --border: 210 30% 80%;
+  --muted: 210 30% 92%;
+  --muted-foreground: 210 15% 40%;
+  --sidebar: 210 35% 90%;
+  --sidebar-foreground: 210 20% 30%;
+  --sidebar-border: 210 30% 83%;
+  --sidebar-accent: 210 30% 86%;
+  --sidebar-accent-foreground: 220 20% 10%;
+  --secondary: 210 30% 88%;
+  --secondary-foreground: 220 20% 10%;
+  --accent: 210 30% 90%;
+  --accent-foreground: 220 20% 10%;
+  --primary: 200 100% 42%;
+  --primary-foreground: 0 0% 100%;
+  --input: 210 30% 88%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 10%;
+  --popover-border: 210 30% 80%;
+}
+.light.glass .bg-card,
+.light.glass [class*="bg-card"] {
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-color: rgba(180, 200, 230, 0.5) !important;
+}
+.light.glass aside {
+  background: rgba(220, 230, 245, 0.75) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Frosted ── Apple macOS-style heavy blur */
+.frosted:not(.light) {
+  color-scheme: dark;
+  --radius: 0.625rem;
+  --background: 222 22% 6%;
+  --foreground: 210 25% 94%;
+  --border: 222 20% 22%;
+  --card: 222 20% 11%;
+  --card-foreground: 210 25% 94%;
+  --card-border: 222 20% 20%;
+  --sidebar: 222 22% 7%;
+  --sidebar-foreground: 210 18% 68%;
+  --sidebar-border: 222 20% 16%;
+  --sidebar-accent: 222 20% 13%;
+  --sidebar-accent-foreground: 210 25% 94%;
+  --muted: 222 18% 13%;
+  --muted-foreground: 210 12% 50%;
+  --accent: 222 20% 14%;
+  --accent-foreground: 210 25% 94%;
+  --input: 222 20% 16%;
+  --popover: 222 20% 11%;
+  --popover-foreground: 210 25% 94%;
+  --popover-border: 222 20% 22%;
+  --secondary: 222 20% 15%;
+  --secondary-foreground: 210 25% 94%;
+  --primary: 211 100% 62%;
+  --primary-foreground: 0 0% 100%;
+}
+.frosted .bg-card,
+.frosted [class*="bg-card"] {
+  background: rgba(18, 25, 48, 0.52) !important;
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border-color: rgba(100, 140, 220, 0.18) !important;
+}
+.frosted aside {
+  background: rgba(10, 15, 32, 0.62) !important;
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+}
+.light.frosted {
+  color-scheme: light;
+  --radius: 0.625rem;
+  --background: 220 25% 93%;
+  --foreground: 222 22% 8%;
+  --border: 220 20% 82%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 22% 8%;
+  --card-border: 220 20% 84%;
+  --sidebar: 220 22% 90%;
+  --sidebar-foreground: 222 18% 28%;
+  --sidebar-border: 220 20% 83%;
+  --sidebar-accent: 220 22% 86%;
+  --sidebar-accent-foreground: 222 22% 8%;
+  --muted: 220 20% 90%;
+  --muted-foreground: 220 12% 44%;
+  --accent: 220 22% 88%;
+  --accent-foreground: 222 22% 8%;
+  --input: 220 20% 86%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 22% 8%;
+  --popover-border: 220 20% 82%;
+  --secondary: 220 20% 86%;
+  --secondary-foreground: 222 22% 8%;
+  --primary: 211 100% 48%;
+  --primary-foreground: 0 0% 100%;
+}
+.light.frosted .bg-card,
+.light.frosted [class*="bg-card"] {
+  background: rgba(255, 255, 255, 0.68) !important;
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border-color: rgba(180, 200, 240, 0.55) !important;
+}
+.light.frosted aside {
+  background: rgba(215, 225, 240, 0.72) !important;
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+}
+
+/* ── Terminal ── matrix green-on-black */
+.terminal:not(.light) {
+  color-scheme: dark;
+  --radius: 0.125rem;
+  --background: 0 0% 3%;
+  --foreground: 120 55% 48%;
+  --border: 120 45% 14%;
+  --card: 0 0% 5%;
+  --card-foreground: 120 55% 48%;
+  --card-border: 120 45% 16%;
+  --sidebar: 0 0% 3%;
+  --sidebar-foreground: 120 50% 40%;
+  --sidebar-border: 120 40% 11%;
+  --sidebar-accent: 0 0% 7%;
+  --sidebar-accent-foreground: 120 55% 48%;
+  --muted: 0 0% 8%;
+  --muted-foreground: 120 30% 32%;
+  --accent: 0 0% 8%;
+  --accent-foreground: 120 55% 48%;
+  --input: 0 0% 9%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 120 55% 48%;
+  --popover-border: 120 45% 16%;
+  --secondary: 0 0% 8%;
+  --secondary-foreground: 120 45% 44%;
+  --primary: 120 60% 40%;
+  --primary-foreground: 0 0% 0%;
+  --destructive: 0 80% 50%;
+  --destructive-foreground: 0 0% 100%;
+}
+.light.terminal {
+  color-scheme: light;
+  --radius: 0.125rem;
+  --background: 0 0% 97%;
+  --foreground: 120 70% 20%;
+  --border: 120 35% 78%;
+  --card: 0 0% 100%;
+  --card-foreground: 120 70% 20%;
+  --card-border: 120 35% 80%;
+  --sidebar: 120 15% 96%;
+  --sidebar-foreground: 120 55% 25%;
+  --sidebar-border: 120 30% 84%;
+  --sidebar-accent: 120 20% 92%;
+  --sidebar-accent-foreground: 120 70% 20%;
+  --muted: 120 18% 93%;
+  --muted-foreground: 120 35% 40%;
+  --accent: 120 18% 92%;
+  --accent-foreground: 120 70% 20%;
+  --input: 120 18% 88%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 120 70% 20%;
+  --popover-border: 120 35% 78%;
+  --secondary: 120 18% 90%;
+  --secondary-foreground: 120 70% 20%;
+  --primary: 120 70% 32%;
+  --primary-foreground: 0 0% 100%;
+}
+
+/* ── Midnight ── deep navy premium */
+.midnight:not(.light) {
+  color-scheme: dark;
+  --background: 230 40% 5%;
+  --foreground: 220 30% 90%;
+  --border: 225 30% 18%;
+  --card: 225 35% 9%;
+  --card-foreground: 220 30% 90%;
+  --card-border: 225 30% 17%;
+  --sidebar: 230 40% 5%;
+  --sidebar-foreground: 220 22% 62%;
+  --sidebar-border: 225 30% 13%;
+  --sidebar-accent: 225 30% 11%;
+  --sidebar-accent-foreground: 220 30% 90%;
+  --muted: 225 25% 13%;
+  --muted-foreground: 220 18% 48%;
+  --accent: 225 30% 12%;
+  --accent-foreground: 220 30% 90%;
+  --input: 225 30% 14%;
+  --popover: 225 35% 9%;
+  --popover-foreground: 220 30% 90%;
+  --popover-border: 225 30% 18%;
+  --secondary: 225 30% 14%;
+  --secondary-foreground: 220 30% 90%;
+  --primary: 225 90% 62%;
+  --primary-foreground: 0 0% 100%;
+}
+.light.midnight {
+  color-scheme: light;
+  --background: 225 40% 96%;
+  --foreground: 225 35% 12%;
+  --border: 225 30% 84%;
+  --card: 0 0% 100%;
+  --card-foreground: 225 35% 12%;
+  --card-border: 225 30% 85%;
+  --sidebar: 225 30% 93%;
+  --sidebar-foreground: 225 28% 28%;
+  --sidebar-border: 225 30% 84%;
+  --sidebar-accent: 225 25% 88%;
+  --sidebar-accent-foreground: 225 35% 12%;
+  --muted: 225 25% 92%;
+  --muted-foreground: 225 18% 44%;
+  --accent: 225 25% 90%;
+  --accent-foreground: 225 35% 12%;
+  --input: 225 25% 86%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 225 35% 12%;
+  --popover-border: 225 30% 84%;
+  --secondary: 225 25% 88%;
+  --secondary-foreground: 225 35% 12%;
+  --primary: 225 80% 50%;
+  --primary-foreground: 0 0% 100%;
+}
+
 @layer base {
   * {
     @apply border-border;

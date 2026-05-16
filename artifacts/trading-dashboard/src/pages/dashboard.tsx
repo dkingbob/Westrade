@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTheme } from "@/hooks/use-theme";
 import {
   useGetPortfolioSummary,
   useGetPositions,
@@ -11,8 +12,8 @@ import {
   getGetPositionsQueryKey,
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2 } from "lucide-react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,56 @@ function fmtUsd(n: number) {
 }
 function fmtPct(n: number) {
   return `${(n * 100).toFixed(2)}%`;
+}
+
+function FearGreedGauge({ value, label, darkMode }: { value: number; label: string; darkMode: boolean }) {
+  const cx = 60, cy = 65, r = 50;
+  const needleColor = darkMode ? "white" : "#1e293b";
+  const color = value <= 25 ? "#ef4444" : value <= 45 ? "#f97316" : value <= 55 ? "#eab308" : value <= 75 ? "#84cc16" : "#22c55e";
+
+  const zones = [
+    { start: 0, end: 36, color: "#ef4444" },
+    { start: 36, end: 72, color: "#f97316" },
+    { start: 72, end: 108, color: "#eab308" },
+    { start: 108, end: 144, color: "#84cc16" },
+    { start: 144, end: 180, color: "#22c55e" },
+  ];
+
+  // 0=left, 90=top, 180=right  (gauge sweeps left→top→right)
+  const toXY = (deg: number, radius: number) => ({
+    x: cx - radius * Math.cos(deg * Math.PI / 180),
+    y: cy - radius * Math.sin(deg * Math.PI / 180),
+  });
+
+  // Needle: value 0→left, 100→right (angle relative to vertical)
+  const needleRad = ((value / 100) * 180 - 90) * Math.PI / 180;
+  const nx = cx + (r - 10) * Math.sin(needleRad);
+  const ny = cy - (r - 10) * Math.cos(needleRad);
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 120 80" className="w-full max-w-[140px]">
+        {zones.map(({ start, end, color: c }) => {
+          const s = toXY(start, r);
+          const e = toXY(end, r);
+          return (
+            <path
+              key={start}
+              d={`M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 0 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`}
+              stroke={c}
+              strokeWidth="9"
+              fill="none"
+              strokeLinecap="butt"
+            />
+          );
+        })}
+        <line x1={cx} y1={cy} x2={nx.toFixed(2)} y2={ny.toFixed(2)} stroke={needleColor} strokeWidth="2" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="3" fill={needleColor} />
+        <text x={cx} y={cy + 10} textAnchor="middle" fontSize="12" fontWeight="bold" fill={color} fontFamily="monospace">{value}</text>
+      </svg>
+      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider -mt-1">{label}</p>
+    </div>
+  );
 }
 
 function MetricCard({ label, value, sub, up, loading }: { label: string; value: string; sub?: string; up?: boolean; loading?: boolean }) {
@@ -71,9 +122,13 @@ function PositionRow({ pos }: { pos: any }) {
   );
 }
 
-function AlertRow({ alert }: { alert: any }) {
+function AlertRow({ alert, darkMode }: { alert: any; darkMode: boolean }) {
   const icons: Record<string, typeof Info> = { critical: AlertCircle, warning: AlertTriangle, info: Info };
-  const colors: Record<string, string> = { critical: "text-red-400", warning: "text-yellow-400", info: "text-blue-400" };
+  const colors: Record<string, string> = {
+    critical: "text-red-400",
+    warning: darkMode ? "text-yellow-400" : "text-amber-700",
+    info: darkMode ? "text-blue-400" : "text-blue-600",
+  };
   const Icon = icons[alert.severity] ?? Info;
   return (
     <div className="flex items-start gap-2 py-1.5 border-b border-border/50 last:border-0" data-testid={`alert-row-${alert.id}`}>
@@ -95,10 +150,25 @@ function AlertRow({ alert }: { alert: any }) {
 }
 
 export default function Dashboard() {
+  const { mode } = useTheme();
   const { data: summary, isLoading: summaryLoading } = useGetPortfolioSummary({ query: { queryKey: getGetPortfolioSummaryQueryKey(), refetchInterval: 5000 } });
   const { data: positions, isLoading: posLoading } = useGetPositions({ query: { queryKey: getGetPositionsQueryKey(), refetchInterval: 5000 } });
   const { data: alerts } = useGetAlerts({ query: { queryKey: getGetAlertsQueryKey() } });
   const { data: engineStatus } = useGetEngineStatus({ query: { queryKey: getGetEngineStatusQueryKey(), refetchInterval: 5000 } });
+
+  const { data: fng } = useQuery({
+    queryKey: ["fear-greed"],
+    queryFn: () => fetch("https://api.alternative.me/fng/?limit=1").then(r => r.json()).then(d => d.data?.[0]),
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: connStatus } = useQuery({
+    queryKey: ["connections-status"],
+    queryFn: () => fetch("/api/connections/status", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 15_000,
+  });
+  const botOnline = connStatus?.pythonBot?.connected ?? false;
 
   const qc = useQueryClient();
   const startEngine = useStartEngine();
@@ -113,6 +183,31 @@ export default function Dashboard() {
     qc.invalidateQueries({ queryKey: getGetEngineStatusQueryKey() });
     qc.invalidateQueries({ queryKey: getGetPortfolioSummaryQueryKey() });
   };
+
+  const [copied, setCopied] = useState(false);
+  const BOT_CMD = 'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git reset --hard HEAD; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py';
+
+  const copyBotCmd = () => {
+    navigator.clipboard.writeText(BOT_CMD);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const { data: botCfg } = useQuery({
+    queryKey: ["bot-config-dash"],
+    queryFn: () => fetch("/api/bot/config", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 10000,
+  });
+  const paperMode = (botCfg as any)?.paperMode ?? false;
+  const toggleMode = useMutation({
+    mutationFn: (paper: boolean) =>
+      fetch("/api/bot/config", {
+        method: "PUT", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paperMode: paper }),
+      }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bot-config-dash"] }),
+  });
 
   const unreviewedAlerts = alerts?.filter((a) => !a.acknowledged) ?? [];
   const dailyUp = (summary?.dailyPnl ?? 0) >= 0;
@@ -141,12 +236,49 @@ export default function Dashboard() {
           ) : (
             <Power size={12} className="mr-1" />
           )}
-          {engineStatus?.running ? "STOP ENGINE" : "START ENGINE"}
+          {engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}
         </Button>
       </div>
 
+      {/* Python Bot banner */}
+      {!botOnline && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded border border-amber-500/40 bg-amber-500/5">
+          <Bot size={12} className="text-amber-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] font-mono text-amber-300 font-semibold">Python Bot OFFLINE</span>
+            <span className="text-[10px] font-mono text-muted-foreground ml-2">— Open PowerShell on your PC and paste:</span>
+            <code className="block text-[9px] font-mono text-primary mt-0.5 truncate">{BOT_CMD}</code>
+          </div>
+          <Button size="sm" variant="outline" className="h-6 px-2 text-[9px] font-mono shrink-0 border-amber-500/40 text-amber-400"
+            onClick={copyBotCmd}>
+            <Copy size={9} className="mr-1" />{copied ? "Copied!" : "Copy"}
+          </Button>
+        </div>
+      )}
+      {botOnline && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-green-500/30 bg-green-500/5">
+          <Bot size={12} className="text-green-400 shrink-0" />
+          <span className="text-[10px] font-mono text-green-400 font-semibold">Python Bot ONLINE</span>
+          <span className="text-[10px] font-mono text-muted-foreground">
+            — {paperMode ? "PAPER MODE (simulated, works on weekends)" : "LIVE MODE (real MT5 orders)"}
+          </span>
+          <button
+            onClick={() => toggleMode.mutate(!paperMode)}
+            disabled={toggleMode.isPending}
+            className={cn(
+              "ml-auto text-[9px] font-mono px-2 py-0.5 rounded border transition-colors",
+              paperMode
+                ? "border-blue-400/40 text-blue-400 hover:bg-blue-400/10"
+                : "border-green-400/40 text-green-400 hover:bg-green-400/10"
+            )}
+          >
+            Switch to {paperMode ? "LIVE" : "PAPER"}
+          </button>
+        </div>
+      )}
+
       {/* Key metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
         <MetricCard
           label="Equity"
           value={fmtUsd(summary?.equity ?? 0)}
@@ -186,7 +318,38 @@ export default function Dashboard() {
           up={false}
           loading={summaryLoading}
         />
+        <Card className="bg-card border-card-border">
+          <CardContent className="p-3">
+            {fng ? (
+              <>
+                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed</div>
+                <FearGreedGauge value={Number(fng.value)} label={fng.value_classification} darkMode={mode === "dark"} />
+              </>
+            ) : (
+              <>
+                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed</div>
+                <div className="text-xs font-mono text-muted-foreground">Loading...</div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Session summary bar */}
+      {positions && positions.length > 0 && (() => {
+        const totalNotional = positions.reduce((sum: number, p: any) => sum + (Number(p.entry_price ?? 0) * Number(p.quantity ?? 0)), 0);
+        const totalPnl = positions.reduce((sum: number, p: any) => sum + Number(p.pnl ?? 0), 0);
+        const pnlUp = totalPnl >= 0;
+        return (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-3 py-2 rounded border border-border bg-card text-[10px] font-mono text-muted-foreground">
+            <span className="font-semibold text-foreground uppercase tracking-wider">Open Exposure</span>
+            <span>Positions: <span className="text-foreground">{positions.length}</span></span>
+            <span>Total Notional: <span className="text-foreground">${totalNotional.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span></span>
+            <span>Unrealised P&L: <span className={pnlUp ? "text-green-400" : "text-red-400"}>{pnlUp ? "+" : ""}{fmtUsd(totalPnl)}</span></span>
+            <span>Avg per trade: <span className="text-foreground">{fmtUsd(totalPnl / positions.length)}</span></span>
+          </div>
+        );
+      })()}
 
       {/* Open Positions & Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -199,13 +362,20 @@ export default function Dashboard() {
                 Open Positions ({positions?.length ?? 0})
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-0">
+              {!botOnline && positions && positions.length > 0 && (
+                <div className="mx-4 mt-3 mb-2 p-2 rounded border border-amber-500/30 bg-amber-500/5 flex items-center gap-2">
+                  <AlertTriangle size={11} className="text-amber-400 shrink-0" />
+                  <p className={cn("text-[10px] font-mono", mode === "dark" ? "text-amber-300" : "text-amber-700")}>Bot offline — positions shown may be stale. Start the bot to sync.</p>
+                </div>
+              )}
+              <div className="p-3 pt-0">
               {posLoading ? (
-                <div className="space-y-1">
+                <div className="space-y-1 pt-3">
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-6 w-full" />)}
                 </div>
               ) : positions && positions.length > 0 ? (
-                <div>
+                <div className="pt-3">
                   <div className="flex items-center gap-3 pb-1 border-b border-border/30 text-[10px] font-mono text-muted-foreground">
                     <div className="w-16">SYMBOL</div>
                     <div className="w-10">SIDE</div>
@@ -223,6 +393,7 @@ export default function Dashboard() {
                   No open positions
                 </div>
               )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -243,7 +414,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-3">
               {unreviewedAlerts.length > 0 ? (
-                unreviewedAlerts.slice(0, 6).map((alert) => <AlertRow key={alert.id} alert={alert} />)
+                unreviewedAlerts.slice(0, 6).map((alert) => <AlertRow key={alert.id} alert={alert} darkMode={mode === "dark"} />)
               ) : (
                 <div className="flex items-center justify-center h-16 text-[11px] font-mono text-muted-foreground">
                   No active alerts

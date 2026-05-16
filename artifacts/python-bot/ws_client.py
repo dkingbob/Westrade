@@ -6,6 +6,7 @@ Sends heartbeats, receives config updates, and emits trade events.
 import asyncio
 import json
 import logging
+import os
 import time
 from datetime import datetime
 
@@ -28,6 +29,8 @@ class BackendWSClient:
         self.mt5_connected = False
         self.mt5_account_id = None
         self.mt5_server = None
+        self.mt5_equity = None
+        self.sentiment_api_status: dict = {"twitter": False, "reddit": False, "newsApi": False}
 
     def on_config_update(self, handler):
         """Register a callback for config updates from dashboard."""
@@ -36,6 +39,27 @@ class BackendWSClient:
     def on_kill_switch(self, handler):
         """Register a callback for kill switch activation."""
         self._kill_switch_handlers.append(handler)
+
+    async def send_heartbeat_once(self):
+        """Send a single heartbeat immediately (called on MT5 connect to sync equity right away)."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                payload = {
+                    "mt5Connected": self.mt5_connected,
+                    "mt5AccountId": self.mt5_account_id,
+                    "mt5Server": self.mt5_server,
+                    "mt5Equity": self.mt5_equity,
+                    "aiValidation": bool(os.getenv("GEMINI_API_KEY") or os.getenv("DEEPSEEK") or os.getenv("DEEPSEEK_API_KEY")),
+                    "sentimentApis": self.sentiment_api_status,
+                }
+                async with session.post(
+                    f"{self.api_url}/connections/bot/heartbeat",
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as resp:
+                    log.info(f"Equity synced to dashboard: ${self.mt5_equity} (status {resp.status})")
+        except Exception as e:
+            log.warning(f"Immediate equity sync failed: {e}")
 
     async def send_heartbeat(self):
         """POST heartbeat to backend REST API."""
@@ -46,6 +70,9 @@ class BackendWSClient:
                         "mt5Connected": self.mt5_connected,
                         "mt5AccountId": self.mt5_account_id,
                         "mt5Server": self.mt5_server,
+                        "mt5Equity": self.mt5_equity,
+                        "aiValidation": bool(os.getenv("GEMINI_API_KEY") or os.getenv("DEEPSEEK") or os.getenv("DEEPSEEK_API_KEY")),
+                        "sentimentApis": self.sentiment_api_status,
                     }
                     async with session.post(
                         f"{self.api_url}/connections/bot/heartbeat",
@@ -67,6 +94,8 @@ class BackendWSClient:
                 await self.ws.send_str(json.dumps({"type": "bot_trade", "data": trade}))
             except Exception as e:
                 log.warning(f"Failed to emit trade: {e}")
+        else:
+            log.warning(f"WS not connected — dropped {trade.get('action', 'event')}")
 
     async def emit_position_update(self, positions: list):
         """Send position update to the dashboard."""

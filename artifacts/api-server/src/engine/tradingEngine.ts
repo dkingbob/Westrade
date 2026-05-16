@@ -13,6 +13,7 @@ import {
   notificationSettingsTable,
   riskSettingsTable,
   sentimentSettingsTable,
+  botConfigTable,
 } from "@workspace/db";
 import { eq, and, isNull } from "drizzle-orm";
 import { wsServer } from "../ws/server";
@@ -22,8 +23,16 @@ class TradingEngine {
   private startTime: Date | null = null;
   private tickInterval: NodeJS.Timeout | null = null;
   private snapshotInterval: NodeJS.Timeout | null = null;
+  private equityRefreshInterval: NodeJS.Timeout | null = null;
   private initialEquity = 100_000;
   private mode: "live" | "paper" | "backtest" = "paper";
+
+  async init() {
+    // One-time startup: reset kill switch and seed strategies without starting engine
+    await db.update(botConfigTable).set({ killSwitchActive: false, updatedAt: new Date() });
+    await this.seedStrategies();
+    logger.info("Trading engine initialized (not started)");
+  }
 
   async start() {
     if (this.running) return;
@@ -40,6 +49,9 @@ class TradingEngine {
     // Snapshot every 30 seconds
     this.snapshotInterval = setInterval(() => this.takeSnapshot(), 30_000);
 
+    // Refresh equity from bot heartbeat every 60 seconds
+    this.equityRefreshInterval = setInterval(() => this.refreshEquityFromBot(), 60_000);
+
     // Immediately take first snapshot
     setTimeout(() => this.takeSnapshot(), 1000);
   }
@@ -49,8 +61,10 @@ class TradingEngine {
     this.running = false;
     if (this.tickInterval) clearInterval(this.tickInterval);
     if (this.snapshotInterval) clearInterval(this.snapshotInterval);
+    if (this.equityRefreshInterval) clearInterval(this.equityRefreshInterval);
     this.tickInterval = null;
     this.snapshotInterval = null;
+    this.equityRefreshInterval = null;
     logger.info("Trading engine stopped");
   }
 
@@ -71,8 +85,77 @@ class TradingEngine {
     };
   }
 
+  private async seedStrategies() {
+    const existing = await db.select().from(strategiesTable);
+    const existingTypes = new Set(existing.map(r => r.type));
+
+    const desired = [
+      {
+        name: "Trend Pullback",
+        type: "trend_pullback",
+        active: true,
+        symbols: ["EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD", "NZDUSD"],
+        parameters: { adxMin: 22, rsiLow: 38, rsiHigh: 52 },
+        riskPct: "0.05",
+        description: "ADX-filtered trend following with RSI pullback entries — ~52-58% win rate",
+      },
+      {
+        name: "BB Mean Reversion",
+        type: "bb_reversion",
+        active: true,
+        symbols: ["EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD", "NZDUSD"],
+        parameters: { adxMax: 22, bbPctThreshold: 0.15 },
+        riskPct: "0.05",
+        description: "Bollinger Band extremes in ranging markets (ADX < 22) — ~55% win rate",
+      },
+    ];
+
+    // Insert any new strategy types that don't exist yet
+    const toInsert = desired.filter(d => !existingTypes.has(d.type));
+    if (toInsert.length > 0) {
+      await db.insert(strategiesTable).values(toInsert);
+      logger.info(`Inserted ${toInsert.length} new strategies`);
+    }
+
+    // Delete old strategy types that are no longer used
+    const keepTypes = new Set(desired.map(d => d.type));
+    for (const row of existing) {
+      if (!keepTypes.has(row.type)) {
+        await db.delete(strategiesTable).where(eq(strategiesTable.id, row.id));
+      }
+    }
+
+    logger.info("Strategies synced");
+  }
+
+  private async refreshEquityFromBot() {
+    try {
+      const [cfg] = await db.select().from(botConfigTable).limit(1);
+      if (!cfg) return;
+      const extra = cfg.botExtra as Record<string, unknown> | null;
+      const equity = extra?.mt5Equity;
+      if (typeof equity === "number" && equity > 0) {
+        this.initialEquity = equity;
+        logger.debug({ equity }, "Updated initialEquity from bot heartbeat");
+      }
+    } catch (err) {
+      logger.warn({ err }, "Could not refresh equity from bot config");
+    }
+  }
+
   private async loadSettings() {
     try {
+      // Load MT5 equity from last bot heartbeat
+      const [cfg] = await db.select().from(botConfigTable).limit(1);
+      if (cfg) {
+        const extra = cfg.botExtra as Record<string, unknown> | null;
+        const equity = extra?.mt5Equity;
+        if (typeof equity === "number" && equity > 0) {
+          this.initialEquity = equity;
+          logger.info({ equity }, "Loaded initialEquity from bot config");
+        }
+      }
+
       const [riskRow] = await db.select().from(riskSettingsTable).limit(1);
       if (riskRow) {
         riskEngine.updateConfig({

@@ -11,6 +11,7 @@ import {
   SESSION_TTL,
   type SessionData,
 } from "../lib/auth";
+import { sendEmailTo } from "./notifications";
 
 const RegisterBody = z.object({
   username: z.string().min(3).max(30),
@@ -23,7 +24,9 @@ const LoginBody = z.object({
   password: z.string().min(1),
 });
 
-const router: IRouter = Router();
+const SendCodeBody = z.object({
+  email: z.string().email(),
+});
 
 function setSessionCookie(res: Response, sid: string) {
   res.cookie(SESSION_COOKIE, sid, {
@@ -31,7 +34,7 @@ function setSessionCookie(res: Response, sid: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_TTL,
+    ...(rememberMe ? { maxAge: SESSION_REMEMBER_TTL } : { maxAge: SESSION_TTL }),
   });
 }
 
@@ -109,6 +112,12 @@ router.post("/auth/logout", async (req: Request, res: Response): Promise<void> =
   const sid = getSessionId(req);
   await clearSession(res, sid);
   res.json({ success: true });
+});
+
+router.get("/logout", async (req: Request, res: Response): Promise<void> => {
+  const sid = getSessionId(req);
+  await clearSession(res, sid);
+  res.redirect("/login");
 });
 
 router.get("/logout", async (req: Request, res: Response): Promise<void> => {

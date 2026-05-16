@@ -1,4 +1,5 @@
 export * from "./trades";
+export * from "./analytics_reports";
 export * from "./strategies";
 export * from "./risk_settings";
 export * from "./sentiment_settings";

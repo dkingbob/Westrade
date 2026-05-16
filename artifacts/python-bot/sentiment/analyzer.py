@@ -36,6 +36,14 @@ class SentimentAnalyzer:
         """Return current composite sentiment score (0-100)."""
         return self.score
 
+    def get_api_status(self) -> dict:
+        """Return which external sentiment API keys are configured."""
+        return {
+            "twitter": bool(self.twitter_token),
+            "reddit": bool(self.reddit_client_id),
+            "newsApi": bool(self.news_api_key),
+        }
+
     def get_full_sentiment(self) -> dict:
         return {
             "composite": round(self.score, 2),

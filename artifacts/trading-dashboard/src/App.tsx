@@ -13,12 +13,18 @@ import Portfolio from "@/pages/portfolio";
 import Analytics from "@/pages/analytics";
 import Strategies from "@/pages/strategies";
 import Risk from "@/pages/risk";
-import Backtest from "@/pages/backtest";
 import Sentiment from "@/pages/sentiment";
 import Notifications from "@/pages/notifications";
 import Connections from "@/pages/connections";
 import Help from "@/pages/help";
 import Presets from "@/pages/presets";
+import Settings from "@/pages/settings";
+import AiActivity from "@/pages/ai-activity";
+import AutoTuner from "@/pages/auto-tuner";
+import BotFeed from "@/pages/bot-feed";
+import BrainGym from "@/pages/brain-gym";
+import LandingPage from "@/pages/landing";
+import { useTheme } from "@/hooks/use-theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,17 +54,22 @@ function ProtectedRouter() {
     <Layout>
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/trades" component={Trades} />
         <Route path="/portfolio" component={Portfolio} />
         <Route path="/analytics" component={Analytics} />
         <Route path="/strategies" component={Strategies} />
         <Route path="/risk" component={Risk} />
-        <Route path="/backtest" component={Backtest} />
         <Route path="/sentiment" component={Sentiment} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/connections" component={Connections} />
         <Route path="/help" component={Help} />
         <Route path="/presets" component={Presets} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/ai-activity" component={AiActivity} />
+        <Route path="/auto-tuner" component={AutoTuner} />
+        <Route path="/bot-feed" component={BotFeed} />
+        <Route path="/brain-gym" component={BrainGym} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -75,9 +86,10 @@ function Router() {
 }
 
 function App() {
+  const { mode, style } = useTheme();
   useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
+    // theme hook handles class application
+  }, [mode, style]);
 
   return (
     <QueryClientProvider client={queryClient}>

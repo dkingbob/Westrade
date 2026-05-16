@@ -26,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Shield, AlertTriangle, Zap, Loader2 } from "lucide-react";
+import { Shield, AlertTriangle, Zap, Loader2, Clock } from "lucide-react";
 
 function fmt(n: number, dec = 2) { return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 function fmtUsd(n: number) { return `$${fmt(n)}`; }
@@ -79,23 +79,35 @@ function RiskScoreMeter({ score }: { score: number }) {
 }
 
 function SettingField({
-  label, value, onChange, step = 0.001, suffix = "%"
+  label, value, onChange, step = 1, suffix = "%"
 }: {
   label: string; value: number; onChange: (v: number) => void; step?: number; suffix?: string;
 }) {
+  const maxVal = suffix === "%" ? 50 : undefined;
+  const [raw, setRaw] = useState("");
+  const displayVal = suffix === "%" ? parseFloat((value * 100).toFixed(2)) : value;
+
   return (
     <div className="space-y-0.5">
       <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
       <div className="flex items-center gap-1">
-        <Input
+        <input
           type="number"
-          value={suffix === "%" ? fmt(value * 100, 3) : value}
-          step={suffix === "%" ? step * 100 : step}
+          value={raw !== "" ? raw : displayVal}
+          step={step}
           min={0}
-          className="h-7 text-xs font-mono bg-background border-border"
-          onChange={(e) => {
-            const raw = parseFloat(e.target.value);
-            onChange(suffix === "%" ? raw / 100 : raw);
+          max={maxVal}
+          className="h-7 text-xs font-mono bg-background border border-border rounded px-2 w-full"
+          onChange={(e) => setRaw(e.target.value)}
+          onBlur={(e) => {
+            const n = parseFloat(e.target.value);
+            setRaw("");
+            if (isNaN(n)) return;
+            const capped = maxVal !== undefined ? Math.min(n, maxVal) : n;
+            onChange(suffix === "%" ? capped / 100 : capped);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
           data-testid={`risk-field-${label.toLowerCase().replace(/\s/g, "-")}`}
         />
@@ -110,6 +122,10 @@ export default function Risk() {
   const { toast } = useToast();
   const { data: riskState, isLoading: stateLoading } = useGetRiskState({ query: { queryKey: getGetRiskStateQueryKey(), refetchInterval: 3000 } });
   const { data: settings, isLoading: settingsLoading } = useGetRiskSettings();
+  const { data: botConfig } = useQuery({
+    queryKey: ["bot-config"],
+    queryFn: () => fetch("/api/bot/config", { credentials: "include" }).then(r => r.json()),
+  });
   const updateSettings = useUpdateRiskSettings();
   const killSwitch = useTriggerKillSwitch();
 
@@ -127,6 +143,29 @@ export default function Risk() {
   const [correlationThreshold, setCorrelationThreshold] = useState<number | null>(null);
   const [slippagePct, setSlippagePct] = useState<number | null>(null);
   const [feesPct, setFeesPct] = useState<number | null>(null);
+  const [maxPositionUsd, setMaxPositionUsd] = useState<number | null>(null);
+  const [dailyLossLimitUsd, setDailyLossLimitUsd] = useState<number | null>(null);
+  const [dailyProfitTargetUsd, setDailyProfitTargetUsd] = useState<number | null>(null);
+  const [lossBufferUsd, setLossBufferUsd] = useState<number | null>(null);
+  const [winBufferUsd, setWinBufferUsd] = useState<number | null>(null);
+  const [sessionHours, setSessionHours] = useState<number | null>(null);
+  const [intervalTradeHours, setIntervalTradeHours] = useState<number | null>(null);
+  const [intervalPauseHours, setIntervalPauseHours] = useState<number | null>(null);
+
+  const sessionInitialized = useRef(false);
+  useEffect(() => {
+    if (sessionInitialized.current || !botConfig) return;
+    sessionInitialized.current = true;
+    const extra = (botConfig.botExtra as Record<string, unknown>) ?? {};
+    if (extra.maxPositionUsd != null) setMaxPositionUsd(Number(extra.maxPositionUsd));
+    if (extra.dailyLossLimitUsd != null) setDailyLossLimitUsd(Number(extra.dailyLossLimitUsd));
+    if (extra.dailyProfitTargetUsd != null) setDailyProfitTargetUsd(Number(extra.dailyProfitTargetUsd));
+    if (extra.lossBufferUsd != null) setLossBufferUsd(Number(extra.lossBufferUsd));
+    if (extra.winBufferUsd != null) setWinBufferUsd(Number(extra.winBufferUsd));
+    if (extra.sessionHours != null) setSessionHours(Number(extra.sessionHours));
+    if (extra.intervalTradeHours != null) setIntervalTradeHours(Number(extra.intervalTradeHours));
+    if (extra.intervalPauseHours != null) setIntervalPauseHours(Number(extra.intervalPauseHours));
+  }, [botConfig]);
 
   const eff = {
     maxDailyLossPct: maxDailyLossPct ?? settings?.maxDailyLossPct ?? 0.02,
@@ -141,6 +180,23 @@ export default function Risk() {
 
   const handleSave = async () => {
     await updateSettings.mutateAsync({ data: eff });
+    const extra: Record<string, unknown> = {};
+    if (maxPositionUsd !== null) extra.maxPositionUsd = maxPositionUsd <= 0 ? null : maxPositionUsd;
+    if (dailyLossLimitUsd !== null) extra.dailyLossLimitUsd = dailyLossLimitUsd <= 0 ? null : dailyLossLimitUsd;
+    if (dailyProfitTargetUsd !== null) extra.dailyProfitTargetUsd = dailyProfitTargetUsd <= 0 ? null : dailyProfitTargetUsd;
+    if (lossBufferUsd !== null) extra.lossBufferUsd = lossBufferUsd <= 0 ? null : lossBufferUsd;
+    if (winBufferUsd !== null) extra.winBufferUsd = winBufferUsd <= 0 ? null : winBufferUsd;
+    if (sessionHours !== null) extra.sessionHours = sessionHours <= 0 ? 24 : sessionHours;
+    if (intervalTradeHours !== null) extra.intervalTradeHours = intervalTradeHours <= 0 ? null : intervalTradeHours;
+    if (intervalPauseHours !== null) extra.intervalPauseHours = intervalPauseHours <= 0 ? null : intervalPauseHours;
+    if (Object.keys(extra).length > 0) {
+      await fetch("/api/bot/config", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(extra),
+      });
+    }
     qc.invalidateQueries({ queryKey: getGetRiskSettingsQueryKey() });
     qc.invalidateQueries({ queryKey: getGetRiskStateQueryKey() });
   };
@@ -272,12 +328,9 @@ export default function Risk() {
       <Card className="bg-card border-red-500/30 border-card-border">
         <CardContent className="p-4 flex items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={14} className="text-red-400" />
-              <span className="text-sm font-mono font-bold text-red-400 uppercase tracking-wider">Emergency Kill Switch</span>
-            </div>
+            <span className="text-sm font-mono font-bold text-yellow-400 uppercase tracking-wider">Reset Trading Data</span>
             <p className="text-[11px] font-mono text-muted-foreground mt-1">
-              Immediately close all open positions and halt trading. Cannot be undone automatically.
+              Delete all trades and portfolio history. Use this when switching from paper to live trading.
             </p>
           </div>
           <AlertDialog>
@@ -287,15 +340,11 @@ export default function Risk() {
                 {riskState?.killSwitchActive ? "ACTIVE" : "KILL SWITCH"}
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-card border-red-500/50 font-mono">
+            <AlertDialogContent className="bg-card font-mono">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-red-400 flex items-center gap-2">
-                  <AlertTriangle size={16} />
-                  Confirm Kill Switch
-                </AlertDialogTitle>
+                <AlertDialogTitle className="text-yellow-400">Reset All Trading Data?</AlertDialogTitle>
                 <AlertDialogDescription className="text-muted-foreground text-xs">
-                  This will immediately close ALL open positions at market price and halt the trading engine.
-                  All pending orders will be cancelled. This action takes effect instantly.
+                  This will permanently delete all trades and portfolio snapshots. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -307,6 +356,169 @@ export default function Risk() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </CardContent>
+      </Card>
+
+      {/* Daily Session Limits */}
+      <Card className="bg-card border-card-border">
+        <CardHeader className="py-2 px-3 border-b border-border flex-row items-center gap-2">
+          <Clock size={13} className="text-blue-400" />
+          <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Daily Session Limits</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 space-y-3">
+          <p className="text-[10px] font-mono text-muted-foreground">
+            Set dollar limits for the session. Bot stops new trades in warning zone and fully halts at the loss limit.
+            Session resets after the configured hours.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Max Loss / Session ($)</label>
+              <Input type="number" value={dailyLossLimitUsd ?? ""} step={5} min={0} placeholder="e.g. 30"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setDailyLossLimitUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Profit Target / Session ($)</label>
+              <Input type="number" value={dailyProfitTargetUsd ?? ""} step={5} min={0} placeholder="e.g. 50"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setDailyProfitTargetUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Loss Buffer ($)</label>
+              <Input type="number" value={lossBufferUsd ?? ""} step={1} min={0}
+                max={dailyLossLimitUsd ?? undefined}
+                placeholder="e.g. 5"
+                className={cn("h-7 text-xs font-mono bg-background border-border",
+                  lossBufferUsd != null && dailyLossLimitUsd != null && lossBufferUsd >= dailyLossLimitUsd && "border-red-500")}
+                onChange={(e) => setLossBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
+              {lossBufferUsd != null && dailyLossLimitUsd != null && lossBufferUsd >= dailyLossLimitUsd
+                ? <p className="text-[9px] font-mono text-red-400">Buffer must be less than loss limit</p>
+                : <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before loss limit</p>}
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Win Buffer ($)</label>
+              <Input type="number" value={winBufferUsd ?? ""} step={1} min={0}
+                max={dailyProfitTargetUsd ?? undefined}
+                placeholder="e.g. 5"
+                className={cn("h-7 text-xs font-mono bg-background border-border",
+                  winBufferUsd != null && dailyProfitTargetUsd != null && winBufferUsd >= dailyProfitTargetUsd && "border-red-500")}
+                onChange={(e) => setWinBufferUsd(e.target.value === "" ? null : parseFloat(e.target.value))} />
+              {winBufferUsd != null && dailyProfitTargetUsd != null && winBufferUsd >= dailyProfitTargetUsd
+                ? <p className="text-[9px] font-mono text-red-400">Buffer must be less than profit target</p>
+                : <p className="text-[9px] font-mono text-muted-foreground">Pauses new trades this $ before profit target</p>}
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Session Duration (hours)</label>
+              <Input type="number" value={sessionHours ?? ""} step={1} min={1} max={168} placeholder="24"
+                className="h-7 text-xs font-mono bg-background border-border"
+                onChange={(e) => setSessionHours(e.target.value === "" ? null : Math.min(168, Math.max(1, parseFloat(e.target.value))))} />
+              <p className="text-[9px] font-mono text-muted-foreground">Session resets after this many hours (max 168 = 1 week)</p>
+            </div>
+            <div className="col-span-2 border-t border-border pt-3">
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Interval Trading (optional)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Trade Window (hours)</label>
+                  <Input type="number" value={intervalTradeHours ?? ""} step={0.5} min={0} placeholder="e.g. 3 (disabled if empty)"
+                    className="h-7 text-xs font-mono bg-background border-border"
+                    onChange={(e) => setIntervalTradeHours(e.target.value === "" ? null : Math.max(0.5, parseFloat(e.target.value)))} />
+                  <p className="text-[9px] font-mono text-muted-foreground">How long the bot actively trades</p>
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Pause Window (hours)</label>
+                  <Input type="number" value={intervalPauseHours ?? ""} step={0.5} min={0} placeholder="e.g. 1 (disabled if empty)"
+                    className="h-7 text-xs font-mono bg-background border-border"
+                    onChange={(e) => setIntervalPauseHours(e.target.value === "" ? null : Math.max(0.5, parseFloat(e.target.value)))} />
+                  <p className="text-[9px] font-mono text-muted-foreground">How long the bot pauses before next window</p>
+                </div>
+              </div>
+              <p className="text-[9px] font-mono text-muted-foreground mt-1">Example: 3h trade / 1h pause → bot trades 3h, rests 1h, repeats. Leave both empty to trade continuously.</p>
+            </div>
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={
+              updateSettings.isPending ||
+              (lossBufferUsd != null && dailyLossLimitUsd != null && lossBufferUsd >= dailyLossLimitUsd) ||
+              (winBufferUsd != null && dailyProfitTargetUsd != null && winBufferUsd >= dailyProfitTargetUsd)
+            }
+            className="w-full h-8 text-xs font-mono"
+          >
+            {updateSettings.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
+            Save Session Limits
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Kill Switch */}
+      <Card className={cn("bg-card border-card-border", riskState?.killSwitchActive ? "border-red-500/60" : "border-red-500/30")}>
+        <CardContent className="p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={14} className="text-red-400" />
+              <span className="text-sm font-mono font-bold text-red-400 uppercase tracking-wider">Emergency Kill Switch</span>
+              {riskState?.killSwitchActive && (
+                <span className="text-[10px] font-mono text-red-400 animate-pulse font-bold">● ACTIVE</span>
+              )}
+            </div>
+            <p className="text-[11px] font-mono text-muted-foreground mt-1">
+              {riskState?.killSwitchActive
+                ? "All trading halted. Click Deactivate to allow trading to resume."
+                : "Immediately close all open positions and halt trading."}
+            </p>
+          </div>
+
+          <div className="flex gap-2 shrink-0">
+            {riskState?.killSwitchActive ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-mono text-xs h-8 px-4 border-green-500/50 text-green-400 hover:bg-green-500/10"
+                onClick={() => deactivateKillSwitch.mutate()}
+                disabled={deactivateKillSwitch.isPending}
+              >
+                {deactivateKillSwitch.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : <Zap size={12} className="mr-1" />}
+                Deactivate
+              </Button>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="font-mono text-xs h-8 px-4 font-bold"
+                    data-testid="kill-switch-btn"
+                  >
+                    <Zap size={12} className="mr-1" />
+                    Kill Switch
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-card border-red-500/50 font-mono">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-red-400 flex items-center gap-2">
+                      <AlertTriangle size={16} />
+                      Confirm Kill Switch
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-muted-foreground text-xs">
+                      This will immediately close ALL open positions at market price and halt the trading bot.
+                      Click Deactivate afterwards to resume trading.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="text-xs h-8" data-testid="kill-switch-cancel">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700 text-xs h-8"
+                      onClick={handleKillSwitch}
+                      data-testid="kill-switch-confirm"
+                    >
+                      {killSwitch.isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
+                      Confirm Kill Switch
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

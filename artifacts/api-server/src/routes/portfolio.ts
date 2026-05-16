@@ -3,10 +3,25 @@ import { db } from "@workspace/db";
 import {
   tradesTable,
   portfolioSnapshotsTable,
+  botConfigTable,
 } from "@workspace/db";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { riskEngine } from "../engine/risk";
 import { getCurrentPrice } from "../engine/marketData";
+
+async function getMt5Equity(): Promise<{ current: number; initial: number; botConnected: boolean; hasRealEquity: boolean }> {
+  const [cfg] = await db.select().from(botConfigTable).limit(1);
+  const extra = cfg?.botExtra as Record<string, unknown> | null;
+  const equity = extra?.mt5Equity;
+  const now = Date.now();
+  const heartbeatAge = cfg?.lastBotHeartbeat
+    ? now - new Date(cfg.lastBotHeartbeat).getTime()
+    : null;
+  const botConnected = heartbeatAge !== null && heartbeatAge < 30_000;
+  const hasRealEquity = typeof equity === "number" && equity > 0;
+  const value = hasRealEquity ? (equity as number) : 100_000;
+  return { current: value, initial: value, botConnected, hasRealEquity };
+}
 
 const router: IRouter = Router();
 
@@ -21,23 +36,23 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
     .from(tradesTable)
     .where(eq(tradesTable.status, "closed"));
 
-  const initialEquity = 100_000;
-  let totalPnl = 0;
+  const { current: mt5Equity, initial: initialEquity, botConnected, hasRealEquity } = await getMt5Equity();
+
+  // totalPnl = realised P&L from closed trades in DB + unrealised from equity delta
+  const closedPnl = closedTrades.reduce((sum, t) => sum + parseFloat((t.pnl as string) ?? "0"), 0);
+  const unrealisedPnl = (botConnected || hasRealEquity) ? (mt5Equity - initialEquity - closedPnl) : 0;
+  let totalPnl = closedPnl + unrealisedPnl;
   let totalExposure = 0;
 
   for (const trade of openTrades) {
-    const currentPrice = getCurrentPrice(trade.symbol);
     const entryPrice = parseFloat(trade.entryPrice as string);
     const qty = parseFloat(trade.quantity as string);
-    const pnl =
-      trade.side === "long"
-        ? (currentPrice - entryPrice) * qty
-        : (entryPrice - currentPrice) * qty;
-    totalPnl += pnl;
     totalExposure += (entryPrice * qty) / initialEquity;
   }
 
-  const equity = initialEquity + totalPnl;
+  // Use MT5 equity directly when bot is live or when we have a previously synced value.
+  // Only fall back to paper calculation if equity has never been synced from MT5.
+  const equity = (botConnected || hasRealEquity) ? mt5Equity : initialEquity + totalPnl;
   const riskState = riskEngine.getState();
 
   // Calculate performance metrics from closed trades
