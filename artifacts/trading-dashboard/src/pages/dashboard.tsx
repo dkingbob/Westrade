@@ -160,7 +160,38 @@ const CRYPTO_MOCK_POSITIONS = [
   { id: "c3", symbol: "SOL/USD", side: "short", quantity: 5,    entryPrice: 148.2, currentPrice: 144.8, pnl: 17.00,  pnlPct: 0.0229, strategy: "Breakout" },
 ];
 
-function ProfileDropdown({ user, tradingMode, onToggleMode }: { user: any; tradingMode: "forex" | "crypto"; onToggleMode: () => void }) {
+function ModeSwitch({ tradingMode, onToggle }: { tradingMode: "forex" | "crypto"; onToggle: () => void }) {
+  const isCrypto = tradingMode === "crypto";
+  return (
+    <button
+      onClick={onToggle}
+      className="relative flex items-center h-7 rounded-full p-0.5 transition-all shrink-0"
+      style={{
+        background: isCrypto ? "rgba(249,115,22,0.12)" : "rgba(99,102,241,0.12)",
+        border: isCrypto ? "1px solid rgba(249,115,22,0.3)" : "1px solid rgba(99,102,241,0.3)",
+        width: "108px",
+      }}
+      title={`Switch to ${isCrypto ? "Forex" : "Crypto"} mode`}
+    >
+      {/* sliding pill */}
+      <span
+        className="absolute top-0.5 bottom-0.5 w-[50px] rounded-full transition-all duration-300"
+        style={{
+          left: isCrypto ? "calc(100% - 52px)" : "2px",
+          background: isCrypto ? "rgba(249,115,22,0.85)" : "rgba(99,102,241,0.85)",
+        }}
+      />
+      <span className={cn("relative z-10 flex-1 text-center text-[9px] font-mono font-bold transition-colors", !isCrypto ? "text-white" : "text-muted-foreground")}>
+        FOREX
+      </span>
+      <span className={cn("relative z-10 flex-1 text-center text-[9px] font-mono font-bold transition-colors", isCrypto ? "text-white" : "text-muted-foreground")}>
+        ₿ BTC
+      </span>
+    </button>
+  );
+}
+
+function ProfileDropdown({ user }: { user: any }) {
   const [open, setOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { logout } = useAuth();
@@ -176,43 +207,23 @@ function ProfileDropdown({ user, tradingMode, onToggleMode }: { user: any; tradi
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  const isCrypto = tradingMode === "crypto";
-
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(v => !v)}
         className="flex items-center gap-2 rounded-full p-0.5 transition-all hover:ring-2 hover:ring-primary/40 focus:outline-none">
         <Avatar className="w-7 h-7">
           <AvatarImage src={user?.profileImageUrl ?? undefined} />
-          <AvatarFallback className={cn("text-[10px] font-mono", isCrypto ? "bg-orange-500/20 text-orange-400" : "bg-primary/20 text-primary")}>{initials}</AvatarFallback>
+          <AvatarFallback className="bg-primary/20 text-primary text-[10px] font-mono">{initials}</AvatarFallback>
         </Avatar>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-56 rounded-xl overflow-hidden shadow-2xl"
+        <div className="absolute right-0 top-10 z-50 w-52 rounded-xl overflow-hidden shadow-2xl"
           style={{ background: "rgba(15,17,28,0.97)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
-          {/* User info */}
           <div className="px-4 py-3 border-b border-white/5">
             <p className="text-xs font-semibold text-foreground truncate">{name}</p>
             <p className="text-[10px] text-muted-foreground truncate">{user?.email ?? "—"}</p>
           </div>
-          {/* Mode switcher */}
-          <div className="px-4 py-2.5 border-b border-white/5">
-            <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-1.5">Trading mode</p>
-            <button
-              onClick={() => { onToggleMode(); setOpen(false); }}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold transition-all",
-                isCrypto
-                  ? "bg-orange-500/12 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20"
-                  : "bg-indigo-500/12 text-indigo-400 border border-indigo-500/25 hover:bg-indigo-500/20"
-              )}
-            >
-              <span>{isCrypto ? "₿ Crypto" : "📈 Forex"}</span>
-              <span className="text-[9px] text-muted-foreground font-normal">switch →</span>
-            </button>
-          </div>
-          {/* Menu items */}
           <div className="py-1">
             <button onClick={() => { setLocation("/settings"); setOpen(false); }}
               className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">
@@ -347,7 +358,8 @@ export default function Dashboard() {
             <span className="hidden sm:inline">{engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}</span>
             <span className="sm:hidden">{engineStatus?.running ? "STOP" : "START"}</span>
           </Button>
-          <ProfileDropdown user={user} tradingMode={tradingMode} onToggleMode={toggleTradingMode} />
+          <ModeSwitch tradingMode={tradingMode} onToggle={toggleTradingMode} />
+          <ProfileDropdown user={user} />
         </div>
       </div>
 
