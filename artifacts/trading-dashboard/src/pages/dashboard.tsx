@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { MarketHours } from "@/components/MarketHours";
 
 function fmt(n: number, dec = 2) {
   return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -454,7 +455,7 @@ export default function Dashboard() {
         );
       })()}
 
-      {/* Open Positions & Alerts */}
+      {/* Open Positions, Market Hours & Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Open Positions */}
         <div className="lg:col-span-2">
@@ -527,6 +528,9 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Market Hours */}
+          <MarketHours className="mt-4" />
         </div>
       </div>
 

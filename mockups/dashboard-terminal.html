@@ -1,248 +1,761 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Westrade — Quant Terminal</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<meta charset="utf-8"/>
+<title>Westrade — Quant Terminal (Full)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
-  :root{
-    --bg:#06070a; --panel:#0b0d12; --line:#1a1d26; --line2:#23273236;
-    --fg:#e6e8ee; --mute:#7d8493; --green:#3ddc97; --red:#ff5774; --amber:#ffb86b;
-    --blue:#4ea1ff; --violet:#a78bfa;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;line-height:1.4}
-  a{color:inherit;text-decoration:none}
-  .grid-bg{background:
-    radial-gradient(circle at 20% 0%, #0e1320 0%, transparent 40%),
-    radial-gradient(circle at 80% 100%, #0c1a18 0%, transparent 50%),
-    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px) 0 0/24px 24px,
-    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px) 0 0/24px 24px,
-    var(--bg);
-    min-height:100vh}
+:root{--bg:#06070a;--panel:#0b0d12;--line:#1a1d26;--line2:rgba(35,39,50,.5);--fg:#e6e8ee;--mute:#7d8493;--green:#3ddc97;--red:#ff5774;--amber:#ffb86b;--blue:#4ea1ff;--violet:#a78bfa;--cyan:#22d3ee}
+.crypto{--green:#f7931a;--blue:#f7931a;--brand:#f7931a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4;overflow-x:hidden}
+.grid-bg{background:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px) 0 0/24px 24px,var(--bg)}
+button,a{background:none;border:none;color:inherit;cursor:pointer;text-decoration:none;font-family:inherit;font-size:inherit}
 
-  /* topbar */
-  .top{display:flex;align-items:center;gap:18px;padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(11,13,18,.7);backdrop-filter:blur(8px);position:sticky;top:0;z-index:10}
-  .brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.18em}
-  .brand .dot{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 12px var(--green)}
-  .ticker{flex:1;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
-  .ticker-track{display:inline-flex;gap:32px;white-space:nowrap;animation:scroll 60s linear infinite}
-  @keyframes scroll{to{transform:translateX(-50%)}}
-  .tick{color:var(--mute)}
-  .tick .sym{color:var(--fg);margin-right:6px}
-  .tick.up .pct{color:var(--green)} .tick.down .pct{color:var(--red)}
-  .pill{padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:var(--mute)}
-  .pill.live{color:var(--green);border-color:#1e3a2c}
-  .pill.live::before{content:"";display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;margin-right:6px;box-shadow:0 0 8px var(--green);animation:pulse 1.6s ease-in-out infinite}
-  @keyframes pulse{50%{opacity:.4}}
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;gap:14px;padding:7px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;background:rgba(6,7,10,.85);backdrop-filter:blur(10px)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.18em;white-space:nowrap}
+.brand .dot{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 12px var(--green);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+.ticker{flex:1;overflow:hidden;mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent)}
+.track{display:inline-flex;gap:28px;white-space:nowrap;animation:scroll 50s linear infinite}
+.track.crypto-track{display:none}
+.crypto .track{display:none}
+.crypto .track.crypto-track{display:inline-flex;animation:scroll 50s linear infinite}
+@keyframes scroll{to{transform:translateX(-50%)}}
+.tick .sym{color:var(--fg);margin-right:5px}.tick.up .pct{color:var(--green)}.tick.dn .pct{color:var(--red)}
+.mode-toggle{display:flex;gap:1px;border:1px solid var(--line);border-radius:5px;overflow:hidden;shrink:0}
+.mode-toggle button{padding:4px 10px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);transition:.15s}
+.mode-toggle button.active{background:var(--green);color:#000;font-weight:700}
+.crypto .mode-toggle button.active{background:#f7931a;color:#000}
+.pill{padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:var(--mute);font-size:9px;white-space:nowrap}
+.pill.live{color:var(--green);border-color:#1e3a2c;display:flex;align-items:center;gap:5px}
+.pill.live::before{content:"";width:6px;height:6px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green);flex-shrink:0;animation:pulse 1.6s infinite}
+.crypto .pill.live{color:#f7931a;border-color:#3a2808}
+.crypto .pill.live::before{background:#f7931a;box-shadow:0 0 8px #f7931a}
 
-  /* layout */
-  .wrap{display:grid;grid-template-columns:200px 1fr 280px;gap:12px;padding:12px}
-  .side{display:flex;flex-direction:column;gap:8px}
-  .side a{padding:7px 10px;border-radius:6px;color:var(--mute);display:flex;align-items:center;gap:8px;border:1px solid transparent}
-  .side a:hover{color:var(--fg);background:#10131b}
-  .side a.active{color:var(--fg);background:#11151f;border-color:var(--line)}
-  .side a .k{width:14px;text-align:center;opacity:.6}
-  .side .group{margin-top:10px;font-size:9px;letter-spacing:.2em;color:#4a5063;padding-left:8px;text-transform:uppercase}
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:192px 1fr;min-height:calc(100vh - 35px)}
 
-  /* panels */
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative}
-  .panel h3{margin:0;padding:8px 12px;border-bottom:1px solid var(--line);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--mute);display:flex;align-items:center;justify-content:space-between}
-  .panel h3 .badge{font-size:9px;color:var(--green);padding:1px 6px;border:1px solid #1f3a2c;border-radius:4px}
-  .panel .body{padding:10px 12px}
+/* ── SIDEBAR ── */
+.side{border-right:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:2px;position:sticky;top:35px;height:calc(100vh - 35px);overflow-y:auto}
+.side .group{margin:10px 0 4px 6px;font-size:9px;letter-spacing:.2em;color:#3d4255;text-transform:uppercase}
+.side a{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:5px;color:var(--mute);border:1px solid transparent;transition:.12s}
+.side a:hover{color:var(--fg);background:#10131b}
+.side a.active{color:var(--fg);background:#11151f;border-color:var(--line)}
+.side a.active .k{color:var(--green)}
+.crypto .side a.active .k{color:#f7931a}
+.side a .k{width:12px;text-align:center;opacity:.5;font-size:10px}
+.side .badge-count{margin-left:auto;background:#ff5774;color:#fff;font-size:8px;padding:1px 5px;border-radius:999px;font-weight:700}
 
-  /* metrics row */
-  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .metric{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;position:relative;overflow:hidden}
-  .metric .l{font-size:9px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase}
-  .metric .v{font-size:20px;font-weight:700;margin-top:4px}
-  .metric .s{font-size:10px;color:var(--mute);margin-top:2px}
-  .metric.up .v{color:var(--green)} .metric.down .v{color:var(--red)}
-  .metric .spark{position:absolute;right:8px;bottom:8px;width:60px;height:18px;opacity:.7}
+/* ── MAIN ── */
+.main{padding:12px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;max-height:calc(100vh - 35px)}
 
-  /* center grid */
-  .center{display:flex;flex-direction:column;gap:12px}
-  .row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+/* ── PANELS ── */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.ph{padding:7px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ph .title{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);display:flex;align-items:center;gap:6px}
+.ph .badge{font-size:9px;padding:1px 6px;border:1px solid #1f3a2c;border-radius:4px;color:var(--green)}
+.ph .badge.red{border-color:#3a1f2a;color:var(--red)}
+.ph .badge.amber{border-color:#3a2d1a;color:var(--amber)}
+.crypto .ph .badge{border-color:#3a2808;color:#f7931a}
+.pb{padding:10px 12px}
 
-  /* table */
-  table{width:100%;border-collapse:collapse;font-size:11px}
-  th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--line2)}
-  th{font-size:9px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase;font-weight:500}
-  th:first-child,td:first-child{text-align:left}
-  td.sym{color:var(--fg);font-weight:700}
-  td.up{color:var(--green)} td.down{color:var(--red)}
-  tr:hover td{background:#0e1220}
-  .tag{font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
-  .tag.long{color:var(--green);border-color:#1e3a2c;background:#0d1a15}
-  .tag.short{color:var(--red);border-color:#3a1f2a;background:#1a0d12}
+/* ── ROWS / GRIDS ── */
+.row{display:grid;gap:12px}
+.col2{grid-template-columns:1fr 1fr}
+.col3{grid-template-columns:1fr 1fr 1fr}
+.col22{grid-template-columns:2fr 1fr}
+.col24{grid-template-columns:2fr 1fr}
+.col4{grid-template-columns:repeat(4,1fr)}
+.col7{grid-template-columns:repeat(7,1fr)}
 
-  /* chart */
-  .chart{height:240px;width:100%;display:block}
-  .chart .grid line{stroke:#1a1d26;stroke-dasharray:2 4}
-  .chart .axis text{font-size:9px;fill:var(--mute);font-family:inherit}
-  .chart .price{fill:none;stroke:var(--green);stroke-width:1.5}
-  .chart .area{fill:url(#g1)}
-  .chart .ema{fill:none;stroke:var(--blue);stroke-dasharray:3 3;stroke-width:1}
+/* ── METRIC CARDS ── */
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:10px 12px;position:relative;overflow:hidden}
+.metric .l{font-size:9px;letter-spacing:.18em;color:var(--mute);text-transform:uppercase}
+.metric .v{font-size:18px;font-weight:700;margin-top:4px}
+.metric .s{font-size:9px;color:var(--mute);margin-top:2px}
+.up .v,.v.up{color:var(--green)}.dn .v,.v.dn{color:var(--red)}
+.spark{position:absolute;right:8px;bottom:8px;width:55px;height:16px;opacity:.7}
 
-  /* orderbook */
-  .ob{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);font-size:10px}
-  .ob > div{background:var(--panel);padding:4px 8px;display:flex;justify-content:space-between;position:relative}
-  .ob .bar{position:absolute;top:0;bottom:0;opacity:.12}
-  .ob .bid .bar{right:0;background:var(--green)}
-  .ob .ask .bar{left:0;background:var(--red)}
-  .ob .bid span:first-child{color:var(--green)}
-  .ob .ask span:first-child{color:var(--red)}
+/* ── CHARTS ── */
+.chart-area{width:100%;display:block}
 
-  /* right rail */
-  .right{display:flex;flex-direction:column;gap:12px}
-  .feed{font-size:10px}
-  .feed .item{padding:6px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px;align-items:flex-start}
-  .feed .item .t{color:var(--mute);min-width:36px}
-  .feed .item .b{flex:1}
-  .feed .item .b .who{color:var(--violet)}
-  .feed .item.alert .b{color:var(--amber)}
-  .feed .item.kill .b{color:var(--red)}
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse}
+th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--line2);font-size:10px}
+th{font-size:8px;letter-spacing:.18em;color:var(--mute);text-transform:uppercase;font-weight:500;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tag{font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--line)}
+.tag.long{color:var(--green);border-color:#1e3a2c;background:#0d1a15}
+.tag.short{color:var(--red);border-color:#3a1f2a;background:#1a0d12}
+td.sym{color:var(--fg);font-weight:700}
+td.up,span.up{color:var(--green)} td.dn,span.dn{color:var(--red)}
 
-  /* heatmap */
-  .heat{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:8px}
-  .heat .c{aspect-ratio:1.3;border-radius:3px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:10px;color:#fff;font-weight:700;text-shadow:0 1px 0 rgba(0,0,0,.4)}
-  .heat .c span{font-size:8px;opacity:.85;font-weight:500}
+/* ── ORDER BOOK ── */
+.ob{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.ob > div{background:var(--panel);padding:4px 10px;display:flex;justify-content:space-between;align-items:center;position:relative;font-size:10px}
+.ob .bar{position:absolute;top:0;bottom:0;opacity:.1}
+.ob .bid .bar{right:0;background:var(--green)}.ob .ask .bar{left:0;background:var(--red)}
+.ob .bid span:first-child{color:var(--green)}.ob .ask span:first-child{color:var(--red)}
+.ob .header{background:var(--panel);padding:5px 10px;display:flex;justify-content:space-between;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--line)}
 
-  /* footer status */
-  .statusbar{display:flex;gap:18px;padding:6px 14px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;border-top:1px solid var(--line);color:var(--mute);background:var(--panel)}
-  .statusbar .ok{color:var(--green)}
-  .statusbar .warn{color:var(--amber)}
-  .blink{animation:blink 1.2s steps(2) infinite}
-  @keyframes blink{50%{opacity:0}}
+/* ── PROGRESS BARS ── */
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bar-row .label{width:90px;font-size:10px;color:var(--mute);text-align:right}
+.bar-bg{flex:1;height:12px;background:#0e1220;border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:.3s}
+.bar-val{width:64px;font-size:10px;text-align:right}
+
+/* ── FEED ── */
+.feed-item{padding:6px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px;align-items:flex-start}
+.feed-item:last-child{border:0}
+.feed-item .t{color:var(--mute);min-width:38px;font-size:9px;flex-shrink:0;padding-top:1px}
+.feed-item .b{flex:1;font-size:10px}
+.feed-item.warn .b{color:var(--amber)}.feed-item.err .b{color:var(--red)}.feed-item.ok .b{color:var(--green)}
+.who{color:var(--violet)}
+
+/* ── HEATMAP ── */
+.heat{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:8px}
+.heat .c{aspect-ratio:1.4;border-radius:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:10px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.heat .c span{font-size:8px;font-weight:500;opacity:.9}
+
+/* ── GAUGE (fear/greed) ── */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0}
+.gauge-label{font-size:9px;letter-spacing:.15em;color:var(--mute);text-transform:uppercase;margin-top:4px}
+
+/* ── RISK BARS ── */
+.risk-row{display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px}
+.risk-row .k{color:var(--mute)}
+.risk-bg{height:6px;background:#0e1220;border-radius:3px;overflow:hidden;margin-bottom:10px}
+.risk-fill{height:100%;border-radius:3px}
+
+/* ── STATUS BAR ── */
+.statusbar{display:flex;gap:18px;padding:5px 14px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;border-top:1px solid var(--line);background:var(--panel);position:sticky;bottom:0;z-index:50}
+.statusbar .ok{color:var(--green)}.statusbar .warn{color:var(--amber)}.statusbar .err{color:var(--red)}
+.blink{animation:blink 1.2s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ── SECTION PAGES ── */
+.section{display:none}
+.section.active{display:flex;flex-direction:column;gap:12px}
+
+/* ── SETTINGS ── */
+.stab{display:flex;gap:1px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.stab button{padding:7px 12px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--mute);border-bottom:2px solid transparent;transition:.15s}
+.stab button.on{color:var(--fg);border-bottom-color:var(--green)}
+.crypto .stab button.on{border-bottom-color:#f7931a}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.form-row.full{grid-template-columns:1fr}
+.field label{display:block;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;background:#0e1220;border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-family:inherit;font-size:10px;color:var(--fg);outline:none}
+.field input:focus{border-color:var(--blue)}
+.field textarea{resize:none;height:60px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:.15s}
+.btn-primary{background:var(--green);color:#000}.btn-primary:hover{opacity:.9}
+.crypto .btn-primary{background:#f7931a}
+.btn-danger{background:var(--red);color:#fff}
+.btn-outline{border:1px solid var(--line);color:var(--mute)}.btn-outline:hover{color:var(--fg);border-color:var(--mute)}
+.switch{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--mute);cursor:pointer}
+.switch-track{width:32px;height:16px;border-radius:999px;background:#1a1d26;border:1px solid var(--line);position:relative;transition:.2s}
+.switch-track.on{background:var(--green)}.crypto .switch-track.on{background:#f7931a}
+.switch-thumb{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.switch-track.on .switch-thumb{left:18px}
+
+/* alerts */
+.alert-item{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border-bottom:1px solid var(--line2)}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.alert-item.crit .alert-dot{background:var(--red);box-shadow:0 0 8px var(--red)}
+.alert-item.warn .alert-dot{background:var(--amber)}
+.alert-item.info .alert-dot{background:var(--blue)}
+.badge-sev{font-size:8px;padding:1px 6px;border-radius:3px;margin-left:auto;flex-shrink:0}
+.badge-sev.crit{background:rgba(255,87,116,.15);color:var(--red)}
+.badge-sev.warn{background:rgba(255,184,107,.12);color:var(--amber)}
+.badge-sev.info{background:rgba(78,161,255,.12);color:var(--blue)}
+
+/* brain gym */
+.strategy-card{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--bg);margin-bottom:8px}
+.strategy-card .name{font-weight:700;font-size:11px;color:var(--fg)}
+.strategy-card .meta{font-size:9px;color:var(--mute);margin-top:2px}
+.strategy-card .metrics{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap}
+.strategy-card .m{font-size:10px}
+.strategy-card .m .k{color:var(--mute)}
+
+/* crypto info box */
+.info-box{padding:10px 12px;border-radius:5px;font-size:10px;line-height:1.5}
+.info-box.blue{background:rgba(78,161,255,.08);border:1px solid rgba(78,161,255,.2);color:var(--blue)}
+.info-box.amber{background:rgba(255,184,107,.08);border:1px solid rgba(255,184,107,.2);color:var(--amber)}
+.info-box.green{background:rgba(61,220,151,.08);border:1px solid rgba(61,220,151,.2);color:var(--green)}
+.info-box.orange{background:rgba(247,147,26,.08);border:1px solid rgba(247,147,26,.3);color:#f7931a}
 </style>
 </head>
-<body class="grid-bg">
-  <div class="top">
-    <div class="brand"><span class="dot"></span> WESTRADE//TERMINAL</div>
-    <div class="ticker"><div class="ticker-track">
-      <span class="tick up"><span class="sym">EURUSD</span> 1.08742 <span class="pct">+0.42%</span></span>
-      <span class="tick down"><span class="sym">GBPUSD</span> 1.27114 <span class="pct">-0.18%</span></span>
-      <span class="tick up"><span class="sym">XAUUSD</span> 2,341.20 <span class="pct">+1.12%</span></span>
-      <span class="tick up"><span class="sym">USDJPY</span> 156.81 <span class="pct">+0.21%</span></span>
-      <span class="tick down"><span class="sym">BTCUSD</span> 71,420 <span class="pct">-2.04%</span></span>
-      <span class="tick up"><span class="sym">SPX500</span> 5,341.4 <span class="pct">+0.68%</span></span>
-      <span class="tick down"><span class="sym">USOIL</span> 78.12 <span class="pct">-0.91%</span></span>
-      <span class="tick up"><span class="sym">EURUSD</span> 1.08742 <span class="pct">+0.42%</span></span>
-      <span class="tick down"><span class="sym">GBPUSD</span> 1.27114 <span class="pct">-0.18%</span></span>
-      <span class="tick up"><span class="sym">XAUUSD</span> 2,341.20 <span class="pct">+1.12%</span></span>
-    </div></div>
-    <span class="pill live">LIVE · MT5</span>
-    <span class="pill">SESSION 06:42:11</span>
-    <span class="pill">v3.2.1</span>
+<body class="grid-bg" id="body">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand"><span class="dot"></span><span id="brand-text">WESTRADE//TERMINAL</span></div>
+
+  <!-- Forex tickers -->
+  <div class="ticker">
+    <div class="track">
+      <span class="tick up"><span class="sym">EURUSD</span>1.08742 <span class="pct">+0.42%</span></span>
+      <span class="tick dn"><span class="sym">GBPUSD</span>1.27114 <span class="pct">-0.18%</span></span>
+      <span class="tick up"><span class="sym">XAUUSD</span>2,341.20 <span class="pct">+1.12%</span></span>
+      <span class="tick up"><span class="sym">USDJPY</span>156.81 <span class="pct">+0.21%</span></span>
+      <span class="tick dn"><span class="sym">USOIL</span>78.12 <span class="pct">-0.91%</span></span>
+      <span class="tick up"><span class="sym">SPX500</span>5,341.4 <span class="pct">+0.68%</span></span>
+      <span class="tick up"><span class="sym">EURUSD</span>1.08742 <span class="pct">+0.42%</span></span>
+      <span class="tick dn"><span class="sym">GBPUSD</span>1.27114 <span class="pct">-0.18%</span></span>
+      <span class="tick up"><span class="sym">XAUUSD</span>2,341.20 <span class="pct">+1.12%</span></span>
+    </div>
+    <!-- Crypto tickers -->
+    <div class="track crypto-track">
+      <span class="tick dn"><span class="sym">BTC/USD</span>71,420 <span class="pct">-2.04%</span></span>
+      <span class="tick up"><span class="sym">ETH/USD</span>3,811 <span class="pct">+1.44%</span></span>
+      <span class="tick up"><span class="sym">SOL/USD</span>184.20 <span class="pct">+3.12%</span></span>
+      <span class="tick dn"><span class="sym">XRP/USD</span>0.5821 <span class="pct">-0.82%</span></span>
+      <span class="tick up"><span class="sym">DOGE/USD</span>0.1842 <span class="pct">+5.1%</span></span>
+      <span class="tick up"><span class="sym">AVAX/USD</span>38.42 <span class="pct">+2.2%</span></span>
+      <span class="tick dn"><span class="sym">BTC/USD</span>71,420 <span class="pct">-2.04%</span></span>
+      <span class="tick up"><span class="sym">ETH/USD</span>3,811 <span class="pct">+1.44%</span></span>
+    </div>
   </div>
 
-  <div class="wrap">
-    <!-- side -->
-    <nav class="side">
-      <a class="active"><span class="k">D</span> Dashboard</a>
-      <a><span class="k">T</span> Trades</a>
-      <a><span class="k">P</span> Portfolio</a>
-      <a><span class="k">A</span> Analytics</a>
-      <a><span class="k">S</span> Strategies</a>
-      <a><span class="k">R</span> Risk Engine</a>
-      <div class="group">— AI</div>
-      <a><span class="k">B</span> Brain Gym</a>
-      <a><span class="k">F</span> Bot Feed</a>
-      <a><span class="k">Σ</span> Auto-Tuner</a>
-      <div class="group">— System</div>
-      <a><span class="k">C</span> Connections</a>
-      <a><span class="k">N</span> Alerts</a>
-      <a><span class="k">⚙</span> Settings</a>
-    </nav>
+  <div class="mode-toggle">
+    <button class="active" onclick="setMode('forex')">⬡ Forex</button>
+    <button onclick="setMode('crypto')">₿ Crypto</button>
+  </div>
+  <span class="pill live" id="mode-pill">LIVE · MT5</span>
+  <span class="pill" id="session-time">SESSION 06:42:11</span>
+  <span class="pill">v3.2.1</span>
+</div>
 
-    <!-- center -->
-    <section class="center">
-      <div class="metrics">
-        <div class="metric up"><div class="l">Equity</div><div class="v">$14,231.50</div><div class="s">+$420.18 today · 3 open</div>
-          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,12 8,11 16,8 24,9 32,6 40,7 48,3 60,1" fill="none" stroke="#3ddc97" stroke-width="1.4"/></svg></div>
-        <div class="metric up"><div class="l">Daily P&L</div><div class="v">+$420.18</div><div class="s">+3.04% · target +$600</div>
-          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,9 10,10 20,7 30,8 40,4 50,5 60,2" fill="none" stroke="#3ddc97" stroke-width="1.4"/></svg></div>
-        <div class="metric"><div class="l">Sharpe Ratio</div><div class="v">1.62</div><div class="s">target 1.5 ✓</div>
-          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,14 12,12 22,10 34,8 46,7 60,5" fill="none" stroke="#4ea1ff" stroke-width="1.4"/></svg></div>
-        <div class="metric down"><div class="l">Max Drawdown</div><div class="v">-4.21%</div><div class="s">risk score 28/100</div>
-          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,2 10,4 20,6 30,3 40,8 50,11 60,9" fill="none" stroke="#ff5774" stroke-width="1.4"/></svg></div>
+<!-- APP GRID -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <nav class="side">
+    <a class="active" data-nav="dashboard"><span class="k">D</span>Dashboard</a>
+    <a data-nav="trades"><span class="k">T</span>Trades</a>
+    <a data-nav="portfolio"><span class="k">P</span>Portfolio</a>
+    <a data-nav="analytics"><span class="k">A</span>Analytics</a>
+    <a data-nav="strategies"><span class="k">S</span>Strategies</a>
+    <a data-nav="risk"><span class="k">R</span>Risk Engine</a>
+    <a data-nav="presets"><span class="k">⚡</span>Presets</a>
+    <div class="group">— AI</div>
+    <a data-nav="braingym"><span class="k">B</span>Brain Gym</a>
+    <a data-nav="botfeed"><span class="k">F</span>Bot Feed</a>
+    <a data-nav="autotuner"><span class="k">Σ</span>Auto-Tuner</a>
+    <a data-nav="aiactivity"><span class="k">◈</span>AI Activity</a>
+    <div class="group">— Market</div>
+    <a data-nav="sentiment"><span class="k">⧊</span>Sentiment</a>
+    <div class="group">— System</div>
+    <a data-nav="connections"><span class="k">⚙</span>Connections</a>
+    <a data-nav="alerts"><span class="k">⚠</span>Alerts <span class="badge-count">2</span></a>
+    <a data-nav="notifications"><span class="k">✉</span>Notifications</a>
+    <a data-nav="settings"><span class="k">≡</span>Settings</a>
+    <a data-nav="help"><span class="k">?</span>Help</a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ═══════════ DASHBOARD ═══════════ -->
+    <div class="section active" id="sec-dashboard">
+
+      <!-- Bot offline banner -->
+      <div class="panel" style="border-color:#3a2d1a" id="bot-banner">
+        <div class="pb" style="display:flex;align-items:center;gap:10px;padding:8px 12px">
+          <span style="color:var(--amber)">⚡</span>
+          <span style="color:var(--amber);font-size:10px;font-weight:700">Python Bot OFFLINE</span>
+          <span style="color:var(--mute);font-size:10px">— Open PowerShell and paste:</span>
+          <code style="color:var(--blue);font-size:9px;flex:1">cd westrade\artifacts\python-bot; git pull; python bot.py</code>
+          <button class="btn btn-outline" style="font-size:9px;padding:3px 8px">Copy</button>
+          <button onclick="document.getElementById('bot-banner').style.display='none'" style="color:var(--mute)">✕</button>
+        </div>
       </div>
 
-      <div class="panel">
-        <h3>Session P&L · 24h <span class="badge">+3.04%</span></h3>
-        <div class="body" style="padding:0">
-          <svg class="chart" viewBox="0 0 800 240" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stop-color="#3ddc97" stop-opacity=".35"/>
-                <stop offset="100%" stop-color="#3ddc97" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <g class="grid">
-              <line x1="0" x2="800" y1="60" y2="60"/><line x1="0" x2="800" y1="120" y2="120"/><line x1="0" x2="800" y1="180" y2="180"/>
-            </g>
-            <path class="area" d="M0,180 L40,170 L80,175 L130,150 L180,158 L230,130 L290,140 L340,110 L400,118 L460,90 L520,100 L580,72 L640,80 L700,55 L760,60 L800,42 L800,240 L0,240 Z"/>
-            <path class="price" d="M0,180 L40,170 L80,175 L130,150 L180,158 L230,130 L290,140 L340,110 L400,118 L460,90 L520,100 L580,72 L640,80 L700,55 L760,60 L800,42"/>
-            <path class="ema" d="M0,190 L80,180 L180,168 L290,150 L400,130 L520,108 L640,88 L760,68 L800,60"/>
-            <g class="axis">
-              <text x="6" y="14" fill="#7d8493">+$600</text>
-              <text x="6" y="74" fill="#7d8493">+$420</text>
-              <text x="6" y="134" fill="#7d8493">+$200</text>
-              <text x="6" y="194" fill="#7d8493">$0</text>
-            </g>
-            <circle cx="800" cy="42" r="4" fill="#3ddc97"/>
-            <circle cx="800" cy="42" r="9" fill="none" stroke="#3ddc97" opacity=".4"/>
+      <!-- Metrics row -->
+      <div class="row col7">
+        <div class="metric up"><div class="l">Equity</div><div class="v">$14,231</div><div class="s">3 open pos</div><svg class="spark" viewBox="0 0 55 16"><polyline points="0,12 10,10 22,7 34,8 44,4 55,2" fill="none" stroke="var(--green)" stroke-width="1.4"/></svg></div>
+        <div class="metric up"><div class="l">Daily P&L</div><div class="v">+$420</div><div class="s">+3.04%</div><svg class="spark" viewBox="0 0 55 16"><polyline points="0,10 12,8 24,6 36,5 48,3 55,2" fill="none" stroke="var(--green)" stroke-width="1.4"/></svg></div>
+        <div class="metric up"><div class="l">Total P&L</div><div class="v">+$3,820</div><div class="s">+38.2%</div></div>
+        <div class="metric"><div class="l">Sharpe</div><div class="v">1.62</div><div class="s">target 1.5 ✓</div></div>
+        <div class="metric"><div class="l">Win Rate</div><div class="v">64.2%</div><div class="s">PF: 1.84</div></div>
+        <div class="metric dn"><div class="l">Drawdown</div><div class="v">-4.21%</div><div class="s">risk 28/100</div></div>
+        <div class="metric"><div class="l">Open Risk</div><div class="v">1.4%</div><div class="s">cap 2.0%</div></div>
+      </div>
+
+      <!-- Chart + Fear&Greed + Risk -->
+      <div class="row" style="grid-template-columns:1fr 140px 200px">
+
+        <div class="panel">
+          <div class="ph"><span class="title">Session P&L · 24h</span><span class="badge" id="pnl-badge">+3.04%</span></div>
+          <svg viewBox="0 0 700 180" style="width:100%;height:180px;display:block">
+            <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity=".35"/><stop offset="100%" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+            <line x1="0" x2="700" y1="60" y2="60" stroke="var(--line)" stroke-dasharray="2 4"/>
+            <line x1="0" x2="700" y1="120" y2="120" stroke="var(--line)" stroke-dasharray="2 4"/>
+            <path d="M0,160 L50,150 L100,155 L160,128 L220,136 L290,105 L350,115 L420,82 L490,92 L560,62 L630,70 L700,40 L700,180 L0,180Z" fill="url(#g1)"/>
+            <path d="M0,160 L50,150 L100,155 L160,128 L220,136 L290,105 L350,115 L420,82 L490,92 L560,62 L630,70 L700,40" fill="none" stroke="var(--green)" stroke-width="1.8"/>
+            <path d="M0,168 L120,158 L250,144 L400,122 L560,94 L700,68" fill="none" stroke="var(--blue)" stroke-dasharray="3 3" stroke-width="1" opacity=".6"/>
+            <circle cx="700" cy="40" r="4" fill="var(--green)"/>
+            <circle cx="700" cy="40" r="10" fill="none" stroke="var(--green)" stroke-opacity=".3"><animate attributeName="r" values="6;14;6" dur="2s" repeatCount="indefinite"/></circle>
+            <text x="6" y="14" fill="var(--mute)" font-size="9" font-family="inherit">+$600</text>
+            <text x="6" y="74" fill="var(--mute)" font-size="9" font-family="inherit">+$420</text>
+            <text x="6" y="134" fill="var(--mute)" font-size="9" font-family="inherit">$0</text>
           </svg>
         </div>
+
+        <!-- Fear & Greed -->
+        <div class="panel">
+          <div class="ph"><span class="title">Sentiment</span></div>
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 120 80" style="width:130px">
+              <path d="M15,65 A50,50 0 0 1 105,65" fill="none" stroke="#ef4444" stroke-width="9" stroke-linecap="butt"/>
+              <path d="M15,65 A50,50 0 0 1 45,28" fill="none" stroke="#f97316" stroke-width="9" stroke-linecap="butt"/>
+              <path d="M45,28 A50,50 0 0 1 75,28" fill="none" stroke="#eab308" stroke-width="9" stroke-linecap="butt"/>
+              <path d="M75,28 A50,50 0 0 1 105,65" fill="none" stroke="#22c55e" stroke-width="9" stroke-linecap="butt"/>
+              <!-- needle at ~72 (Greed) -->
+              <line x1="60" y1="65" x2="95" y2="32" stroke="var(--fg)" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="60" cy="65" r="4" fill="var(--fg)"/>
+              <text x="60" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#22c55e" font-family="inherit">72</text>
+            </svg>
+            <div class="gauge-label" style="color:#22c55e">GREED</div>
+            <div style="font-size:9px;color:var(--mute);margin-top:6px;text-align:center;padding:0 8px;line-height:1.4">Market sentiment index<br/>updated every 5 min</div>
+          </div>
+        </div>
+
+        <!-- Risk snapshot -->
+        <div class="panel">
+          <div class="ph"><span class="title">Risk Snapshot</span><span class="badge">ARMED</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Daily loss cap</span><span>$300</span></div>
+            <div class="risk-bg"><div class="risk-fill" style="width:0%;background:var(--green)"></div></div>
+            <div class="risk-row"><span class="k">Profit target</span><span style="color:var(--green)">$420/$600</span></div>
+            <div class="risk-bg"><div class="risk-fill" style="width:70%;background:linear-gradient(90deg,var(--green),var(--violet))"></div></div>
+            <div class="risk-row"><span class="k">Open risk</span><span>1.4% / 2.0%</span></div>
+            <div class="risk-bg"><div class="risk-fill" style="width:70%;background:var(--blue)"></div></div>
+            <div class="risk-row"><span class="k">Max positions</span><span>3 / 5</span></div>
+            <div class="risk-row"><span class="k">Correlation cap</span><span>0.60</span></div>
+            <div class="risk-row"><span class="k">Kill switch</span><span style="color:var(--green)">SAFE</span></div>
+          </div>
+        </div>
       </div>
 
-      <div class="row">
+      <!-- Positions + Order Book -->
+      <div class="row col22">
         <div class="panel">
-          <h3>Open Positions <span class="badge">3 LIVE</span></h3>
-          <div class="body" style="padding:0">
-            <table>
-              <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>P&L</th><th>%</th></tr></thead>
-              <tbody>
-                <tr><td class="sym">EURUSD</td><td><span class="tag long">LONG</span></td><td>0.50</td><td>1.0823</td><td>1.0874</td><td class="up">+$255.00</td><td class="up">+0.47%</td></tr>
-                <tr><td class="sym">XAUUSD</td><td><span class="tag long">LONG</span></td><td>0.20</td><td>2,318</td><td>2,341</td><td class="up">+$460.00</td><td class="up">+0.99%</td></tr>
-                <tr><td class="sym">GBPUSD</td><td><span class="tag short">SHORT</span></td><td>0.30</td><td>1.2702</td><td>1.2711</td><td class="down">-$27.00</td><td class="down">-0.07%</td></tr>
-              </tbody>
-            </table>
+          <div class="ph"><span class="title">Open Positions</span><span class="badge">3 LIVE</span></div>
+          <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>P&L $</th><th>P&L %</th><th>Strategy</th></tr></thead>
+            <tbody>
+              <tr><td class="sym" id="pos1-sym">EURUSD</td><td><span class="tag long">LONG</span></td><td>0.50</td><td>1.0823</td><td>1.0874</td><td class="up">+$255</td><td class="up">+0.47%</td><td style="color:var(--mute)">MeanRev</td></tr>
+              <tr><td class="sym" id="pos2-sym">XAUUSD</td><td><span class="tag long">LONG</span></td><td>0.20</td><td>2,318</td><td>2,341</td><td class="up">+$460</td><td class="up">+0.99%</td><td style="color:var(--mute)">Breakout</td></tr>
+              <tr><td class="sym" id="pos3-sym">GBPUSD</td><td><span class="tag short">SHORT</span></td><td>0.30</td><td>1.2702</td><td>1.2711</td><td class="dn">-$27</td><td class="dn">-0.07%</td><td style="color:var(--mute)">Momentum</td></tr>
+            </tbody>
+          </table>
           </div>
         </div>
         <div class="panel">
-          <h3>Order Book · EURUSD</h3>
+          <div class="ph"><span class="title" id="ob-title">Order Book · EURUSD</span></div>
           <div class="ob">
-            <div class="ask"><div class="bar" style="width:80%"></div><span>1.08750</span><span>2.1M</span></div>
-            <div class="bid"><div class="bar" style="width:40%"></div><span>1.08742</span><span>1.4M</span></div>
-            <div class="ask"><div class="bar" style="width:55%"></div><span>1.08753</span><span>1.8M</span></div>
-            <div class="bid"><div class="bar" style="width:70%"></div><span>1.08740</span><span>2.0M</span></div>
-            <div class="ask"><div class="bar" style="width:32%"></div><span>1.08755</span><span>820K</span></div>
-            <div class="bid"><div class="bar" style="width:90%"></div><span>1.08738</span><span>2.6M</span></div>
-            <div class="ask"><div class="bar" style="width:22%"></div><span>1.08758</span><span>520K</span></div>
-            <div class="bid"><div class="bar" style="width:48%"></div><span>1.08736</span><span>1.5M</span></div>
+            <div class="header">Bid</div><div class="header">Ask</div>
+            <div class="bid"><div class="bar" style="width:60%"></div><span>1.08742</span><span>1.4M</span></div>
+            <div class="ask"><div class="bar" style="width:75%"></div><span>1.08750</span><span>2.1M</span></div>
+            <div class="bid"><div class="bar" style="width:80%"></div><span>1.08740</span><span>2.3M</span></div>
+            <div class="ask"><div class="bar" style="width:45%"></div><span>1.08753</span><span>1.4M</span></div>
+            <div class="bid"><div class="bar" style="width:40%"></div><span>1.08738</span><span>1.1M</span></div>
+            <div class="ask"><div class="bar" style="width:30%"></div><span>1.08755</span><span>840K</span></div>
+            <div class="bid"><div class="bar" style="width:90%"></div><span>1.08736</span><span>2.6M</span></div>
+            <div class="ask"><div class="bar" style="width:22%"></div><span>1.08758</span><span>620K</span></div>
           </div>
         </div>
       </div>
 
-      <div class="row">
+      <!-- Strategy P&L + Heatmap + AI feed -->
+      <div class="row col3">
         <div class="panel">
-          <h3>Strategy P&L · 30d</h3>
-          <div class="body" style="padding:8px 14px">
-            <div style="display:flex;flex-direction:column;gap:6px">
-              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">MeanRev v2</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#3ddc97,#3ddc9788);width:78%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--green)">+$1,842</div></div>
-              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Breakout</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#3ddc97,#3ddc9788);width:58%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--green)">+$1,210</div></div>
-              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Momentum</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#3ddc97,#3ddc9788);width:34%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--green)">+$622</div></div>
-              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Carry</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#ff5774,#ff577488);width:18%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--red)">-$184</div></div>
-              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Pairs</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#ff5774,#ff577488);width:28%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--red)">-$310</div></div>
+          <div class="ph"><span class="title" id="strat-title">Strategy P&L · 30d</span></div>
+          <div class="pb" id="strat-bars">
+            <div class="bar-row"><div class="label">MeanRev v2</div><div class="bar-bg"><div class="bar-fill" style="width:78%;background:linear-gradient(90deg,var(--green),#22c55e88)"></div></div><div class="bar-val up">+$1,842</div></div>
+            <div class="bar-row"><div class="label">Breakout</div><div class="bar-bg"><div class="bar-fill" style="width:58%;background:linear-gradient(90deg,var(--green),#22c55e88)"></div></div><div class="bar-val up">+$1,210</div></div>
+            <div class="bar-row"><div class="label">Momentum</div><div class="bar-bg"><div class="bar-fill" style="width:34%;background:linear-gradient(90deg,var(--green),#22c55e88)"></div></div><div class="bar-val up">+$622</div></div>
+            <div class="bar-row"><div class="label">Carry</div><div class="bar-bg"><div class="bar-fill" style="width:18%;background:linear-gradient(90deg,var(--red),#ef444488)"></div></div><div class="bar-val dn">-$184</div></div>
+            <div class="bar-row"><div class="label">Pairs</div><div class="bar-bg"><div class="bar-fill" style="width:28%;background:linear-gradient(90deg,var(--red),#ef444488)"></div></div><div class="bar-val dn">-$310</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="ph"><span class="title" id="heatmap-title">FX Heatmap · 1D</span></div>
+          <div class="heat" id="heatmap">
+            <div class="c" style="background:#0f6b41">EUR<span>+0.82</span></div>
+            <div class="c" style="background:#0d8f51">GBP<span>+1.21</span></div>
+            <div class="c" style="background:#7a1f33">USD<span>-0.43</span></div>
+            <div class="c" style="background:#0d8f51">XAU<span>+1.12</span></div>
+            <div class="c" style="background:#5a1928">JPY<span>-0.21</span></div>
+            <div class="c" style="background:#0f6b41">AUD<span>+0.31</span></div>
+            <div class="c" style="background:#a31f3d">OIL<span>-0.91</span></div>
+            <div class="c" style="background:#0d8f51">SPX<span>+0.68</span></div>
+            <div class="c" style="background:#7a1f33">DXY<span>-0.43</span></div>
+            <div class="c" style="background:#0f6b41">NZD<span>+0.42</span></div>
+            <div class="c" style="background:#5a1928">CHF<span>-0.14</span></div>
+            <div class="c" style="background:#0f6b41">CAD<span>+0.55</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="ph"><span class="title">AI Activity</span><span class="badge">LIVE</span></div>
+          <div id="ai-feed">
+            <div class="feed-item ok"><span class="t">06:42</span><div class="b"><span class="who">brain</span> entered EURUSD long 0.5 lot @ 1.0823</div></div>
+            <div class="feed-item"><span class="t">06:38</span><div class="b"><span class="who">tuner</span> raised correlation threshold → 0.60</div></div>
+            <div class="feed-item warn"><span class="t">06:31</span><div class="b">⚠ slippage GBPUSD +0.8 pips</div></div>
+            <div class="feed-item ok"><span class="t">06:22</span><div class="b"><span class="who">brain</span> closed XAU trail +99 pips</div></div>
+            <div class="feed-item"><span class="t">06:14</span><div class="b"><span class="who">tuner</span> disabled Carry (sharpe 0.3)</div></div>
+            <div class="feed-item err"><span class="t">05:51</span><div class="b">✗ kill-switch test (simulated) — PASSED</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ TRADES ═══════════ -->
+    <div class="section" id="sec-trades">
+      <div class="panel">
+        <div class="ph"><span class="title">Trade History</span><span class="badge">247 total</span></div>
+        <div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)">
+          <button class="btn btn-outline" style="font-size:9px;padding:3px 8px">All</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:3px 8px">Win</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:3px 8px">Loss</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:3px 8px">Today</button>
+          <button class="btn btn-outline" style="font-size:9px;padding:3px 8px">7D</button>
+        </div>
+        <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>ID</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>P&L</th><th>Duration</th><th>Strategy</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr><td>#0247</td><td class="sym">XAUUSD</td><td><span class="tag long">LONG</span></td><td>0.20</td><td>2,318</td><td>2,341</td><td class="up">+$460</td><td>4h 12m</td><td style="color:var(--mute)">Breakout</td><td style="color:var(--mute)">Today</td></tr>
+            <tr><td>#0246</td><td class="sym">EURUSD</td><td><span class="tag long">LONG</span></td><td>0.50</td><td>1.0801</td><td>1.0823</td><td class="up">+$110</td><td>1h 48m</td><td style="color:var(--mute)">MeanRev</td><td style="color:var(--mute)">Today</td></tr>
+            <tr><td>#0245</td><td class="sym">GBPUSD</td><td><span class="tag short">SHORT</span></td><td>0.20</td><td>1.2741</td><td>1.2712</td><td class="up">+$58</td><td>2h 30m</td><td style="color:var(--mute)">Momentum</td><td style="color:var(--mute)">Yesterday</td></tr>
+            <tr><td>#0244</td><td class="sym">USDJPY</td><td><span class="tag long">LONG</span></td><td>0.10</td><td>155.20</td><td>154.80</td><td class="dn">-$40</td><td>45m</td><td style="color:var(--mute)">Breakout</td><td style="color:var(--mute)">Yesterday</td></tr>
+            <tr><td>#0243</td><td class="sym">EURUSD</td><td><span class="tag long">LONG</span></td><td>0.30</td><td>1.0782</td><td>1.0801</td><td class="up">+$57</td><td>3h 5m</td><td style="color:var(--mute)">MeanRev</td><td style="color:var(--mute)">May 14</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <div class="row col3">
+        <div class="metric up"><div class="l">Best Trade</div><div class="v">+$460</div><div class="s">XAUUSD · Breakout</div></div>
+        <div class="metric dn"><div class="l">Worst Trade</div><div class="v">-$184</div><div class="s">USOIL · Carry</div></div>
+        <div class="metric"><div class="l">Avg Duration</div><div class="v">2h 18m</div><div class="s">247 trades total</div></div>
+      </div>
+    </div>
+
+    <!-- ═══════════ PORTFOLIO ═══════════ -->
+    <div class="section" id="sec-portfolio">
+      <div class="row col4">
+        <div class="metric up"><div class="l">Account Balance</div><div class="v">$14,231</div><div class="s">+38.2% all-time</div></div>
+        <div class="metric"><div class="l">Unrealized P&L</div><div class="v">+$688</div><div class="s">3 positions</div></div>
+        <div class="metric dn"><div class="l">Max Drawdown</div><div class="v">-$1,240</div><div class="s">-12.4% peak</div></div>
+        <div class="metric"><div class="l">Starting Capital</div><div class="v">$10,000</div><div class="s">Since Jan 2025</div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="title">Equity Curve · All-time</span></div>
+        <svg viewBox="0 0 800 200" style="width:100%;height:200px;display:block">
+          <defs><linearGradient id="g2" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity=".3"/><stop offset="100%" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,180 L80,175 L160,168 L220,158 L280,162 L340,140 L380,148 L440,122 L500,110 L540,118 L600,90 L660,78 L720,62 L800,45 L800,200 L0,200Z" fill="url(#g2)"/>
+          <path d="M0,180 L80,175 L160,168 L220,158 L280,162 L340,140 L380,148 L440,122 L500,110 L540,118 L600,90 L660,78 L720,62 L800,45" fill="none" stroke="var(--green)" stroke-width="1.8"/>
+          <line x1="0" x2="800" y1="130" y2="130" stroke="var(--line)" stroke-dasharray="2 4"/>
+          <text x="4" y="48" fill="var(--mute)" font-size="9" font-family="inherit">$14,231</text>
+          <text x="4" y="133" fill="var(--mute)" font-size="9" font-family="inherit">$10,000</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="title">Allocation by Strategy</span></div>
+        <div class="pb">
+          <div class="bar-row"><div class="label">MeanRev v2</div><div class="bar-bg"><div class="bar-fill" style="width:40%;background:var(--violet)"></div></div><div class="bar-val">40%</div></div>
+          <div class="bar-row"><div class="label">Breakout</div><div class="bar-bg"><div class="bar-fill" style="width:30%;background:var(--blue)"></div></div><div class="bar-val">30%</div></div>
+          <div class="bar-row"><div class="label">Momentum</div><div class="bar-bg"><div class="bar-fill" style="width:20%;background:var(--cyan)"></div></div><div class="bar-val">20%</div></div>
+          <div class="bar-row"><div class="label">Cash</div><div class="bar-bg"><div class="bar-fill" style="width:10%;background:var(--mute)"></div></div><div class="bar-val">10%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ ANALYTICS ═══════════ -->
+    <div class="section" id="sec-analytics">
+      <div class="row col4">
+        <div class="metric"><div class="l">Sharpe Ratio</div><div class="v">1.62</div><div class="s">target 1.5 ✓</div></div>
+        <div class="metric"><div class="l">Sortino Ratio</div><div class="v">2.14</div><div class="s">vs benchmark 0.9</div></div>
+        <div class="metric"><div class="l">Profit Factor</div><div class="v">1.84</div><div class="s">wins / losses</div></div>
+        <div class="metric"><div class="l">Calmar Ratio</div><div class="v">0.92</div><div class="s">Ann. return / MDD</div></div>
+      </div>
+      <div class="row col22">
+        <div class="panel">
+          <div class="ph"><span class="title">Monthly Returns</span></div>
+          <div class="pb">
+            <div style="display:flex;gap:4px;align-items:flex-end;height:80px">
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;align-items:center"><div style="width:100%;background:var(--green);height:60px;border-radius:3px 3px 0 0"></div><span style="font-size:8px;color:var(--mute)">Jan</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;align-items:center"><div style="width:100%;background:var(--red);height:20px;border-radius:3px 3px 0 0"></div><span style="font-size:8px;color:var(--mute)">Feb</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;align-items:center"><div style="width:100%;background:var(--green);height:45px;border-radius:3px 3px 0 0"></div><span style="font-size:8px;color:var(--mute)">Mar</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;align-items:center"><div style="width:100%;background:var(--green);height:70px;border-radius:3px 3px 0 0"></div><span style="font-size:8px;color:var(--mute)">Apr</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;align-items:center"><div style="width:100%;background:var(--green);height:35px;border-radius:3px 3px 0 0"></div><span style="font-size:8px;color:var(--mute)">May</span></div>
             </div>
           </div>
         </div>
         <div class="panel">
-          <h3>FX Heatmap · 1D</h3>
+          <div class="ph"><span class="title">Sharpe Target</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Current</span><span style="color:var(--green)">1.62</span></div>
+            <div class="risk-bg" style="height:10px;margin-bottom:4px"><div class="risk-fill" style="width:81%;background:linear-gradient(90deg,var(--green),var(--cyan))"></div></div>
+            <div style="position:relative;height:0">
+              <div style="position:absolute;left:75%;top:-14px;width:2px;height:16px;background:white;opacity:.6"></div>
+            </div>
+            <div style="font-size:8px;color:var(--mute);margin-top:4px">Target: 1.5 (75%) · Max shown: 2.0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ STRATEGIES ═══════════ -->
+    <div class="section" id="sec-strategies">
+      <div class="strategy-card">
+        <div class="name">MeanRev v2 <span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(61,220,151,.12);color:var(--green);border:1px solid #1e3a2c;margin-left:6px">ACTIVE</span></div>
+        <div class="meta">Mean reversion on M15 timeframe · Gemini signal scoring</div>
+        <div class="metrics">
+          <div class="m"><span class="k">Sharpe: </span>1.92</div>
+          <div class="m"><span class="k">Win rate: </span><span style="color:var(--green)">68%</span></div>
+          <div class="m"><span class="k">P&L 30d: </span><span style="color:var(--green)">+$1,842</span></div>
+          <div class="m"><span class="k">Trades: </span>84</div>
+          <div class="m"><span class="k">Drawdown: </span><span style="color:var(--red)">-2.1%</span></div>
+        </div>
+      </div>
+      <div class="strategy-card">
+        <div class="name">Breakout <span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(61,220,151,.12);color:var(--green);border:1px solid #1e3a2c;margin-left:6px">ACTIVE</span></div>
+        <div class="meta">VWAP breakout with ATR-based stops · H1 / H4</div>
+        <div class="metrics">
+          <div class="m"><span class="k">Sharpe: </span>1.44</div>
+          <div class="m"><span class="k">Win rate: </span><span style="color:var(--green)">58%</span></div>
+          <div class="m"><span class="k">P&L 30d: </span><span style="color:var(--green)">+$1,210</span></div>
+          <div class="m"><span class="k">Trades: </span>62</div>
+          <div class="m"><span class="k">Drawdown: </span><span style="color:var(--red)">-3.8%</span></div>
+        </div>
+      </div>
+      <div class="strategy-card">
+        <div class="name">Carry <span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(255,87,116,.1);color:var(--red);border:1px solid #3a1f2a;margin-left:6px">DISABLED</span></div>
+        <div class="meta">Interest rate differential · disabled by Auto-Tuner (sharpe 0.3)</div>
+        <div class="metrics">
+          <div class="m"><span class="k">Sharpe: </span><span style="color:var(--red)">0.30</span></div>
+          <div class="m"><span class="k">Win rate: </span><span style="color:var(--red)">41%</span></div>
+          <div class="m"><span class="k">P&L 30d: </span><span style="color:var(--red)">-$184</span></div>
+          <div class="m"><span class="k">Trades: </span>28</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ RISK ENGINE ═══════════ -->
+    <div class="section" id="sec-risk">
+      <div class="row col3">
+        <div class="metric"><div class="l">Kill Switch</div><div class="v" style="color:var(--green)">SAFE</div><div class="s">last checked 2s ago</div></div>
+        <div class="metric dn"><div class="l">Daily Loss Used</div><div class="v">$0</div><div class="s">cap: $300</div></div>
+        <div class="metric up"><div class="l">Profit Captured</div><div class="v">$420</div><div class="s">target: $600</div></div>
+      </div>
+      <div class="row col22">
+        <div class="panel">
+          <div class="ph"><span class="title">Risk Settings</span></div>
+          <div class="pb">
+            <div class="form-row">
+              <div class="field"><label>Max Daily Loss %</label><input value="2.00" /></div>
+              <div class="field"><label>Max Daily Loss $</label><input value="300" /></div>
+              <div class="field"><label>Max Drawdown %</label><input value="8.00" /></div>
+              <div class="field"><label>Risk Per Trade %</label><input value="1.00" /></div>
+              <div class="field"><label>Max Open Positions</label><input value="5" /></div>
+              <div class="field"><label>Correlation Threshold</label><input value="0.60" /></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:8px">Save Risk Settings</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">Kill Switch</span><span class="badge">ARMED</span></div>
+          <div class="pb" style="display:flex;flex-direction:column;gap:10px">
+            <div class="info-box green">Kill switch is armed and will close all positions if daily loss exceeds $300 or drawdown exceeds 8%.</div>
+            <button class="btn btn-danger" style="width:100%;justify-content:center">⚡ TRIGGER KILL SWITCH</button>
+            <div class="risk-row"><span class="k">Auto-trigger: loss limit</span><span style="color:var(--green)">ON</span></div>
+            <div class="risk-row"><span class="k">Auto-trigger: drawdown</span><span style="color:var(--green)">ON</span></div>
+            <div class="risk-row"><span class="k">Email on trigger</span><span style="color:var(--green)">ON</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ PRESETS ═══════════ -->
+    <div class="section" id="sec-presets">
+      <div class="info-box blue" style="margin-bottom:4px">Presets apply risk + bot configuration simultaneously. Numbers are templates — tune based on your results.</div>
+      <div class="row col3">
+        <div class="panel">
+          <div class="ph"><span class="title">⚡ Optimal Profit</span><span class="badge">RECOMMENDED</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Loss cap</span><span>$30</span></div>
+            <div class="risk-row"><span class="k">Profit target</span><span>$60 (2×)</span></div>
+            <div class="risk-row"><span class="k">Risk/trade</span><span>1.0%</span></div>
+            <div class="risk-row"><span class="k">Max positions</span><span>3</span></div>
+            <div class="risk-row"><span class="k">Correlation</span><span>0.60</span></div>
+            <div style="display:flex;gap:4px;margin:10px 0">
+              <button class="btn" style="flex:1;justify-content:center;background:#1a2a3a;color:var(--blue);border:1px solid #2a4a6a;font-size:9px">−</button>
+              <span style="flex:2;text-align:center;padding:4px 0;font-size:10px">$30 loss / $60 target</span>
+              <button class="btn" style="flex:1;justify-content:center;background:#1a2a3a;color:var(--blue);border:1px solid #2a4a6a;font-size:9px">+</button>
+            </div>
+            <div style="display:flex;gap:4px;margin-bottom:10px">
+              <button class="btn" style="flex:1;justify-content:center;background:#1a2a40;color:var(--blue);border:1px solid #2a4060;font-size:9px">📄 Paper</button>
+              <button class="btn" style="flex:1;justify-content:center;background:#0d1a12;color:var(--mute);border:1px solid var(--line);font-size:9px">💰 Live</button>
+            </div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center">Apply Preset</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">🔥 High Risk / High Reward</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Loss cap</span><span style="color:var(--red)">5%</span></div>
+            <div class="risk-row"><span class="k">Risk/trade</span><span style="color:var(--red)">3%</span></div>
+            <div class="risk-row"><span class="k">Max positions</span><span>8</span></div>
+            <div class="risk-row"><span class="k">Drawdown</span><span style="color:var(--red)">20%</span></div>
+            <div class="info-box amber" style="margin:8px 0">⚠ Aggressive mode. Suitable for paper or small accounts only.</div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center">Apply Preset</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">🧪 Experimental</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Mode</span><span style="color:var(--violet)">PAPER ONLY</span></div>
+            <div class="risk-row"><span class="k">Auto-tuner</span><span style="color:var(--green)">ENABLED</span></div>
+            <div class="risk-row"><span class="k">Session</span><span>24h non-stop</span></div>
+            <div class="risk-row"><span class="k">Loss cap</span><span>4%</span></div>
+            <div class="info-box blue" style="margin:8px 0">Run this for 4+ weeks in paper mode before going live.</div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center">Apply Preset</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="title">Saved Configurations</span></div>
+        <div class="pb" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline">📁 My Config Jan25</button>
+          <button class="btn btn-outline">📁 Conservative v1</button>
+          <button class="btn btn-primary">+ Save Current</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ BRAIN GYM ═══════════ -->
+    <div class="section" id="sec-braingym">
+      <div class="info-box blue">Brain Gym evaluates each strategy's rolling Sharpe, drawdown, and profit factor every Sunday. Under-performers are flagged or disabled automatically.</div>
+      <div class="row col22">
+        <div class="panel">
+          <div class="ph"><span class="title">Weekly Post-Mortem</span><span class="badge">Week 20, 2026</span></div>
+          <div class="pb">
+            <div class="bar-row"><div class="label">MeanRev v2</div><div class="bar-bg"><div class="bar-fill" style="width:96%;background:var(--green)"></div></div><div class="bar-val up">A+</div></div>
+            <div class="bar-row"><div class="label">Breakout</div><div class="bar-bg"><div class="bar-fill" style="width:72%;background:var(--blue)"></div></div><div class="bar-val" style="color:var(--blue)">B+</div></div>
+            <div class="bar-row"><div class="label">Momentum</div><div class="bar-bg"><div class="bar-fill" style="width:55%;background:var(--amber)"></div></div><div class="bar-val" style="color:var(--amber)">C+</div></div>
+            <div class="bar-row"><div class="label">Carry</div><div class="bar-bg"><div class="bar-fill" style="width:18%;background:var(--red)"></div></div><div class="bar-val dn">F</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">Replay Backtest</span></div>
+          <div class="pb" style="display:flex;flex-direction:column;gap:8px">
+            <div class="field"><label>Symbol</label><select><option>EURUSD</option><option>XAUUSD</option><option>GBPUSD</option></select></div>
+            <div class="field"><label>Date range</label><input placeholder="2025-01-01 → 2025-12-31" /></div>
+            <div class="field"><label>Strategy</label><select><option>MeanRev v2</option><option>Breakout</option></select></div>
+            <button class="btn btn-primary">▶ Run Replay</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ BOT FEED ═══════════ -->
+    <div class="section" id="sec-botfeed">
+      <div class="panel">
+        <div class="ph"><span class="title">Python Bot Log</span><span class="badge amber">OFFLINE</span></div>
+        <div style="background:#04060a;padding:10px 14px;font-size:10px;height:320px;overflow-y:auto;font-family:'JetBrains Mono',monospace">
+          <div style="color:var(--green)">[06:42:18] strategy MeanRevV2 signal=LONG sym=EURUSD score=0.82</div>
+          <div style="color:var(--fg)">[06:42:18] placing order EURUSD BUY 0.5 lot @ market</div>
+          <div style="color:var(--fg)">[06:42:19] order filled @ 1.08230 slippage=0.1pip</div>
+          <div style="color:var(--blue)">[06:42:19] risk check passed: open_risk=1.2% corr=0.40</div>
+          <div style="color:var(--mute)">[06:38:05] auto-tuner: correlation threshold → 0.60</div>
+          <div style="color:var(--amber)">[06:31:42] WARN: slippage GBPUSD 0.8pip (threshold 0.5pip)</div>
+          <div style="color:var(--green)">[06:22:11] CLOSE XAUUSD trail TP hit +99pips +$460.00</div>
+          <div style="color:var(--mute)">[06:14:00] auto-tuner: disabling Carry (rolling_sharpe=0.30 &lt; 0.50)</div>
+          <div style="color:var(--mute)">[05:51:00] kill-switch self-test: PASSED</div>
+          <div style="color:var(--mute)">[05:00:00] session start equity=$13,811.50</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ AUTO-TUNER ═══════════ -->
+    <div class="section" id="sec-autotuner">
+      <div class="row col3">
+        <div class="metric"><div class="l">Strategies Watched</div><div class="v">5</div></div>
+        <div class="metric dn"><div class="l">Disabled This Week</div><div class="v">1</div><div class="s">Carry</div></div>
+        <div class="metric up"><div class="l">Capital Reallocated</div><div class="v">+12%</div><div class="s">to MeanRev</div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="title">Tuner Config</span></div>
+        <div class="pb">
+          <div class="form-row">
+            <div class="field"><label>Sharpe disable threshold</label><input value="0.50" /></div>
+            <div class="field"><label>Review window (days)</label><input value="30" /></div>
+            <div class="field"><label>Min trades for eval</label><input value="20" /></div>
+            <div class="field"><label>Reallocation method</label><select><option>Proportional Sharpe</option><option>Equal weight</option></select></div>
+          </div>
+          <div class="switch" style="margin-bottom:8px"><div class="switch-track on"><div class="switch-thumb"></div></div> Auto-disable under-performers</div>
+          <div class="switch"><div class="switch-track on"><div class="switch-thumb"></div></div> Auto-reallocate capital</div>
+          <button class="btn btn-primary" style="margin-top:10px">Save Tuner Config</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ AI ACTIVITY ═══════════ -->
+    <div class="section" id="sec-aiactivity">
+      <div class="panel">
+        <div class="ph"><span class="title">AI Decision Log</span></div>
+        <div style="height:400px;overflow-y:auto">
+          <div class="feed-item ok"><span class="t">06:42</span><div class="b"><span class="who">[BRAIN]</span> EURUSD: Gemini score=0.82 → ENTER LONG 0.5lot · reasoning: momentum + RSI divergence on M15</div></div>
+          <div class="feed-item"><span class="t">06:40</span><div class="b"><span class="who">[BRAIN]</span> USDJPY: Gemini score=0.44 → SKIP · reasoning: low conviction, news risk in 2h</div></div>
+          <div class="feed-item"><span class="t">06:38</span><div class="b"><span class="who">[TUNER]</span> Adjusting correlation cap 0.55→0.60 based on recent pair divergence</div></div>
+          <div class="feed-item warn"><span class="t">06:31</span><div class="b">SLIPPAGE WARNING GBPUSD: expected 1.2702 filled 1.2710 (+0.8pip). Logging for strategy audit.</div></div>
+          <div class="feed-item ok"><span class="t">06:22</span><div class="b"><span class="who">[BRAIN]</span> XAUUSD: trail stop reached +99pips → CLOSE LONG. P&L: +$460.00</div></div>
+          <div class="feed-item err"><span class="t">06:14</span><div class="b"><span class="who">[TUNER]</span> Carry strategy rolling sharpe=0.30 below threshold 0.50 → DISABLE. Capital reallocated to MeanRev (+12%)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SENTIMENT ═══════════ -->
+    <div class="section" id="sec-sentiment">
+      <div class="row col3">
+        <div class="panel">
+          <div class="ph"><span class="title">Fear & Greed Index</span></div>
+          <div class="gauge-wrap" style="padding:16px">
+            <svg viewBox="0 0 120 80" style="width:160px">
+              <path d="M15,65 A50,50 0 0 1 105,65" fill="none" stroke="#ef4444" stroke-width="9"/>
+              <path d="M15,65 A50,50 0 0 1 45,28" fill="none" stroke="#f97316" stroke-width="9"/>
+              <path d="M45,28 A50,50 0 0 1 75,28" fill="none" stroke="#eab308" stroke-width="9"/>
+              <path d="M75,28 A50,50 0 0 1 105,65" fill="none" stroke="#22c55e" stroke-width="9"/>
+              <line x1="60" y1="65" x2="95" y2="32" stroke="var(--fg)" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="60" cy="65" r="4" fill="var(--fg)"/>
+              <text x="60" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#22c55e" font-family="inherit">72</text>
+            </svg>
+            <div class="gauge-label" style="color:#22c55e;font-size:11px;margin-top:4px">GREED</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">News Sentiment · 24h</span></div>
+          <div class="pb" style="display:flex;flex-direction:column;gap:6px">
+            <div class="bar-row"><div class="label">EUR/USD</div><div class="bar-bg"><div class="bar-fill" style="width:72%;background:var(--green)"></div></div><div class="bar-val up">+72</div></div>
+            <div class="bar-row"><div class="label">GBP/USD</div><div class="bar-bg"><div class="bar-fill" style="width:38%;background:var(--red)"></div></div><div class="bar-val dn">-38</div></div>
+            <div class="bar-row"><div class="label">XAU/USD</div><div class="bar-bg"><div class="bar-fill" style="width:88%;background:var(--green)"></div></div><div class="bar-val up">+88</div></div>
+            <div class="bar-row"><div class="label">USD/JPY</div><div class="bar-bg"><div class="bar-fill" style="width:55%;background:var(--amber)"></div></div><div class="bar-val" style="color:var(--amber)">+12</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">FX Heatmap</span></div>
           <div class="heat">
             <div class="c" style="background:#0f6b41">EUR<span>+0.82</span></div>
             <div class="c" style="background:#0d8f51">GBP<span>+1.21</span></div>
@@ -250,64 +763,346 @@
             <div class="c" style="background:#0d8f51">XAU<span>+1.12</span></div>
             <div class="c" style="background:#5a1928">JPY<span>-0.21</span></div>
             <div class="c" style="background:#0f6b41">AUD<span>+0.31</span></div>
-            <div class="c" style="background:#a31f3d">BTC<span>-2.04</span></div>
-            <div class="c" style="background:#0d8f51">SPX<span>+0.68</span></div>
-            <div class="c" style="background:#7a1f33">OIL<span>-0.91</span></div>
-            <div class="c" style="background:#0f6b41">NZD<span>+0.42</span></div>
-            <div class="c" style="background:#5a1928">CHF<span>-0.14</span></div>
-            <div class="c" style="background:#0f6b41">CAD<span>+0.55</span></div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- right -->
-    <aside class="right">
+    <!-- ═══════════ CONNECTIONS ═══════════ -->
+    <div class="section" id="sec-connections">
+      <div class="row col3">
+        <div class="panel">
+          <div class="ph"><span class="title">MT5 Bridge</span><span class="badge">ONLINE · 12ms</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Server</span><span>ICMarkets-Live</span></div>
+            <div class="risk-row"><span class="k">Account</span><span id="conn-account">50504865**</span></div>
+            <div class="risk-row"><span class="k">Last tick</span><span>0.2s ago</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">Python Bot</span><span class="badge red">OFFLINE</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Version</span><span>v3.2.1</span></div>
+            <div class="risk-row"><span class="k">Last seen</span><span style="color:var(--red)">48m ago</span></div>
+            <code style="font-size:9px;color:var(--blue);display:block;margin-top:6px;word-break:break-all">cd westrade\artifacts\python-bot; python bot.py</code>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="title">Email (SMTP)</span><span class="badge amber">UNTESTED</span></div>
+          <div class="pb">
+            <div class="risk-row"><span class="k">Host</span><span>smtp-relay.brevo.com</span></div>
+            <div class="risk-row"><span class="k">Port</span><span>587</span></div>
+            <div class="risk-row"><span class="k">User</span><span>ab28c7001@smtp-brevo.com</span></div>
+            <button class="btn btn-outline" style="margin-top:8px;width:100%;justify-content:center">Send Test Email</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ ALERTS ═══════════ -->
+    <div class="section" id="sec-alerts">
       <div class="panel">
-        <h3>Risk Engine <span class="badge">ARMED</span></h3>
-        <div class="body" style="font-size:10px;line-height:1.7">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Max daily loss</span><span>$300</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Used</span><span class="" style="color:var(--green)">$0</span></div>
-          <div style="height:6px;background:#0e1220;border-radius:3px;margin:6px 0"><div style="width:0%;height:100%;background:var(--green);border-radius:3px"></div></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Daily profit target</span><span>$600</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Used</span><span style="color:var(--green)">$420</span></div>
-          <div style="height:6px;background:#0e1220;border-radius:3px;margin:6px 0"><div style="width:70%;height:100%;background:linear-gradient(90deg,#3ddc97,#a78bfa);border-radius:3px"></div></div>
-          <div style="display:flex;justify-content:space-between;margin-top:6px"><span style="color:var(--mute)">Open risk %</span><span>1.4%</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Correlation cap</span><span>0.60</span></div>
+        <div class="ph"><span class="title">System Alerts</span><span class="badge red">2 unread</span></div>
+        <div class="alert-item warn"><div class="alert-dot"></div><div><div style="font-size:10px;font-weight:700">Slippage threshold exceeded — GBPUSD +0.8pip</div><div style="font-size:9px;color:var(--mute);margin-top:2px">06:31 · Strategy: Momentum</div></div><span class="badge-sev warn">warning</span></div>
+        <div class="alert-item info"><div class="alert-dot"></div><div><div style="font-size:10px;font-weight:700">Auto-Tuner disabled Carry strategy</div><div style="font-size:9px;color:var(--mute);margin-top:2px">06:14 · Rolling Sharpe fell to 0.30</div></div><span class="badge-sev info">info</span></div>
+        <div class="alert-item crit" style="opacity:.5"><div class="alert-dot"></div><div><div style="font-size:10px;font-weight:700">Kill switch test — PASSED</div><div style="font-size:9px;color:var(--mute);margin-top:2px">05:51 · Simulated trigger, no positions closed</div></div><span class="badge-sev crit">resolved</span></div>
+      </div>
+    </div>
+
+    <!-- ═══════════ NOTIFICATIONS ═══════════ -->
+    <div class="section" id="sec-notifications">
+      <div class="panel">
+        <div class="ph"><span class="title">Email Alert Settings</span></div>
+        <div class="pb">
+          <div class="form-row full"><div class="field"><label>Alert email addresses</label><input value="you@example.com" /></div></div>
+          <div style="margin-bottom:8px;display:flex;flex-direction:column;gap:8px">
+            <div class="switch"><div class="switch-track on"><div class="switch-thumb"></div></div> Kill switch triggered</div>
+            <div class="switch"><div class="switch-track on"><div class="switch-thumb"></div></div> Daily loss limit hit (50% warning)</div>
+            <div class="switch"><div class="switch-track on"><div class="switch-thumb"></div></div> Profit target reached</div>
+            <div class="switch"><div class="switch-track"><div class="switch-thumb"></div></div> Every new trade opened</div>
+          </div>
+          <button class="btn btn-primary">Save Settings</button>
+          <button class="btn btn-outline" style="margin-left:8px">Send Test Email</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SETTINGS ═══════════ -->
+    <div class="section" id="sec-settings">
+      <div class="stab">
+        <button class="on" onclick="setSettingsTab(this,'stab-profile')">Profile</button>
+        <button onclick="setSettingsTab(this,'stab-appearance')">Appearance</button>
+        <button onclick="setSettingsTab(this,'stab-email')">Email Alerts</button>
+        <button onclick="setSettingsTab(this,'stab-crypto')">Crypto API</button>
+        <button onclick="setSettingsTab(this,'stab-setup')">Bot Setup</button>
+        <button onclick="setSettingsTab(this,'stab-plan')">Plan</button>
+      </div>
+
+      <div id="stab-profile">
+        <div class="panel">
+          <div class="ph"><span class="title">Profile</span></div>
+          <div class="pb">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">IL</div>
+              <div><div style="font-weight:700">Ilyes</div><div style="color:var(--mute);font-size:10px">ilyes@example.com</div></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Display name</label><input value="Ilyes" /></div>
+              <div class="field"><label>Email</label><input value="ilyes@example.com" /></div>
+            </div>
+            <div class="form-row full"><div class="field"><label>Bio</label><textarea>Retail trader, algo enthusiast.</textarea></div></div>
+            <button class="btn btn-primary">Save Profile</button>
+            <button class="btn btn-danger" style="margin-left:8px">Sign Out</button>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>AI Activity</h3>
-        <div class="feed">
-          <div class="item"><span class="t">06:42</span><div class="b"><span class="who">brain</span> identified mean-rev setup on EURUSD; entered long 0.5 lot</div></div>
-          <div class="item"><span class="t">06:38</span><div class="b"><span class="who">tuner</span> raised correlation threshold to 0.60</div></div>
-          <div class="item alert"><span class="t">06:31</span><div class="b">⚠ slippage on GBPUSD entry (+0.8 pips)</div></div>
-          <div class="item"><span class="t">06:22</span><div class="b"><span class="who">brain</span> closed XAU trail at +99 pips</div></div>
-          <div class="item"><span class="t">06:14</span><div class="b"><span class="who">tuner</span> disabled Carry strategy (sharpe 0.3)</div></div>
-          <div class="item kill"><span class="t">05:51</span><div class="b">✗ kill-switch test passed (simulated)</div></div>
+      <div id="stab-appearance" style="display:none">
+        <div class="panel">
+          <div class="ph"><span class="title">Visual Style</span></div>
+          <div class="pb">
+            <div class="row col4">
+              <div style="border:2px solid var(--green);border-radius:6px;padding:8px;text-align:center;font-size:10px">Terminal ✓</div>
+              <div style="border:1px solid var(--line);border-radius:6px;padding:8px;text-align:center;font-size:10px;color:var(--mute)">Glass</div>
+              <div style="border:1px solid var(--line);border-radius:6px;padding:8px;text-align:center;font-size:10px;color:var(--mute)">Midnight</div>
+              <div style="border:1px solid var(--line);border-radius:6px;padding:8px;text-align:center;font-size:10px;color:var(--mute)">Frosted</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Connections</h3>
-        <div class="body" style="font-size:10px;display:flex;flex-direction:column;gap:4px">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">MT5 bridge</span><span style="color:var(--green)">● online · 12ms</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Python bot</span><span style="color:var(--green)">● online · v3.2.1</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">News feed</span><span style="color:var(--green)">● online</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">SMTP (Brevo)</span><span style="color:var(--amber)">● untested</span></div>
+      <div id="stab-email" style="display:none">
+        <div class="panel">
+          <div class="ph"><span class="title">SMTP Settings (Brevo)</span></div>
+          <div class="pb">
+            <div class="form-row">
+              <div class="field"><label>Host</label><input value="smtp-relay.brevo.com" /></div>
+              <div class="field"><label>Port</label><input value="587" /></div>
+              <div class="field"><label>Username</label><input value="ab28c7001@smtp-brevo.com" /></div>
+              <div class="field"><label>API Key (Password)</label><input type="password" placeholder="Paste Brevo API key here" /></div>
+            </div>
+            <div class="info-box blue" style="margin:8px 0">Brevo → Settings → SMTP & API → API Keys → Generate. Copy the key immediately — it's only shown once.</div>
+            <button class="btn btn-primary">Save</button>
+            <button class="btn btn-outline" style="margin-left:8px">Send Test Email</button>
+          </div>
         </div>
       </div>
-    </aside>
-  </div>
 
-  <div class="statusbar">
-    <span>● <span class="ok">MARKET OPEN</span></span>
-    <span>NY 09:42 · LDN 14:42 · TOK 23:42</span>
-    <span class="ok">▲ EQUITY +3.04%</span>
-    <span>OPEN RISK 1.4%</span>
-    <span class="warn">2 PENDING ALERTS</span>
-    <span style="margin-left:auto" class="blink">▮ AWAITING SIGNAL</span>
-  </div>
+      <!-- ✨ CRYPTO API TAB -->
+      <div id="stab-crypto" style="display:none">
+        <div class="panel">
+          <div class="ph"><span class="title">Crypto Paper Trading · Alpaca</span><span class="badge amber">PAPER ONLY</span></div>
+          <div class="pb">
+            <div class="info-box orange" style="margin-bottom:12px">
+              <strong>Alpaca Paper Trading</strong> — 100% free. Real BTC/ETH/SOL prices, fake money. No real capital at risk.<br/><br/>
+              1. Sign up free at <strong>alpaca.markets</strong><br/>
+              2. Switch to "Paper Trading" account in top-right<br/>
+              3. Go to API Keys → Generate<br/>
+              4. Paste both keys below
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Alpaca API Key ID</label><input placeholder="PKXXXXXXXXXXXXXXXX" /></div>
+              <div class="field"><label>Alpaca Secret Key</label><input type="password" placeholder="Paste secret key here" /></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Account type</label><select><option>Paper (recommended)</option><option>Live (real money ⚠)</option></select></div>
+              <div class="field"><label>Base URL</label><input value="https://paper-api.alpaca.markets" /></div>
+            </div>
+            <div class="info-box blue" style="margin:8px 0">Alpaca supports: BTC, ETH, SOL, DOGE, XRP, AVAX, LINK, LTC + many more. $100,000 virtual starting balance.</div>
+            <button class="btn btn-primary">Save Crypto API Keys</button>
+            <button class="btn btn-outline" style="margin-left:8px">Test Connection</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="stab-setup" style="display:none">
+        <div class="panel">
+          <div class="ph"><span class="title">Bot Setup</span></div>
+          <div class="pb">
+            <div class="info-box blue" style="margin-bottom:10px">Run this command in PowerShell on the same PC as MT5:</div>
+            <code style="display:block;background:#04060a;padding:10px;border-radius:4px;font-size:10px;color:var(--blue);word-break:break-all">cd C:\Users\Ilyes\westrade\artifacts\python-bot; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py</code>
+          </div>
+        </div>
+      </div>
+
+      <div id="stab-plan" style="display:none">
+        <div class="panel">
+          <div class="ph"><span class="title">Current Plan</span></div>
+          <div class="pb"><div style="font-size:14px;font-weight:700;margin-bottom:4px">Pro · $49/mo</div><div style="color:var(--mute);font-size:10px">Renews June 17, 2026</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ HELP ═══════════ -->
+    <div class="section" id="sec-help">
+      <div class="panel">
+        <div class="ph"><span class="title">Getting Started</span></div>
+        <div class="pb" style="line-height:2;font-size:10px;color:var(--mute)">
+          <div>1. Connect your MT5 account in <button onclick="nav('connections')" style="color:var(--blue)">Connections</button></div>
+          <div>2. Set risk limits in <button onclick="nav('risk')" style="color:var(--blue)">Risk Engine</button></div>
+          <div>3. Apply a preset in <button onclick="nav('presets')" style="color:var(--blue)">Presets</button> — start with Optimal Profit in Paper mode</div>
+          <div>4. Start the Python bot (see <button onclick="nav('settings')" style="color:var(--blue)">Settings → Bot Setup</button>)</div>
+          <div>5. Watch the <button onclick="nav('botfeed')" style="color:var(--blue)">Bot Feed</button> for activity</div>
+          <div>6. For crypto paper trading: <button onclick="nav('settings');setSettingsTabById('stab-crypto')" style="color:var(--blue)">Settings → Crypto API</button></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <span id="market-status">● <span class="ok">MARKET OPEN</span></span>
+  <span id="clock-zones">NY 09:42 · LDN 14:42 · TOK 23:42</span>
+  <span class="ok" id="equity-stat">▲ EQUITY +3.04%</span>
+  <span>OPEN RISK 1.4%</span>
+  <span class="warn">2 ALERTS</span>
+  <span style="margin-left:auto" class="blink" id="mode-status">▮ FOREX · PAPER MODE</span>
+</div>
+
+<script>
+// ── Navigation ──
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.side a').forEach(a => a.classList.remove('active'));
+  const sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('active');
+  const link = document.querySelector('[data-nav="' + id + '"]');
+  if (link) link.classList.add('active');
+}
+document.querySelectorAll('.side a[data-nav]').forEach(a => {
+  a.addEventListener('click', () => nav(a.dataset.nav));
+});
+
+// ── Settings tabs ──
+function setSettingsTab(btn, id) {
+  document.querySelectorAll('.stab button').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  ['stab-profile','stab-appearance','stab-email','stab-crypto','stab-setup','stab-plan']
+    .forEach(t => { const el = document.getElementById(t); if (el) el.style.display = t === id ? '' : 'none'; });
+}
+function setSettingsTabById(id) {
+  const btn = document.querySelector(`.stab button[onclick*="${id}"]`);
+  if (btn) setSettingsTab(btn, id);
+}
+
+// ── Mode switch ──
+const forexPositions = [
+  {sym:'EURUSD',side:'long',qty:'0.50',entry:'1.0823',mark:'1.0874',pnl:'+$255',pct:'+0.47%',strat:'MeanRev'},
+  {sym:'XAUUSD',side:'long',qty:'0.20',entry:'2,318',mark:'2,341',pnl:'+$460',pct:'+0.99%',strat:'Breakout'},
+  {sym:'GBPUSD',side:'short',qty:'0.30',entry:'1.2702',mark:'1.2711',pnl:'-$27',pct:'-0.07%',strat:'Momentum'},
+];
+const cryptoPositions = [
+  {sym:'BTC/USD',side:'long',qty:'0.021',entry:'70,142',mark:'71,420',pnl:'+$268',pct:'+1.82%',strat:'Breakout'},
+  {sym:'ETH/USD',side:'long',qty:'0.40',entry:'3,742',mark:'3,811',pnl:'+$276',pct:'+1.84%',strat:'MeanRev'},
+  {sym:'SOL/USD',side:'short',qty:'2.00',entry:'190.20',mark:'184.20',pnl:'+$120',pct:'+3.15%',strat:'Momentum'},
+];
+const forexHeat = [
+  {sym:'EUR',v:'+0.82',bg:'#0f6b41'},{sym:'GBP',v:'+1.21',bg:'#0d8f51'},
+  {sym:'USD',v:'-0.43',bg:'#7a1f33'},{sym:'XAU',v:'+1.12',bg:'#0d8f51'},
+  {sym:'JPY',v:'-0.21',bg:'#5a1928'},{sym:'AUD',v:'+0.31',bg:'#0f6b41'},
+  {sym:'OIL',v:'-0.91',bg:'#a31f3d'},{sym:'SPX',v:'+0.68',bg:'#0d8f51'},
+  {sym:'DXY',v:'-0.43',bg:'#7a1f33'},{sym:'NZD',v:'+0.42',bg:'#0f6b41'},
+  {sym:'CHF',v:'-0.14',bg:'#5a1928'},{sym:'CAD',v:'+0.55',bg:'#0f6b41'},
+];
+const cryptoHeat = [
+  {sym:'BTC',v:'-2.04',bg:'#a31f3d'},{sym:'ETH',v:'+1.44',bg:'#0d8f51'},
+  {sym:'SOL',v:'+3.12',bg:'#0d8f51'},{sym:'XRP',v:'-0.82',bg:'#7a1f33'},
+  {sym:'DOGE',v:'+5.1',bg:'#0d8f51'},{sym:'AVAX',v:'+2.2',bg:'#0f6b41'},
+  {sym:'LINK',v:'+0.91',bg:'#0f6b41'},{sym:'LTC',v:'-1.1',bg:'#7a1f33'},
+  {sym:'UNI',v:'+2.4',bg:'#0d8f51'},{sym:'MATIC',v:'+1.8',bg:'#0f6b41'},
+  {sym:'ADA',v:'-0.4',bg:'#5a1928'},{sym:'DOT',v:'+0.62',bg:'#0f6b41'},
+];
+
+let currentMode = 'forex';
+
+function setMode(m) {
+  currentMode = m;
+  const body = document.getElementById('body');
+  const btns = document.querySelectorAll('.mode-toggle button');
+
+  if (m === 'crypto') {
+    body.classList.add('crypto');
+    btns[0].classList.remove('active'); btns[1].classList.add('active');
+    document.getElementById('brand-text').textContent = 'WESTRADE//CRYPTO';
+    document.getElementById('mode-pill').textContent = '◈ PAPER · ALPACA';
+    document.getElementById('ob-title').textContent = 'Order Book · BTC/USD';
+    document.getElementById('heatmap-title').textContent = 'Crypto Heatmap · 1D';
+    document.getElementById('strat-title').textContent = 'Strategy P&L · Crypto';
+    document.getElementById('pnl-badge').textContent = '+1.82%';
+    document.getElementById('equity-stat').textContent = '▲ EQUITY +1.82%';
+    document.getElementById('mode-status').textContent = '₿ CRYPTO · PAPER MODE';
+    document.getElementById('conn-account').textContent = 'Alpaca Paper';
+    // update positions
+    updatePositions(cryptoPositions);
+    // update heatmap
+    updateHeatmap(cryptoHeat);
+    // update ob
+    document.querySelector('.ob').innerHTML = `
+      <div class="header">Bid</div><div class="header">Ask</div>
+      <div class="bid"><div class="bar" style="width:55%"></div><span>71,412</span><span>0.42</span></div>
+      <div class="ask"><div class="bar" style="width:80%"></div><span>71,428</span><span>1.21</span></div>
+      <div class="bid"><div class="bar" style="width:70%"></div><span>71,405</span><span>0.85</span></div>
+      <div class="ask"><div class="bar" style="width:45%"></div><span>71,435</span><span>0.62</span></div>
+      <div class="bid"><div class="bar" style="width:35%"></div><span>71,398</span><span>0.28</span></div>
+      <div class="ask"><div class="bar" style="width:28%"></div><span>71,442</span><span>0.42</span></div>
+    `;
+  } else {
+    body.classList.remove('crypto');
+    btns[0].classList.add('active'); btns[1].classList.remove('active');
+    document.getElementById('brand-text').textContent = 'WESTRADE//TERMINAL';
+    document.getElementById('mode-pill').innerHTML = 'LIVE · MT5';
+    document.getElementById('ob-title').textContent = 'Order Book · EURUSD';
+    document.getElementById('heatmap-title').textContent = 'FX Heatmap · 1D';
+    document.getElementById('strat-title').textContent = 'Strategy P&L · 30d';
+    document.getElementById('pnl-badge').textContent = '+3.04%';
+    document.getElementById('equity-stat').textContent = '▲ EQUITY +3.04%';
+    document.getElementById('mode-status').textContent = '▮ FOREX · PAPER MODE';
+    document.getElementById('conn-account').textContent = '50504865**';
+    updatePositions(forexPositions);
+    updateHeatmap(forexHeat);
+    document.querySelector('.ob').innerHTML = `
+      <div class="header">Bid</div><div class="header">Ask</div>
+      <div class="bid"><div class="bar" style="width:60%"></div><span>1.08742</span><span>1.4M</span></div>
+      <div class="ask"><div class="bar" style="width:75%"></div><span>1.08750</span><span>2.1M</span></div>
+      <div class="bid"><div class="bar" style="width:80%"></div><span>1.08740</span><span>2.3M</span></div>
+      <div class="ask"><div class="bar" style="width:45%"></div><span>1.08753</span><span>1.4M</span></div>
+    `;
+  }
+}
+
+function updatePositions(pos) {
+  const rows = document.querySelectorAll('tbody tr');
+  pos.forEach((p, i) => {
+    if (!rows[i]) return;
+    rows[i].children[0].textContent = p.sym;
+    rows[i].children[1].innerHTML = `<span class="tag ${p.side}">${p.side.toUpperCase()}</span>`;
+    rows[i].children[2].textContent = p.qty;
+    rows[i].children[3].textContent = p.entry;
+    rows[i].children[4].textContent = p.mark;
+    rows[i].children[5].className = p.pnl.startsWith('+') ? 'up' : 'dn';
+    rows[i].children[5].textContent = p.pnl;
+    rows[i].children[6].className = p.pct.startsWith('+') ? 'up' : 'dn';
+    rows[i].children[6].textContent = p.pct;
+    rows[i].children[7].textContent = p.strat;
+  });
+}
+
+function updateHeatmap(data) {
+  const h = document.getElementById('heatmap');
+  h.innerHTML = data.map(d => `<div class="c" style="background:${d.bg}">${d.sym}<span>${d.v}</span></div>`).join('');
+}
+
+// ── Session clock ──
+function tick() {
+  const now = new Date();
+  const fmt = (n) => String(n).padStart(2,'0');
+  const h = fmt(now.getHours()), m = fmt(now.getMinutes()), s = fmt(now.getSeconds());
+  const el = document.getElementById('session-time');
+  if (el) el.textContent = `SESSION ${h}:${m}:${s}`;
+}
+setInterval(tick, 1000); tick();
+</script>
 </body>
 </html>
