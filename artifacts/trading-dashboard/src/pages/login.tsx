@@ -111,25 +111,27 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: "#070b12" }}
+      className="min-h-screen flex flex-col items-center justify-center p-4 relative"
+      style={{ background: "#060810" }}
     >
-      {/* Background grid */}
+      {/* Full-page grid — spans entire viewport */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none"
         style={{
-          backgroundImage: `linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px)`,
-          backgroundSize: "48px 48px",
+          backgroundImage: `linear-gradient(rgba(99,102,241,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.07) 1px, transparent 1px)`,
+          backgroundSize: "52px 52px",
+          zIndex: 0,
         }}
       />
-      {/* Glow blobs */}
-      <div className="absolute top-[-120px] left-[-80px] w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)", filter: "blur(40px)" }} />
-      <div className="absolute bottom-[-100px] right-[-60px] w-[400px] h-[400px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(168,85,247,0.14) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      {/* Large ambient glow — center */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        <div style={{ position: "absolute", top: "10%", left: "50%", transform: "translateX(-50%)", width: "700px", height: "500px", background: "radial-gradient(ellipse, rgba(99,102,241,0.13) 0%, transparent 65%)", filter: "blur(60px)" }} />
+        <div style={{ position: "absolute", bottom: "5%", right: "10%", width: "500px", height: "400px", background: "radial-gradient(ellipse, rgba(168,85,247,0.10) 0%, transparent 65%)", filter: "blur(60px)" }} />
+        <div style={{ position: "absolute", top: "5%", left: "5%", width: "400px", height: "350px", background: "radial-gradient(ellipse, rgba(59,130,246,0.08) 0%, transparent 65%)", filter: "blur(50px)" }} />
+      </div>
 
       {/* Logo */}
-      <div className="relative flex items-center gap-3 mb-8">
+      <div className="relative z-10 flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 8px 28px -6px #6366f1aa" }}>
           <TrendingUp size={20} className="text-white" />
@@ -139,12 +141,12 @@ export default function LoginPage() {
 
       {/* Card */}
       <div
-        className="relative w-full max-w-[420px] rounded-2xl p-8 space-y-6"
+        className="relative z-10 w-full max-w-[420px] rounded-2xl p-8 space-y-6"
         style={{
-          background: "rgba(15, 17, 28, 0.85)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          backdropFilter: "blur(24px)",
-          boxShadow: "0 32px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)",
+          background: "rgba(10, 11, 22, 0.72)",
+          border: "1px solid rgba(99,102,241,0.18)",
+          backdropFilter: "blur(28px)",
+          boxShadow: "0 32px 80px -20px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
       >
         {/* ── Reset code entry ── */}
@@ -335,7 +337,7 @@ export default function LoginPage() {
 
       {/* Feature pills */}
       {(view === "login" || view === "register") && (
-        <div className="relative flex flex-wrap justify-center gap-2 mt-6 max-w-[420px]">
+        <div className="relative z-10 flex flex-wrap justify-center gap-2 mt-6 max-w-[420px]">
           {["AI-powered entries", "Kill switch protection", "Paper trade mode", "Live MT5 connection"].map(f => (
             <span key={f} className="text-xs px-3 py-1.5 rounded-full"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#8a8fa3" }}>
@@ -345,7 +347,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      <p className="relative mt-6 text-xs" style={{ color: "#4a4f60" }}>© {new Date().getFullYear()} Westrade. All rights reserved.</p>
+      <p className="relative z-10 mt-6 text-xs" style={{ color: "#4a4f60" }}>© {new Date().getFullYear()} Westrade. All rights reserved.</p>
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot, UserCircle, Settings, LogOut } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot, UserCircle, Settings, LogOut, RefreshCw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -154,7 +154,13 @@ function AlertRow({ alert, darkMode }: { alert: any; darkMode: boolean }) {
   );
 }
 
-function ProfileDropdown({ user }: { user: any }) {
+const CRYPTO_MOCK_POSITIONS = [
+  { id: "c1", symbol: "BTC/USD", side: "long",  quantity: 0.05, entryPrice: 62400, currentPrice: 63850, pnl: 72.50,  pnlPct: 0.0232, strategy: "Momentum" },
+  { id: "c2", symbol: "ETH/USD", side: "long",  quantity: 0.80, entryPrice: 3420,  currentPrice: 3508,  pnl: 70.40,  pnlPct: 0.0257, strategy: "Mean-Rev" },
+  { id: "c3", symbol: "SOL/USD", side: "short", quantity: 5,    entryPrice: 148.2, currentPrice: 144.8, pnl: 17.00,  pnlPct: 0.0229, strategy: "Breakout" },
+];
+
+function ProfileDropdown({ user, tradingMode, onToggleMode }: { user: any; tradingMode: "forex" | "crypto"; onToggleMode: () => void }) {
   const [open, setOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { logout } = useAuth();
@@ -170,23 +176,41 @@ function ProfileDropdown({ user }: { user: any }) {
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
+  const isCrypto = tradingMode === "crypto";
+
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(v => !v)}
         className="flex items-center gap-2 rounded-full p-0.5 transition-all hover:ring-2 hover:ring-primary/40 focus:outline-none">
         <Avatar className="w-7 h-7">
           <AvatarImage src={user?.profileImageUrl ?? undefined} />
-          <AvatarFallback className="bg-primary/20 text-primary text-[10px] font-mono">{initials}</AvatarFallback>
+          <AvatarFallback className={cn("text-[10px] font-mono", isCrypto ? "bg-orange-500/20 text-orange-400" : "bg-primary/20 text-primary")}>{initials}</AvatarFallback>
         </Avatar>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-52 rounded-xl overflow-hidden shadow-2xl"
+        <div className="absolute right-0 top-10 z-50 w-56 rounded-xl overflow-hidden shadow-2xl"
           style={{ background: "rgba(15,17,28,0.97)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
           {/* User info */}
           <div className="px-4 py-3 border-b border-white/5">
             <p className="text-xs font-semibold text-foreground truncate">{name}</p>
             <p className="text-[10px] text-muted-foreground truncate">{user?.email ?? "—"}</p>
+          </div>
+          {/* Mode switcher */}
+          <div className="px-4 py-2.5 border-b border-white/5">
+            <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-1.5">Trading mode</p>
+            <button
+              onClick={() => { onToggleMode(); setOpen(false); }}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold transition-all",
+                isCrypto
+                  ? "bg-orange-500/12 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20"
+                  : "bg-indigo-500/12 text-indigo-400 border border-indigo-500/25 hover:bg-indigo-500/20"
+              )}
+            >
+              <span>{isCrypto ? "₿ Crypto" : "📈 Forex"}</span>
+              <span className="text-[9px] text-muted-foreground font-normal">switch →</span>
+            </button>
           </div>
           {/* Menu items */}
           <div className="py-1">
@@ -208,6 +232,17 @@ function ProfileDropdown({ user }: { user: any }) {
 export default function Dashboard() {
   const { mode } = useTheme();
   const { user } = useAuth();
+  const [tradingMode, setTradingMode] = useState<"forex" | "crypto">(() =>
+    (localStorage.getItem("wt_trading_mode") as "forex" | "crypto") ?? "forex"
+  );
+
+  function toggleTradingMode() {
+    const next = tradingMode === "forex" ? "crypto" : "forex";
+    setTradingMode(next);
+    localStorage.setItem("wt_trading_mode", next);
+  }
+
+  const isCrypto = tradingMode === "crypto";
   const { data: summary, isLoading: summaryLoading } = useGetPortfolioSummary({ query: { queryKey: getGetPortfolioSummaryQueryKey(), refetchInterval: 5000 } });
   const { data: positions, isLoading: posLoading } = useGetPositions({ query: { queryKey: getGetPositionsQueryKey(), refetchInterval: 5000 } });
   const { data: alerts } = useGetAlerts({ query: { queryKey: getGetAlertsQueryKey() } });
@@ -272,6 +307,7 @@ export default function Dashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bot-config-dash"] }),
   });
 
+  const displayPositions = isCrypto ? CRYPTO_MOCK_POSITIONS : positions;
   const unreviewedAlerts = alerts?.filter((a) => !a.acknowledged) ?? [];
   const dailyUp = (summary?.dailyPnl ?? 0) >= 0;
   const totalUp = (summary?.totalPnl ?? 0) >= 0;
@@ -281,7 +317,15 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-sm font-mono font-bold text-foreground uppercase tracking-widest">Dashboard</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-mono font-bold text-foreground uppercase tracking-widest">Dashboard</h1>
+            {isCrypto && (
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full border font-semibold"
+                style={{ background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.3)", color: "#fb923c" }}>
+                ₿ CRYPTO MODE
+              </span>
+            )}
+          </div>
           <p className="text-[10px] font-mono text-muted-foreground mt-0.5">
             {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
@@ -303,7 +347,7 @@ export default function Dashboard() {
             <span className="hidden sm:inline">{engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}</span>
             <span className="sm:hidden">{engineStatus?.running ? "STOP" : "START"}</span>
           </Button>
-          <ProfileDropdown user={user} />
+          <ProfileDropdown user={user} tradingMode={tradingMode} onToggleMode={toggleTradingMode} />
         </div>
       </div>
 
@@ -403,17 +447,17 @@ export default function Dashboard() {
       </div>
 
       {/* Session summary bar */}
-      {positions && positions.length > 0 && (() => {
-        const totalNotional = positions.reduce((sum: number, p: any) => sum + (Number(p.entry_price ?? 0) * Number(p.quantity ?? 0)), 0);
-        const totalPnl = positions.reduce((sum: number, p: any) => sum + Number(p.pnl ?? 0), 0);
+      {displayPositions && displayPositions.length > 0 && (() => {
+        const totalNotional = displayPositions.reduce((sum: number, p: any) => sum + (Number(p.entry_price ?? p.entryPrice ?? 0) * Number(p.quantity ?? 0)), 0);
+        const totalPnl = displayPositions.reduce((sum: number, p: any) => sum + Number(p.pnl ?? 0), 0);
         const pnlUp = totalPnl >= 0;
         return (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-3 py-2 rounded border border-border bg-card text-[10px] font-mono text-muted-foreground">
             <span className="font-semibold text-foreground uppercase tracking-wider">Open Exposure</span>
-            <span>Positions: <span className="text-foreground">{positions.length}</span></span>
+            <span>Positions: <span className="text-foreground">{displayPositions.length}</span></span>
             <span>Total Notional: <span className="text-foreground">${totalNotional.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span></span>
             <span>Unrealised P&L: <span className={pnlUp ? "text-green-400" : "text-red-400"}>{pnlUp ? "+" : ""}{fmtUsd(totalPnl)}</span></span>
-            <span>Avg per trade: <span className="text-foreground">{fmtUsd(totalPnl / positions.length)}</span></span>
+            <span>Avg per trade: <span className="text-foreground">{fmtUsd(totalPnl / displayPositions.length)}</span></span>
           </div>
         );
       })()}
@@ -463,22 +507,23 @@ export default function Dashboard() {
             <CardHeader className="py-2 px-3 border-b border-border">
               <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Activity size={11} />
-                Open Positions ({positions?.length ?? 0})
+                Open Positions ({displayPositions?.length ?? 0})
+                {isCrypto && <span className="ml-1 text-[9px] text-orange-400 border border-orange-500/30 rounded px-1">₿ Paper</span>}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {!botOnline && positions && positions.length > 0 && (
+              {!botOnline && !isCrypto && positions && positions.length > 0 && (
                 <div className="mx-4 mt-3 mb-2 p-2 rounded border border-amber-500/30 bg-amber-500/5 flex items-center gap-2">
                   <AlertTriangle size={11} className="text-amber-400 shrink-0" />
                   <p className={cn("text-[10px] font-mono", mode === "dark" ? "text-amber-300" : "text-amber-700")}>Bot offline — positions shown may be stale. Start the bot to sync.</p>
                 </div>
               )}
               <div className="p-3 pt-0">
-              {posLoading ? (
+              {posLoading && !isCrypto ? (
                 <div className="space-y-1 pt-3">
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-6 w-full" />)}
                 </div>
-              ) : positions && positions.length > 0 ? (
+              ) : displayPositions && displayPositions.length > 0 ? (
                 <div className="pt-3 overflow-x-auto">
                   <div className="min-w-[540px]">
                     <div className="flex items-center gap-3 pb-1 border-b border-border/30 text-[10px] font-mono text-muted-foreground">
@@ -491,7 +536,7 @@ export default function Dashboard() {
                       <div className="w-14 text-right">P&L %</div>
                       <div className="w-28 text-right">STRATEGY</div>
                     </div>
-                    {positions.map((pos) => <PositionRow key={pos.id} pos={pos} />)}
+                    {displayPositions.map((pos: any) => <PositionRow key={pos.id} pos={pos} />)}
                   </div>
                 </div>
               ) : (
