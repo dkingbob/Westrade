@@ -1,420 +1,1121 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Westrade — Trade smarter</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
+<meta charset="utf-8"/>
+<title>Westrade</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap" rel="stylesheet"/>
 <style>
-  :root{
-    --bg:#0a0a14;
-    --bg-2:#0f1020;
-    --fg:#f4f5fa;
-    --mute:#9aa0b8;
-    --line:rgba(255,255,255,.08);
-    --grad:linear-gradient(135deg,#5b6cff 0%,#a855f7 50%,#ec4899 100%);
-    --grad-2:linear-gradient(135deg,#22c55e,#06b6d4);
-  }
-  *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{margin:0;background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-  .mono{font-family:'Geist Mono',ui-monospace,monospace}
-  a{color:inherit;text-decoration:none}
-  ::selection{background:#a855f7;color:#fff}
+/* ─── Reset & base ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0f;
+  --fg: #f0f0f6;
+  --muted: rgba(240,240,246,.45);
+  --border: rgba(255,255,255,.07);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+a { color: inherit; text-decoration: none; }
+::selection { background: rgba(99,102,241,.4); }
 
-  /* ambient gradient blobs */
-  .ambient{position:fixed;inset:-200px;z-index:-1;pointer-events:none;overflow:hidden}
-  .blob{position:absolute;width:700px;height:700px;border-radius:50%;filter:blur(120px);opacity:.35;animation:float 18s ease-in-out infinite}
-  .b1{background:#5b6cff;top:-200px;left:-100px}
-  .b2{background:#ec4899;top:300px;right:-200px;animation-delay:-6s}
-  .b3{background:#22c55e;top:1100px;left:30%;animation-delay:-12s;opacity:.18}
-  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(80px,-60px) scale(1.1)}66%{transform:translate(-60px,80px) scale(.9)}}
+/* ─── Custom cursor ─── */
+#cursor {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width .2s var(--ease-out-expo), height .2s var(--ease-out-expo), background .2s;
+  will-change: transform;
+}
+#cursor-ring {
+  position: fixed;
+  width: 36px; height: 36px;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: width .4s var(--ease-out-expo), height .4s var(--ease-out-expo), border-color .3s, transform .08s linear;
+  will-change: transform;
+}
+body:has(a:hover) #cursor, body:has(button:hover) #cursor { width: 0; height: 0; }
+body:has(a:hover) #cursor-ring, body:has(button:hover) #cursor-ring {
+  width: 52px; height: 52px;
+  border-color: rgba(255,255,255,.6);
+}
 
-  /* nav */
-  nav.top{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(10,10,20,.65);border-bottom:1px solid var(--line);transition:all .3s}
-  .nav-in{max-width:1200px;margin:auto;padding:14px 28px;display:flex;align-items:center;gap:28px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.01em}
-  .brand .logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 6px 24px -4px #5b6cffaa}
-  nav.top a.l{color:var(--mute);font-size:14px;font-weight:500;transition:color .2s;position:relative}
-  nav.top a.l:hover{color:var(--fg)}
-  nav.top a.l::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--grad);border-radius:2px;transform:scaleX(0);transform-origin:left;transition:transform .25s}
-  nav.top a.l:hover::after{transform:scaleX(1)}
-  .nav-cta{margin-left:auto;display:flex;gap:12px;align-items:center}
+/* ─── Noise overlay ─── */
+#noise {
+  position: fixed;
+  inset: -50%;
+  width: 200%; height: 200%;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: .028;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  animation: noise-drift 8s steps(10) infinite;
+}
+@keyframes noise-drift {
+  0%,100% { transform: translate(0,0); }
+  10%  { transform: translate(-1%,-1%); }
+  20%  { transform: translate(1%, 1%); }
+  30%  { transform: translate(-2%, 0); }
+  40%  { transform: translate(2%,-1%); }
+  50%  { transform: translate(-1%, 2%); }
+  60%  { transform: translate(1%,-2%); }
+  70%  { transform: translate(-2%, 1%); }
+  80%  { transform: translate(2%, 0); }
+  90%  { transform: translate(-1%,-2%); }
+}
 
-  /* buttons */
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:10px;font-weight:600;font-size:14px;border:none;cursor:pointer;transition:transform .2s, box-shadow .2s, background .2s}
-  .btn-primary{background:var(--grad);color:#fff;box-shadow:0 12px 30px -10px #a855f7aa}
-  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 20px 40px -10px #a855f7cc}
-  .btn-ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
-  .btn-ghost:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18)}
-  .btn-lg{padding:15px 28px;font-size:15px;border-radius:12px}
-  .btn .arrow{transition:transform .25s}
-  .btn:hover .arrow{transform:translateX(4px)}
+/* ─── HERO ─── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
 
-  /* hero */
-  .hero{padding:140px 28px 80px;text-align:center;max-width:1100px;margin:auto;position:relative}
-  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:13px;color:var(--mute);margin-bottom:24px;transition:all .25s}
-  .eyebrow:hover{background:rgba(255,255,255,.08);transform:translateY(-1px)}
-  .eyebrow .new{background:var(--grad);color:#fff;font-weight:600;font-size:10px;padding:2px 8px;border-radius:999px;letter-spacing:.04em}
-  h1.hero-h{font-size:clamp(40px,7vw,84px);line-height:1.02;letter-spacing:-.035em;font-weight:800;margin:0 0 18px}
-  h1.hero-h .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 200%;animation:hue 6s linear infinite}
-  @keyframes hue{to{background-position:200% 0}}
-  .hero p.sub{font-size:clamp(17px,2vw,21px);color:var(--mute);max-width:680px;margin:0 auto 36px;line-height:1.5}
-  .hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-  .trust{margin-top:60px;color:var(--mute);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
-  .trust-logos{display:flex;justify-content:center;gap:50px;margin-top:18px;flex-wrap:wrap;font-size:18px;font-weight:600;opacity:.5}
+/* ─── Mesh gradient blobs ─── */
+.mesh {
+  position: absolute;
+  inset: 0;
+  filter: blur(80px);
+  transform: translateZ(0);
+  will-change: transform;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.b1 {
+  width: 800px; height: 800px;
+  top: -200px; left: -100px;
+  background: radial-gradient(circle, rgba(99,60,220,.75) 0%, transparent 65%);
+  animation: float1 18s ease-in-out infinite;
+}
+.b2 {
+  width: 700px; height: 700px;
+  top: -100px; right: -150px;
+  background: radial-gradient(circle, rgba(20,120,220,.60) 0%, transparent 65%);
+  animation: float2 22s ease-in-out infinite;
+}
+.b3 {
+  width: 600px; height: 600px;
+  bottom: 0; left: 30%;
+  background: radial-gradient(circle, rgba(168,50,200,.50) 0%, transparent 65%);
+  animation: float3 16s ease-in-out infinite;
+}
+.b4 {
+  width: 500px; height: 500px;
+  top: 40%; right: 10%;
+  background: radial-gradient(circle, rgba(20,180,170,.45) 0%, transparent 65%);
+  animation: float4 20s ease-in-out infinite;
+}
+.b5 {
+  width: 400px; height: 400px;
+  bottom: 10%; left: 10%;
+  background: radial-gradient(circle, rgba(220,80,80,.35) 0%, transparent 65%);
+  animation: float5 24s ease-in-out infinite;
+}
+@keyframes float1 {
+  0%,100% { transform: translate(0px, 0px) scale(1); }
+  33%  { transform: translate(80px, -60px) scale(1.1); }
+  66%  { transform: translate(-60px, 80px) scale(0.9); }
+}
+@keyframes float2 {
+  0%,100% { transform: translate(0px, 0px) scale(1); }
+  40%  { transform: translate(-100px, 60px) scale(1.15); }
+  70%  { transform: translate(60px, -80px) scale(0.95); }
+}
+@keyframes float3 {
+  0%,100% { transform: translate(0px, 0px) scale(1); }
+  30%  { transform: translate(60px, 40px) scale(1.05); }
+  60%  { transform: translate(-40px, -60px) scale(1.1); }
+}
+@keyframes float4 {
+  0%,100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  25%  { transform: translate(-80px, -40px) rotate(45deg) scale(1.1); }
+  50%  { transform: translate(40px, 60px) rotate(90deg) scale(0.9); }
+  75%  { transform: translate(-20px, -80px) rotate(135deg) scale(1.05); }
+}
+@keyframes float5 {
+  0%,100% { transform: translate(0px, 0px) scale(1); }
+  50%  { transform: translate(100px, -80px) scale(1.2); }
+}
 
-  /* product preview (animated tilt) */
-  .preview{max-width:1100px;margin:60px auto 0;padding:0 28px;perspective:2000px}
-  .preview .frame{transform:rotateX(8deg) rotateY(-3deg);transform-style:preserve-3d;transition:transform .8s cubic-bezier(.2,.7,.2,1);border-radius:16px;border:1px solid var(--line);overflow:hidden;background:linear-gradient(180deg,#0f1020,#0a0a14);box-shadow:0 60px 120px -30px rgba(91,108,255,.4), 0 30px 60px -20px rgba(168,85,247,.3)}
-  .preview .frame:hover{transform:rotateX(2deg) rotateY(0deg) scale(1.02)}
-  .preview .titlebar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#0d0e1c;border-bottom:1px solid var(--line)}
-  .preview .titlebar .dot{width:11px;height:11px;border-radius:50%}
-  .preview .titlebar .dot.r{background:#ff5774} .preview .titlebar .dot.y{background:#ffb86b} .preview .titlebar .dot.g{background:#3ddc97}
-  .preview .titlebar .url{margin-left:14px;font-family:'Geist Mono',monospace;font-size:12px;color:var(--mute);background:#0a0a14;padding:5px 12px;border-radius:6px;border:1px solid var(--line)}
-  .preview .body{padding:24px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-  .mini{background:#11121e;border:1px solid var(--line);border-radius:12px;padding:14px}
-  .mini .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.1em}
-  .mini .v{font-size:22px;font-weight:700;margin-top:6px}
-  .mini .v.up{color:#22c55e}
-  .preview .chart{grid-column:1/-1;height:200px;background:#11121e;border:1px solid var(--line);border-radius:12px;padding:14px}
+/* vignette over mesh */
+.mesh::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 40%, rgba(10,10,15,.9) 100%);
+  filter: none;
+}
 
-  /* sections */
-  section{padding:120px 28px;position:relative}
-  .container{max-width:1100px;margin:auto}
-  h2{font-size:clamp(32px,4.5vw,52px);letter-spacing:-.025em;font-weight:800;line-height:1.1;margin:0 0 18px}
-  h2 .grad{background:var(--grad-2);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .lead{font-size:18px;color:var(--mute);max-width:560px;line-height:1.55}
-  .section-head{margin-bottom:64px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:end}
+/* ─── Nav ─── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 0 40px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  transition: background .5s, border-color .5s, backdrop-filter .5s;
+}
+nav.scrolled {
+  background: rgba(10,10,15,.7);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -.02em;
+  margin-right: auto;
+}
+.nav-logo {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+nav a {
+  font-size: 14px;
+  color: var(--muted);
+  transition: color .2s;
+  position: relative;
+}
+nav a:hover { color: var(--fg); }
+.nav-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-ghost {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: none;
+  transition: border-color .2s, background .2s;
+  background: transparent;
+}
+.btn-ghost:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); }
+.btn-primary {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  padding: 9px 20px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  cursor: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s var(--ease-out-expo), box-shadow .2s;
+  box-shadow: 0 0 0 0 rgba(99,102,241,.5);
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.15), transparent);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(99,102,241,.4); }
+.btn-primary:hover::after { opacity: 1; }
 
-  /* features grid with hover */
-  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-  .feature{position:relative;padding:28px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid var(--line);overflow:hidden;transition:transform .3s, border-color .3s, background .3s;cursor:pointer}
-  .feature::before{content:"";position:absolute;inset:0;background:radial-gradient(400px circle at var(--x,50%) var(--y,0%), rgba(168,85,247,.18), transparent 40%);opacity:0;transition:opacity .3s;pointer-events:none}
-  .feature:hover{transform:translateY(-4px);border-color:rgba(168,85,247,.4);background:rgba(255,255,255,.04)}
-  .feature:hover::before{opacity:1}
-  .feature .ico-box{width:42px;height:42px;border-radius:11px;background:rgba(91,108,255,.14);border:1px solid rgba(91,108,255,.3);display:grid;place-items:center;color:#a8b1ff;margin-bottom:18px;transition:transform .25s}
-  .feature:hover .ico-box{transform:rotate(-6deg) scale(1.08)}
-  .feature h3{margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-.01em}
-  .feature p{margin:0;color:var(--mute);font-size:14px;line-height:1.5}
+/* ─── Hero content ─── */
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 0 24px;
+  max-width: 900px;
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 32px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fade-up .8s var(--ease-out-expo) .2s forwards;
+}
+.eyebrow-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #6366f1;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,.6); }
+  50% { box-shadow: 0 0 0 6px rgba(99,102,241,.0); }
+}
+.hero-title {
+  font-size: clamp(48px, 8vw, 88px);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -.04em;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fade-up .9s var(--ease-out-expo) .35s forwards;
+}
+/* The gradient word */
+.grad-word {
+  background: linear-gradient(90deg, #818cf8 0%, #a78bfa 35%, #c084fc 60%, #e879f9 85%, #818cf8 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-shift 4s linear infinite;
+}
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.hero-sub {
+  font-size: clamp(16px, 2.2vw, 20px);
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 580px;
+  margin: 0 auto 40px;
+  font-weight: 400;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fade-up .9s var(--ease-out-expo) .5s forwards;
+}
+.hero-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fade-up .9s var(--ease-out-expo) .65s forwards;
+}
+.btn-hero {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  cursor: none;
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform .3s var(--ease-out-expo), box-shadow .3s;
+  box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 16px 40px -10px rgba(99,102,241,.5);
+  will-change: transform;
+}
+.btn-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.18) 0%, transparent 100%);
+  pointer-events: none;
+}
+.btn-hero:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 24px 60px -10px rgba(99,102,241,.65); }
+.btn-outline-hero {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fg);
+  padding: 14px 28px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  cursor: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background .2s, border-color .2s, transform .3s var(--ease-out-expo);
+}
+.btn-outline-hero:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.2); transform: translateY(-1px); }
+.arrow { transition: transform .25s var(--ease-out-expo); display: inline-block; }
+.btn-hero:hover .arrow { transform: translateX(4px); }
 
-  /* stats strip */
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:60px;border-radius:24px;background:linear-gradient(180deg,rgba(91,108,255,.12),rgba(168,85,247,.04));border:1px solid rgba(168,85,247,.18);position:relative;overflow:hidden}
-  .stats::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 200px at 30% 0%, rgba(91,108,255,.25), transparent);pointer-events:none}
-  .stat .n{font-size:48px;font-weight:800;letter-spacing:-.03em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .stat .l{font-size:13px;color:var(--mute);margin-top:6px}
+/* ─── Product preview card with 3D tilt ─── */
+.hero-visual {
+  position: relative;
+  z-index: 2;
+  margin-top: 80px;
+  padding: 0 24px;
+  max-width: 900px;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(40px) rotateX(8deg);
+  animation: card-reveal 1.2s var(--ease-out-expo) .8s forwards;
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+@keyframes card-reveal {
+  to { opacity: 1; transform: translateY(0) rotateX(0); }
+}
+.card-3d {
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(15,15,22,.9);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.04),
+    0 40px 80px -20px rgba(0,0,0,.8),
+    0 0 60px -10px rgba(99,102,241,.25);
+  transition: box-shadow .4s, transform .08s linear;
+  transform-style: preserve-3d;
+  cursor: none;
+}
+.card-3d:hover {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 60px 120px -20px rgba(0,0,0,.9),
+    0 0 80px -10px rgba(99,102,241,.4);
+}
+.card-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+}
+.tbar-dot { width: 10px; height: 10px; border-radius: 50%; }
+.tbar-url {
+  margin-left: 12px;
+  font-size: 11px;
+  color: rgba(255,255,255,.3);
+  font-family: ui-monospace, monospace;
+  background: rgba(255,255,255,.04);
+  padding: 4px 12px;
+  border-radius: 5px;
+}
+.card-body {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 12px;
+}
+.mini-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: border-color .2s;
+}
+.mini-card:hover { border-color: rgba(255,255,255,.12); }
+.mini-label { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: .08em; }
+.mini-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 6px; letter-spacing: -.02em; }
+.mini-delta { font-size: 11px; margin-top: 6px; display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 5px; }
+.delta-up { color: #4ade80; background: rgba(74,222,128,.1); }
+.delta-dn { color: #f87171; background: rgba(248,113,113,.1); }
+.card-chart-row { grid-column: 1 / -1; }
+.sparkline-wrap { height: 80px; position: relative; overflow: hidden; }
+.sparkline-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(15,15,22,.9), transparent 10%, transparent 90%, rgba(15,15,22,.9));
+  z-index: 1;
+  pointer-events: none;
+}
+.card-chart-row svg { width: 100%; height: 100%; }
 
-  /* split / two-col */
-  .split{display:grid;grid-template-columns:1.1fr 1fr;gap:60px;align-items:center}
-  .split.rev{grid-template-columns:1fr 1.1fr}
-  .split img,.split .demo{width:100%;border-radius:16px;border:1px solid var(--line);background:#0f1020;padding:24px;box-shadow:0 30px 70px -20px rgba(91,108,255,.3);transition:transform .3s}
-  .split .demo:hover{transform:translateY(-4px) scale(1.01)}
-  ul.check{list-style:none;padding:0;margin:24px 0 0}
-  ul.check li{padding:10px 0 10px 32px;position:relative;color:var(--fg);font-size:15px}
-  ul.check li::before{content:"";position:absolute;left:0;top:14px;width:20px;height:20px;border-radius:50%;background:var(--grad-2);display:block}
-  ul.check li::after{content:"";position:absolute;left:6px;top:18px;width:8px;height:4px;border-left:2px solid #0a0a14;border-bottom:2px solid #0a0a14;transform:rotate(-45deg)}
+/* ─── Glow reflection under card ─── */
+.card-glow {
+  position: absolute;
+  bottom: -60px;
+  left: 10%;
+  right: 10%;
+  height: 100px;
+  background: radial-gradient(ellipse, rgba(99,102,241,.35) 0%, transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
 
-  /* code block */
-  .code{font-family:'Geist Mono',monospace;font-size:13px;line-height:1.7;color:#cdd2e4}
-  .code .k{color:#a8b1ff} .code .s{color:#86efac} .code .c{color:#6b7290}
-  .terminal{background:#08081a;border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:18px}
-  .terminal .prompt{color:#a855f7}
+/* ─── Scroll-reveal sections ─── */
+section {
+  padding: 160px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
 
-  /* pricing */
-  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
-  .plan{padding:32px 28px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.02);transition:all .3s;position:relative}
-  .plan:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.18)}
-  .plan.featured{background:linear-gradient(180deg,rgba(168,85,247,.12),rgba(91,108,255,.04));border-color:rgba(168,85,247,.4);transform:scale(1.04)}
-  .plan.featured::before{content:"Most popular";position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--grad);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:.05em;text-transform:uppercase}
-  .plan h3{margin:0;font-size:18px;font-weight:700}
-  .plan .price{font-size:44px;font-weight:800;margin:12px 0;letter-spacing:-.03em}
-  .plan .price small{font-size:14px;color:var(--mute);font-weight:500}
-  .plan p.desc{color:var(--mute);font-size:14px;margin:0 0 24px}
-  .plan ul{list-style:none;padding:0;margin:24px 0;font-size:14px}
-  .plan li{padding:8px 0;color:var(--mute);position:relative;padding-left:24px}
-  .plan li::before{content:"✓";position:absolute;left:0;color:#22c55e;font-weight:700}
+/* ─── Section: Stats ─── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.stat-cell {
+  padding: 40px 32px;
+  background: var(--bg);
+  transition: background .3s;
+}
+.stat-cell:hover { background: rgba(255,255,255,.02); }
+.stat-n {
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  background: linear-gradient(135deg, #a78bfa, #818cf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+.stat-n .stat-count { display: inline-block; }
+.stat-label { font-size: 14px; color: var(--muted); margin-top: 8px; }
 
-  /* footer */
-  footer{padding:60px 28px 40px;border-top:1px solid var(--line);background:#070710;color:var(--mute);font-size:14px}
-  footer .row{max-width:1100px;margin:auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
-  footer h4{color:var(--fg);font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 14px}
-  footer a{display:block;padding:5px 0;transition:color .2s}
-  footer a:hover{color:var(--fg)}
-  footer .copy{max-width:1100px;margin:40px auto 0;padding-top:24px;border-top:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+/* ─── Section: Features ─── */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #818cf8;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: 1.08;
+  margin-bottom: 20px;
+}
+.section-lead {
+  font-size: 18px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 500px;
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  margin-top: 64px;
+}
+.feature-cell {
+  position: relative;
+  padding: 36px 32px;
+  background: var(--bg);
+  overflow: hidden;
+  transition: background .3s;
+  cursor: none;
+}
+.feature-cell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(400px circle at var(--mx,50%) var(--my,50%), rgba(99,102,241,.08), transparent 50%);
+  opacity: 0;
+  transition: opacity .3s;
+}
+.feature-cell:hover { background: rgba(255,255,255,.015); }
+.feature-cell:hover::before { opacity: 1; }
+.feature-icon {
+  font-size: 22px;
+  width: 44px; height: 44px;
+  border-radius: 11px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.04);
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+  transition: transform .3s var(--ease-out-expo), border-color .2s;
+}
+.feature-cell:hover .feature-icon { transform: rotate(-8deg) scale(1.08); border-color: rgba(255,255,255,.18); }
+.feature-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 10px; }
+.feature-desc { font-size: 14px; color: var(--muted); line-height: 1.55; }
 
-  /* scroll reveal */
-  .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s, transform .8s}
-  .reveal.in{opacity:1;transform:translateY(0)}
+/* ─── Split section ─── */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+.split-visual {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.split-visual::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 200px;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,.2), transparent);
+  pointer-events: none;
+}
+.check-list { list-style: none; margin-top: 28px; display: flex; flex-direction: column; gap: 14px; }
+.check-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--muted);
+  transition: color .2s;
+}
+.check-list li:hover { color: var(--fg); }
+.check-mark {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 11px;
+}
 
-  /* mobile */
-  @media (max-width:880px){
-    nav.top a.l{display:none}
-    .features,.preview .body,.stats,.price-grid{grid-template-columns:1fr}
-    .split,.split.rev,.section-head{grid-template-columns:1fr;gap:32px}
-    .stats{padding:30px}
-    .stat .n{font-size:36px}
-    .preview .frame{transform:none}
-  }
+/* ─── CTA band ─── */
+.cta-band {
+  position: relative;
+  padding: 100px 40px;
+  text-align: center;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.06);
+  margin: 0 24px 160px;
+}
+.cta-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,.35), transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(168,85,247,.15), transparent 50%);
+  pointer-events: none;
+}
+.cta-band h2 {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  margin-bottom: 20px;
+  position: relative;
+}
+.cta-band p {
+  font-size: 18px;
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 auto 36px;
+  line-height: 1.6;
+  position: relative;
+}
+
+/* ─── Footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 60px 40px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  font-size: 14px;
+}
+footer a { color: var(--muted); display: block; padding: 5px 0; transition: color .2s; }
+footer a:hover { color: var(--fg); }
+footer h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.35); margin-bottom: 16px; }
+.footer-copy { max-width: 1100px; margin: 0 auto; padding: 24px 40px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+
+/* ─── Reveal animation ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity .8s var(--ease-out-expo), transform .8s var(--ease-out-expo);
+}
+.reveal.in { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: .1s; }
+.reveal-delay-2 { transition-delay: .2s; }
+.reveal-delay-3 { transition-delay: .3s; }
+.reveal-delay-4 { transition-delay: .4s; }
+
+@keyframes fade-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Horizontal rule ─── */
+hr { border: none; border-top: 1px solid var(--border); margin: 0; }
 </style>
 </head>
 <body>
-<div class="ambient"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 
-<nav class="top">
-  <div class="nav-in">
-    <div class="brand"><div class="logo">W</div> Westrade</div>
-    <a class="l" href="#product">Product</a>
-    <a class="l" href="#features">Features</a>
-    <a class="l" href="#pricing">Pricing</a>
-    <a class="l" href="#docs">Docs</a>
-    <div class="nav-cta">
-      <a class="btn btn-ghost">Sign in</a>
-      <a class="btn btn-primary">Get started <span class="arrow">→</span></a>
-    </div>
+<!-- Custom cursor -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Noise texture -->
+<div id="noise" aria-hidden="true"></div>
+
+<!-- Nav -->
+<nav id="nav">
+  <div class="nav-brand">
+    <div class="nav-logo">W</div>
+    Westrade
+  </div>
+  <a href="#">Product</a>
+  <a href="#">Features</a>
+  <a href="#">Pricing</a>
+  <a href="#">Docs</a>
+  <div class="nav-cta">
+    <button class="btn-ghost">Sign in</button>
+    <button class="btn-primary">Get started</button>
   </div>
 </nav>
 
-<header class="hero">
-  <a class="eyebrow"><span class="new">NEW</span> AI Auto-Tuner now in beta · learn more →</a>
-  <h1 class="hero-h">Trade smarter, <br/><span class="grad">not harder.</span></h1>
-  <p class="sub">An AI-powered MT5 trading platform with risk engines, auto-tuning strategies, and real-time analytics. Designed for serious retail traders who treat their account like a quant fund.</p>
-  <div class="hero-cta">
-    <a class="btn btn-primary btn-lg">Start free trial <span class="arrow">→</span></a>
-    <a class="btn btn-ghost btn-lg">▶  Watch demo</a>
+<!-- Hero -->
+<section class="hero" id="hero">
+  <!-- Mesh gradient background -->
+  <div class="mesh" id="mesh" aria-hidden="true">
+    <div class="blob b1" id="b1"></div>
+    <div class="blob b2" id="b2"></div>
+    <div class="blob b3" id="b3"></div>
+    <div class="blob b4" id="b4"></div>
+    <div class="blob b5" id="b5"></div>
   </div>
-  <div class="trust">Trusted by 12,000+ retail traders</div>
-  <div class="trust-logos">
-    <span>FTMO</span><span>MyForexFunds</span><span>TopstepFX</span><span>The5%ers</span><span>FundedNext</span>
-  </div>
-</header>
 
-<!-- Product preview -->
-<div class="preview reveal">
-  <div class="frame">
-    <div class="titlebar">
-      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-      <span class="url">westrade.app/dashboard</span>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="eyebrow-dot"></span>
+      AI-powered trading · Now in beta
     </div>
-    <div class="body">
-      <div class="mini"><div class="l">Equity</div><div class="v">$14,231.50</div></div>
-      <div class="mini"><div class="l">Daily P&L</div><div class="v up">+$420.18</div></div>
-      <div class="mini"><div class="l">Sharpe</div><div class="v">1.62</div></div>
-      <div class="mini"><div class="l">Win rate</div><div class="v">64.2%</div></div>
-      <div class="chart">
-        <svg viewBox="0 0 800 170" style="width:100%;height:100%">
-          <defs><linearGradient id="lp" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22c55e" stop-opacity=".45"/><stop offset="1" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
-          <path d="M0,130 L60,125 L120,128 L200,102 L260,108 L340,85 L420,92 L500,62 L580,70 L660,42 L720,48 L800,22 L800,170 L0,170Z" fill="url(#lp)"/>
-          <path d="M0,130 L60,125 L120,128 L200,102 L260,108 L340,85 L420,92 L500,62 L580,70 L660,42 L720,48 L800,22" fill="none" stroke="#22c55e" stroke-width="2"/>
-          <path d="M0,140 L120,132 L240,124 L360,114 L480,98 L600,80 L720,60 L800,46" fill="none" stroke="#6366f1" stroke-width="1.6" stroke-dasharray="4 4" opacity=".6"/>
-        </svg>
+
+    <h1 class="hero-title">
+      Trade with<br/>
+      <span class="grad-word">institutional edge.</span>
+    </h1>
+
+    <p class="hero-sub">
+      Westrade connects your MT5 account to an AI that analyses markets 24/7, manages risk automatically, and learns from every trade it makes.
+    </p>
+
+    <div class="hero-cta">
+      <button class="btn-hero" id="cta-main">
+        Start free trial <span class="arrow">→</span>
+      </button>
+      <button class="btn-outline-hero">
+        See how it works
+      </button>
+    </div>
+  </div>
+
+  <!-- 3D tilt card -->
+  <div class="hero-visual" id="hero-visual">
+    <div class="card-3d" id="card3d">
+      <div class="card-titlebar">
+        <div class="tbar-dot" style="background:#ff5f57"></div>
+        <div class="tbar-dot" style="background:#febc2e;margin-left:6px"></div>
+        <div class="tbar-dot" style="background:#28c840;margin-left:6px"></div>
+        <div class="tbar-url">westrade.app/dashboard</div>
+      </div>
+      <div class="card-body">
+        <div class="mini-card">
+          <div class="mini-label">Equity</div>
+          <div class="mini-value">$14,231</div>
+          <div class="mini-delta delta-up">▲ +3.04%</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Daily P&L</div>
+          <div class="mini-value" style="color:#4ade80">+$420</div>
+          <div class="mini-delta delta-up">▲ 70% to target</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Sharpe ratio</div>
+          <div class="mini-value">1.62</div>
+          <div class="mini-delta delta-up">▲ Target 1.5 ✓</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Win rate</div>
+          <div class="mini-value">64.2%</div>
+          <div class="mini-delta delta-up">▲ +2.1% this week</div>
+        </div>
+        <div class="card-chart-row">
+          <div class="sparkline-wrap">
+            <svg viewBox="0 0 800 80" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sg" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#818cf8" stop-opacity=".4"/>
+                  <stop offset="100%" stop-color="#818cf8" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,70 C60,68 100,64 140,55 C180,46 200,52 240,42 C280,32 310,38 360,28 C410,18 440,24 490,16 C540,8 580,14 630,10 C680,6 730,4 800,2 L800,80 L0,80Z" fill="url(#sg)"/>
+              <path d="M0,70 C60,68 100,64 140,55 C180,46 200,52 240,42 C280,32 310,38 360,28 C410,18 440,24 490,16 C540,8 580,14 630,10 C680,6 730,4 800,2" fill="none" stroke="#818cf8" stroke-width="2"/>
+              <!-- Trailing live dot -->
+              <circle cx="800" cy="2" r="3.5" fill="#818cf8"/>
+              <circle cx="800" cy="2" r="8" fill="none" stroke="#818cf8" stroke-opacity=".3">
+                <animate attributeName="r" values="5;14;5" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="stroke-opacity" values=".4;0;.4" dur="2s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
+    <div class="card-glow"></div>
   </div>
-</div>
+</section>
+
+<hr/>
+
+<!-- Stats -->
+<section>
+  <div class="stats-row">
+    <div class="stat-cell reveal">
+      <div class="stat-n"><span class="stat-count" data-target="48">0</span>M+</div>
+      <div class="stat-label">Volume traded · last 30 days</div>
+    </div>
+    <div class="stat-cell reveal reveal-delay-1">
+      <div class="stat-n"><span class="stat-count" data-target="1.6" data-decimal="1">0.0</span></div>
+      <div class="stat-label">Median user Sharpe ratio</div>
+    </div>
+    <div class="stat-cell reveal reveal-delay-2">
+      <div class="stat-n"><span class="stat-count" data-target="12400">0</span>+</div>
+      <div class="stat-label">Active accounts</div>
+    </div>
+    <div class="stat-cell reveal reveal-delay-3">
+      <div class="stat-n"><span class="stat-count" data-target="12">0</span>ms</div>
+      <div class="stat-label">Median order latency</div>
+    </div>
+  </div>
+</section>
+
+<hr/>
 
 <!-- Features -->
-<section id="features">
-  <div class="container">
-    <div class="section-head reveal">
-      <div>
-        <div style="font-size:13px;color:#a855f7;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Why Westrade</div>
-        <h2>Everything you need <br/><span class="grad">to trade like a quant.</span></h2>
-      </div>
-      <p class="lead">From signal generation to risk control, every part of the stack is engineered for traders who want reproducible, data-driven performance.</p>
-    </div>
-
-    <div class="features">
-      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
-        <div class="ico-box">⚡</div>
-        <h3>Real-time MT5 bridge</h3>
-        <p>Sub-second order execution to your MetaTrader 5 account with native paper-trade mode for risk-free testing.</p>
-      </div>
-      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
-        <div class="ico-box">🧠</div>
-        <h3>AI Auto-Tuner</h3>
-        <p>Continuously evaluates your strategies and disables under-performing ones based on rolling Sharpe and drawdown.</p>
-      </div>
-      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
-        <div class="ico-box">🛡</div>
-        <h3>Risk engine</h3>
-        <p>Hard daily loss caps, correlation throttling, and a circuit-breaker kill-switch that emails you the moment it trips.</p>
-      </div>
-      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
-        <div class="ico-box">📊</div>
-        <h3>Quant analytics</h3>
-        <p>Sharpe, Sortino, profit factor, drawdown — every metric a prop desk would track, exposed in one dashboard.</p>
-      </div>
-      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
-        <div class="ico-box">🔔</div>
-        <h3>Smart email alerts</h3>
-        <p>Get notified when the bot hits 50% of your loss limit, reaches profit target, or any custom event you define.</p>
-      </div>
-      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
-        <div class="ico-box">🎯</div>
-        <h3>Presets &amp; templates</h3>
-        <p>Save a working configuration once. Snap back to it anytime, or share it with your propfirm cohort.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Stats strip -->
-<section style="padding:40px 28px">
-  <div class="container">
-    <div class="stats reveal">
-      <div class="stat"><div class="n">$48M+</div><div class="l">Volume traded · last 30d</div></div>
-      <div class="stat"><div class="n">1.6</div><div class="l">Median user Sharpe</div></div>
-      <div class="stat"><div class="n">12,400+</div><div class="l">Active accounts</div></div>
-      <div class="stat"><div class="n">12ms</div><div class="l">Median order latency</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- Split: Risk engine -->
 <section>
-  <div class="container">
-    <div class="split">
-      <div class="reveal">
-        <div style="font-size:13px;color:#22c55e;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Risk engine</div>
-        <h2>Hard limits<br/><span class="grad">that actually fire.</span></h2>
-        <p class="lead">Set a daily loss cap once. Westrade closes every position and flatlines the engine the instant it's breached — no manual intervention, no excuses.</p>
-        <ul class="check">
-          <li>Daily loss cap (% of equity or $ amount)</li>
-          <li>Max drawdown trigger with auto-pause</li>
-          <li>Correlation throttle across open positions</li>
-          <li>Kill-switch with email + SMS notification</li>
-        </ul>
-      </div>
-      <div class="demo reveal">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <span class="mono" style="color:#9aa0b8;font-size:12px">RISK_ENGINE.STATUS</span>
-          <span style="padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.12);color:#22c55e;font-size:11px;font-weight:600">● ARMED</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Daily loss cap</span><span class="mono">$300</span></div>
-        <div style="height:8px;background:#1d1f2c;border-radius:4px;overflow:hidden;margin-bottom:14px"><div style="width:0%;height:100%;background:var(--grad-2);border-radius:4px"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Daily profit target</span><span class="mono" style="color:#22c55e">$420 / $600</span></div>
-        <div style="height:8px;background:#1d1f2c;border-radius:4px;overflow:hidden;margin-bottom:14px"><div style="width:70%;height:100%;background:var(--grad);border-radius:4px"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Correlation cap</span><span class="mono">0.60</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Open risk</span><span class="mono">1.4%</span></div>
+  <div style="max-width:600px">
+    <p class="section-label reveal">Why Westrade</p>
+    <h2 class="section-title reveal reveal-delay-1">Every tool a quant<br/>desk uses — yours.</h2>
+    <p class="section-lead reveal reveal-delay-2">From signal to execution, Westrade handles the pipeline. You set the rules. The AI does the work.</p>
+  </div>
 
-        <div class="terminal">
-          <div class="code"><span class="c"># live engine log</span></div>
-          <div class="code"><span class="prompt">›</span> <span class="k">brain</span> opened <span class="s">EURUSD</span> long 0.5lot @ 1.0823</div>
-          <div class="code"><span class="prompt">›</span> <span class="k">risk</span> open risk 1.4% (cap 2%) ✓</div>
-          <div class="code"><span class="prompt">›</span> <span class="k">tuner</span> disabled strategy <span class="s">Carry</span> (sharpe 0.3)</div>
-          <div class="code"><span class="prompt">›</span> <span class="k">brain</span> closed XAU trail @ +99 pips</div>
-        </div>
-      </div>
+  <div class="feature-grid">
+    <div class="feature-cell reveal" onmousemove="featureGlow(event,this)">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Real-time MT5 execution</div>
+      <div class="feature-desc">Sub-second order routing to your MetaTrader 5 account. Paper mode included — test everything before going live.</div>
+    </div>
+    <div class="feature-cell reveal reveal-delay-1" onmousemove="featureGlow(event,this)">
+      <div class="feature-icon">🧠</div>
+      <div class="feature-title">AI Auto-Tuner</div>
+      <div class="feature-desc">Evaluates every strategy on rolling Sharpe, drawdown and profit factor. Disables losers. Scales winners.</div>
+    </div>
+    <div class="feature-cell reveal reveal-delay-2" onmousemove="featureGlow(event,this)">
+      <div class="feature-icon">🛡</div>
+      <div class="feature-title">Hard risk engine</div>
+      <div class="feature-desc">Daily loss caps, correlation throttle, and a kill-switch that closes everything and emails you in milliseconds.</div>
+    </div>
+    <div class="feature-cell reveal reveal-delay-1" onmousemove="featureGlow(event,this)">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">Quant analytics</div>
+      <div class="feature-desc">Sharpe, Sortino, Calmar, profit factor, max drawdown — everything a prop desk tracks, in one screen.</div>
+    </div>
+    <div class="feature-cell reveal reveal-delay-2" onmousemove="featureGlow(event,this)">
+      <div class="feature-icon">🔔</div>
+      <div class="feature-title">Smart email alerts</div>
+      <div class="feature-desc">Get notified when the bot hits 50% of your loss limit, reaches a profit target, or any event you define.</div>
+    </div>
+    <div class="feature-cell reveal reveal-delay-3" onmousemove="featureGlow(event,this)">
+      <div class="feature-icon">🎯</div>
+      <div class="feature-title">Presets & templates</div>
+      <div class="feature-desc">Save a working config once. Snap back to it any time — or start from a built-in Optimal Profit template.</div>
     </div>
   </div>
 </section>
 
-<!-- Split rev: Brain Gym -->
+<hr/>
+
+<!-- Split -->
 <section>
-  <div class="container">
-    <div class="split rev">
-      <div class="demo reveal">
-        <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#9aa0b8;margin-bottom:12px">STRATEGY_PERFORMANCE.30D</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>MeanRev v2</span><span class="mono" style="color:#22c55e">+$1,842</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:var(--grad-2);width:78%;height:100%"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Breakout</span><span class="mono" style="color:#22c55e">+$1,210</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:var(--grad-2);width:58%;height:100%"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Momentum</span><span class="mono" style="color:#22c55e">+$622</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:var(--grad-2);width:34%;height:100%"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Carry</span><span class="mono" style="color:#f43f5e">−$184</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:linear-gradient(90deg,#f43f5e,#ec4899);width:18%;height:100%"></div></div></div>
-        </div>
-        <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:#9aa0b8;line-height:1.6">
-          <strong style="color:#a855f7">Auto-Tuner</strong> disabled <code style="background:#1d1f2c;padding:2px 6px;border-radius:4px;font-size:12px">Carry</code> at 06:14 — rolling Sharpe fell below 0.5 threshold.
-        </div>
-      </div>
-      <div class="reveal">
-        <div style="font-size:13px;color:#a855f7;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Brain Gym</div>
-        <h2>Strategies that <br/><span class="grad">learn from themselves.</span></h2>
-        <p class="lead">Every strategy you run is scored on rolling Sharpe, drawdown, and profit factor. Under-performers get benched automatically while winners get more capital.</p>
-        <ul class="check">
-          <li>Rolling 30-day Sharpe per strategy</li>
-          <li>Auto-disable on sustained drawdown</li>
-          <li>Dynamic capital allocation across strategies</li>
-          <li>Backtest with your own MT5 historical data</li>
-        </ul>
-      </div>
+  <div class="split">
+    <div>
+      <p class="section-label reveal">Risk engine</p>
+      <h2 class="section-title reveal reveal-delay-1">Hard limits that<br/>actually fire.</h2>
+      <p class="section-lead reveal reveal-delay-2">Set a daily loss cap once. Westrade closes every position and shuts the engine the instant it's breached — no manual step, no excuses.</p>
+      <ul class="check-list reveal reveal-delay-3">
+        <li><span class="check-mark">✓</span>Daily loss cap in $ or % of equity</li>
+        <li><span class="check-mark">✓</span>Max drawdown circuit-breaker</li>
+        <li><span class="check-mark">✓</span>Correlation throttle across open trades</li>
+        <li><span class="check-mark">✓</span>Email notification the moment it triggers</li>
+      </ul>
     </div>
-  </div>
-</section>
-
-<!-- Pricing -->
-<section id="pricing" style="padding:120px 28px">
-  <div class="container" style="text-align:center">
-    <div class="reveal">
-      <div style="font-size:13px;color:#a855f7;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Pricing</div>
-      <h2>Start free. <span class="grad">Scale when you're ready.</span></h2>
-      <p class="lead" style="margin:0 auto">No credit card required. Cancel anytime. All plans include paper-trade mode.</p>
-    </div>
-    <div class="price-grid">
-      <div class="plan reveal">
-        <h3>Starter</h3>
-        <div class="price">$0<small>/mo</small></div>
-        <p class="desc">For traders evaluating the platform.</p>
-        <a class="btn btn-ghost" style="width:100%;justify-content:center">Get started</a>
-        <ul><li>Paper-trade mode</li><li>1 strategy</li><li>Basic risk engine</li><li>Daily analytics</li></ul>
+    <div class="split-visual reveal reveal-delay-2">
+      <div style="font-size:11px;font-family:ui-monospace,monospace;color:rgba(255,255,255,.3);margin-bottom:16px;text-transform:uppercase;letter-spacing:.12em">Risk engine · live</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span style="color:var(--muted)">Daily loss cap</span>
+        <span>$300</span>
       </div>
-      <div class="plan featured reveal">
-        <h3>Pro</h3>
-        <div class="price">$49<small>/mo</small></div>
-        <p class="desc">Live MT5 trading with full toolkit.</p>
-        <a class="btn btn-primary" style="width:100%;justify-content:center">Start 14-day trial</a>
-        <ul><li>Live MT5 execution</li><li>Unlimited strategies</li><li>AI Auto-Tuner</li><li>Email + SMS alerts</li><li>Custom presets</li></ul>
+      <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:20px">
+        <div style="width:0%;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px"></div>
       </div>
-      <div class="plan reveal">
-        <h3>Quant</h3>
-        <div class="price">$199<small>/mo</small></div>
-        <p class="desc">Multi-account, props firm ready.</p>
-        <a class="btn btn-ghost" style="width:100%;justify-content:center">Contact sales</a>
-        <ul><li>5 MT5 accounts</li><li>Custom indicators</li><li>API access</li><li>Priority support</li><li>Backtest unlimited</li></ul>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span style="color:var(--muted)">Daily profit target</span>
+        <span style="color:#4ade80">$420 / $600</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:20px">
+        <div style="width:70%;height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:3px"></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;font-family:ui-monospace,monospace;font-size:12px;color:rgba(255,255,255,.3);line-height:2">
+        <div><span style="color:#818cf8">[brain]</span> EURUSD long 0.5 filled @ 1.0823</div>
+        <div><span style="color:#4ade80">[risk]</span>  open risk 1.4% — within cap ✓</div>
+        <div><span style="color:#f59e0b">[tuner]</span> Carry strategy disabled (sharpe 0.3)</div>
+        <div><span style="color:#4ade80">[brain]</span> XAU trail +99 pips → closed</div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- CTA -->
-<section style="padding:60px 28px 120px">
-  <div class="container" style="text-align:center;padding:80px 28px;border-radius:24px;background:linear-gradient(135deg,rgba(91,108,255,.18),rgba(168,85,247,.08));border:1px solid rgba(168,85,247,.3);position:relative;overflow:hidden">
-    <div style="position:absolute;inset:0;background:radial-gradient(600px circle at 50% 0%,rgba(168,85,247,.3),transparent 60%);pointer-events:none"></div>
-    <h2 style="position:relative">Ready to trade smarter?</h2>
-    <p class="lead" style="margin:0 auto 28px;position:relative">Start your free trial — it takes 90 seconds to connect your MT5 account and run the first paper trade.</p>
-    <a class="btn btn-primary btn-lg" style="position:relative">Get started for free <span class="arrow">→</span></a>
-  </div>
-</section>
+<div class="cta-band reveal">
+  <h2>Ready to trade smarter?</h2>
+  <p>Start your free trial — it takes 90 seconds to connect your MT5 account and run your first paper trade.</p>
+  <button class="btn-hero" style="margin:0 auto">
+    Get started for free <span class="arrow">→</span>
+  </button>
+</div>
 
+<!-- Footer -->
 <footer>
-  <div class="row">
-    <div>
-      <div class="brand" style="margin-bottom:14px"><div class="logo">W</div> Westrade</div>
-      <p style="margin:0;max-width:300px">AI-powered MT5 trading for retail traders who treat their account like a quant fund.</p>
+  <div>
+    <div class="nav-brand" style="margin-bottom:16px">
+      <div class="nav-logo">W</div>
+      Westrade
     </div>
-    <div><h4>Product</h4><a>Dashboard</a><a>Risk engine</a><a>Auto-Tuner</a><a>Pricing</a></div>
-    <div><h4>Resources</h4><a>Docs</a><a>API</a><a>Changelog</a><a>Status</a></div>
-    <div><h4>Company</h4><a>About</a><a>Contact</a><a>Terms</a><a>Privacy</a></div>
+    <p style="font-size:14px;color:var(--muted);max-width:280px;line-height:1.6">AI-powered MT5 trading for retail traders who run their account like a quant fund.</p>
   </div>
-  <div class="copy">
-    <span>© 2026 Westrade. All rights reserved.</span>
-    <span>Trading involves risk. Past performance ≠ future results.</span>
+  <div>
+    <h4>Product</h4>
+    <a href="#">Dashboard</a>
+    <a href="#">Risk engine</a>
+    <a href="#">Auto-Tuner</a>
+    <a href="#">Pricing</a>
+  </div>
+  <div>
+    <h4>Resources</h4>
+    <a href="#">Docs</a>
+    <a href="#">API reference</a>
+    <a href="#">Changelog</a>
+    <a href="#">Status</a>
+  </div>
+  <div>
+    <h4>Company</h4>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+    <a href="#">Terms</a>
+    <a href="#">Privacy</a>
   </div>
 </footer>
+<div class="footer-copy">
+  <span>© 2026 Westrade. All rights reserved.</span>
+  <span>Trading involves risk. Past performance ≠ future results.</span>
+</div>
 
 <script>
-  // scroll reveal
-  const io = new IntersectionObserver((entries)=>{
-    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
-  }, { threshold: 0.12 });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+/* ── Custom cursor ── */
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
 
-  // cursor glow on feature cards
-  function cursorGlow(ev, el){
-    const r = el.getBoundingClientRect();
-    el.style.setProperty('--x', (ev.clientX - r.left) + 'px');
-    el.style.setProperty('--y', (ev.clientY - r.top)  + 'px');
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top  = my + 'px';
+});
+
+// Ring follows with lag
+function followRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top  = ry + 'px';
+  requestAnimationFrame(followRing);
+}
+followRing();
+
+/* ── Nav scroll ── */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 30);
+}, { passive: true });
+
+/* ── Hero mouse parallax on mesh blobs ── */
+const hero = document.getElementById('hero');
+let hx = 0, hy = 0;
+
+hero.addEventListener('mousemove', e => {
+  const r = hero.getBoundingClientRect();
+  hx = (e.clientX - r.left) / r.width  - 0.5;
+  hy = (e.clientY - r.top)  / r.height - 0.5;
+});
+
+let bx = 0, by = 0;
+const blobs = ['b1','b2','b3','b4','b5'];
+const depths = [0.04, 0.07, 0.05, 0.09, 0.06]; // parallax depth per blob
+function animateBlobs() {
+  bx += (hx - bx) * 0.05;
+  by += (hy - by) * 0.05;
+  blobs.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const sign = i % 2 === 0 ? 1 : -1;
+      el.style.transform = `translate(${bx * depths[i] * 1000 * sign}px, ${by * depths[i] * 1000 * sign}px)`;
+    }
+  });
+  requestAnimationFrame(animateBlobs);
+}
+animateBlobs();
+
+/* ── 3D card tilt ── */
+const card3d = document.getElementById('card3d');
+const heroVisual = document.getElementById('hero-visual');
+
+heroVisual.addEventListener('mousemove', e => {
+  const r = card3d.getBoundingClientRect();
+  const cx = r.left + r.width  / 2;
+  const cy = r.top  + r.height / 2;
+  const dx = (e.clientX - cx) / (r.width  / 2); // -1 to 1
+  const dy = (e.clientY - cy) / (r.height / 2);
+  const tiltX = dy * -8;   // max 8deg
+  const tiltY = dx *  8;
+  card3d.style.transform = `perspective(1200px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.01,1.01,1.01)`;
+  // Move internal shine
+  card3d.style.setProperty('--shine-x', ((dx + 1) / 2 * 100).toFixed(1) + '%');
+  card3d.style.setProperty('--shine-y', ((dy + 1) / 2 * 100).toFixed(1) + '%');
+});
+
+heroVisual.addEventListener('mouseleave', () => {
+  card3d.style.transform = 'perspective(1200px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+  card3d.style.transition = 'transform .6s cubic-bezier(0.16, 1, 0.3, 1)';
+  setTimeout(() => card3d.style.transition = '', 600);
+});
+
+/* ── Magnetic button effect ── */
+document.querySelectorAll('.btn-hero').forEach(btn => {
+  btn.addEventListener('mousemove', e => {
+    const r = btn.getBoundingClientRect();
+    const bx = e.clientX - (r.left + r.width  / 2);
+    const by = e.clientY - (r.top  + r.height / 2);
+    btn.style.transform = `translate(${bx * 0.25}px, ${by * 0.35}px)`;
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.transform = '';
+  });
+});
+
+/* ── Feature card cursor glow ── */
+function featureGlow(e, el) {
+  const r = el.getBoundingClientRect();
+  el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+  el.style.setProperty('--my', (e.clientY - r.top)  + 'px');
+}
+
+/* ── Scroll reveals ── */
+const revealIO = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('in');
+      revealIO.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.reveal').forEach(el => revealIO.observe(el));
+
+/* ── Number counters ── */
+function animateCount(el) {
+  const target = parseFloat(el.dataset.target);
+  const decimal = parseInt(el.dataset.decimal ?? '0');
+  const duration = 1400;
+  const start = performance.now();
+
+  function update(now) {
+    const t = Math.min((now - start) / duration, 1);
+    // Ease out expo
+    const ease = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    const val = target * ease;
+    el.textContent = decimal > 0
+      ? val.toFixed(decimal)
+      : Math.floor(val).toLocaleString();
+    if (t < 1) requestAnimationFrame(update);
+    else el.textContent = decimal > 0
+      ? target.toFixed(decimal)
+      : Math.floor(target).toLocaleString();
   }
+  requestAnimationFrame(update);
+}
+
+const counterIO = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('.stat-count').forEach(animateCount);
+      counterIO.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.4 });
+
+document.querySelectorAll('.stat-cell').forEach(el => counterIO.observe(el));
+
+/* ── Parallax on scroll ── */
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  const mesh = document.getElementById('mesh');
+  if (mesh) mesh.style.transform = `translateY(${y * 0.3}px)`;
+}, { passive: true });
 </script>
 </body>
 </html>
