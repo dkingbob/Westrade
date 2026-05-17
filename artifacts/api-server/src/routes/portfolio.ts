@@ -8,6 +8,9 @@ import {
 import { eq, desc, and, gte } from "drizzle-orm";
 import { riskEngine } from "../engine/risk";
 import { getCurrentPrice } from "../engine/marketData";
+import { sendAlertEmail } from "./notifications";
+
+let lastPnlAlertSent = 0; // timestamp, rate-limit to once per hour
 
 async function getMt5Equity(): Promise<{ current: number; initial: number; botConnected: boolean; hasRealEquity: boolean }> {
   const [cfg] = await db.select().from(botConfigTable).limit(1);
@@ -54,6 +57,21 @@ router.get("/portfolio/summary", async (req, res): Promise<void> => {
   // Only fall back to paper calculation if equity has never been synced from MT5.
   const equity = (botConnected || hasRealEquity) ? mt5Equity : initialEquity + totalPnl;
   const riskState = riskEngine.getState();
+
+  // Email alert when P&L drops to 50% of daily loss limit
+  {
+    const [cfg] = await db.select().from(botConfigTable).limit(1);
+    const extra = (cfg?.botExtra as Record<string, unknown>) ?? {};
+    const dailyLossLimit = parseFloat((extra.dailyLossLimitUsd as string) ?? "0") || 0;
+    const dailyPnl = riskState.dailyPnl;
+    if (dailyLossLimit > 0 && dailyPnl < -(dailyLossLimit * 0.5) && Date.now() - lastPnlAlertSent > 3_600_000) {
+      lastPnlAlertSent = Date.now();
+      sendAlertEmail(
+        "Daily P&L Warning — 50% Loss Limit Reached",
+        `Your daily P&L has dropped to $${dailyPnl.toFixed(2)}, which is 50% of your $${dailyLossLimit} daily loss limit.\n\nConsider reviewing open positions.\nTime: ${new Date().toUTCString()}`
+      ).catch(() => {});
+    }
+  }
 
   // Calculate performance metrics from closed trades
   const wins = closedTrades.filter((t) => parseFloat((t.pnl as string) ?? "0") > 0);

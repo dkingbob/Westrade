@@ -19,11 +19,34 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Cell,
+  LabelList,
 } from "recharts";
 
 function fmt(n: number, dec = 2) { return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 function fmtUsd(n: number) { return `$${fmt(n)}`; }
 function fmtPct(n: number) { return `${(n * 100).toFixed(2)}%`; }
+
+function SharpeBlock({ value, sortino }: { value: number; sortino: number }) {
+  const target = 1.5;
+  const barPct = Math.min((value / 2.0) * 100, 100);
+  const targetPct = (target / 2.0) * 100;
+  const color = value >= target ? "text-green-400" : value >= 0.5 ? "text-yellow-400" : "text-red-400";
+  const barColor = value >= target ? "bg-green-400" : value >= 0.5 ? "bg-yellow-400" : "bg-red-400";
+  return (
+    <div className="bg-card border border-card-border rounded p-2.5 col-span-2 sm:col-span-1">
+      <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
+        <span>Sharpe Ratio</span>
+        <span className="text-[9px] normal-case tracking-normal text-muted-foreground/60">target 1.5</span>
+      </div>
+      <div className={cn("text-base font-mono font-bold", color)}>{fmt(value)}</div>
+      <div className="relative mt-1.5 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className={cn("h-full rounded-full transition-all", barColor)} style={{ width: `${barPct}%` }} />
+        <div className="absolute top-0 bottom-0 w-px bg-white/60" style={{ left: `${targetPct}%` }} />
+      </div>
+      <div className="text-[10px] font-mono text-muted-foreground mt-0.5">Sortino: {fmt(sortino)}</div>
+    </div>
+  );
+}
 
 function MetricBlock({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: "up" | "down" }) {
   return (
@@ -64,7 +87,7 @@ export default function Analytics() {
           Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-16" />)
         ) : metrics ? (
           <>
-            <MetricBlock label="Sharpe Ratio" value={fmt(metrics.sharpeRatio)} sub={`Sortino: ${fmt(metrics.sortinoRatio)}`} />
+            <SharpeBlock value={metrics.sharpeRatio} sortino={metrics.sortinoRatio} />
             <MetricBlock label="Calmar Ratio" value={fmt(metrics.calmarRatio)} />
             <MetricBlock label="Win Rate" value={fmtPct(metrics.winRate)} highlight={(metrics.winRate ?? 0) >= 0.5 ? "up" : "down"} />
             <MetricBlock label="Profit Factor" value={fmt(metrics.profitFactor)} highlight={(metrics.profitFactor ?? 0) >= 1 ? "up" : "down"} />
@@ -126,6 +149,32 @@ export default function Analytics() {
           )}
         </CardContent>
       </Card>
+
+      {/* Strategy P&L ranking chart */}
+      {stratBreakdown && stratBreakdown.length > 0 && (
+        <Card className="bg-card border-card-border">
+          <CardHeader className="py-2 px-3 border-b border-border">
+            <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Strategy P&L Ranking</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3">
+            <ResponsiveContainer width="100%" height={Math.max(80, stratBreakdown.length * 36)}>
+              <BarChart data={[...stratBreakdown].sort((a, b) => b.pnl - a.pnl)} layout="vertical" margin={{ left: 8, right: 40, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 9, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v >= 0 ? "" : "-"}${Math.abs(v/1000).toFixed(1)}k`} />
+                <YAxis type="category" dataKey="strategy" width={110} tick={{ fontSize: 9, fontFamily: "monospace", fill: "#9ca3af" }} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={ttStyle} formatter={(v: any) => [`$${fmt(v)}`, "P&L"]} />
+                <ReferenceLine x={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="2 2" />
+                <Bar dataKey="pnl" radius={[0,2,2,0]} maxBarSize={18}>
+                  {[...stratBreakdown].sort((a, b) => b.pnl - a.pnl).map((s, i) => (
+                    <Cell key={i} fill={s.pnl >= 0 ? "#22c55e" : "#ef4444"} />
+                  ))}
+                  <LabelList dataKey="pnl" position="right" style={{ fontSize: 9, fontFamily: "monospace", fill: "#9ca3af" }} formatter={(v: number) => `${v >= 0 ? "+" : ""}$${fmt(v)}`} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Strategy breakdown */}
       {stratBreakdown && stratBreakdown.length > 0 && (

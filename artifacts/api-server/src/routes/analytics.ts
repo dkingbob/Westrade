@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { tradesTable, analyticsReportsTable } from "@workspace/db";
+import { tradesTable, analyticsReportsTable, portfolioSnapshotsTable } from "@workspace/db";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { GetTimeBreakdownQueryParams } from "@workspace/api-zod";
 
@@ -533,6 +533,19 @@ router.get("/analytics/market-briefing", async (req, res): Promise<void> => {
     return;
   }
   res.json(latestMarketBriefing);
+});
+
+router.get("/analytics/session-equity", async (req, res): Promise<void> => {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const snapshots = await db
+    .select({ createdAt: portfolioSnapshotsTable.createdAt, equity: portfolioSnapshotsTable.equity })
+    .from(portfolioSnapshotsTable)
+    .where(gte(portfolioSnapshotsTable.createdAt, since))
+    .orderBy(portfolioSnapshotsTable.createdAt);
+  res.json(snapshots.map((s) => ({
+    t: s.createdAt.toISOString(),
+    equity: parseFloat(s.equity as string),
+  })));
 });
 
 export default router;

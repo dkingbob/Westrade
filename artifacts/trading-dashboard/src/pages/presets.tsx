@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Save, Copy, Trash2, Play, Download, Upload, Plus, Star } from "lucide-react";
+import { Save, Copy, Trash2, Play, Download, Upload, Plus, Star, Shield, Zap, FlaskConical, CheckCircle } from "lucide-react";
 
 interface Preset {
   id: number;
@@ -31,6 +31,82 @@ function apiPresets(path = "", opts?: RequestInit) {
   return fetch(`/api/presets${path}`, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
 }
 
+interface BuiltinPreset {
+  id: string;
+  name: string;
+  tag: string;
+  tagColor: string;
+  icon: React.ElementType;
+  iconColor: string;
+  description: string;
+  bullets: string[];
+  risk: {
+    maxDailyLossPct: number; maxDrawdownPct: number; maxExposurePct: number;
+    riskPerTradePct: number; maxOpenPositions: number; correlationThreshold: number;
+    slippagePct: number; feesPct: number;
+  };
+  botConfig: {
+    paperMode: boolean; aiEnabled: boolean; autoTunerEnabled: boolean;
+    dailyLossLimitUsd: number; dailyProfitTargetUsd: number;
+    lossBufferUsd: number; winBufferUsd: number; sessionHours: number;
+    limitOrderOnly: boolean; adaptiveSentiment: boolean;
+  };
+}
+
+const BUILTIN_PRESETS: BuiltinPreset[] = [
+  {
+    id: "optimal",
+    name: "Optimal Profit",
+    tag: "RECOMMENDED",
+    tagColor: "border-green-500/50 text-green-400 bg-green-500/5",
+    icon: Shield,
+    iconColor: "text-green-400",
+    description: "Steady consistent returns with tight risk controls. Best setting to run with real money.",
+    bullets: [
+      "Risk 1% per trade, max 3 open positions",
+      "Daily loss cap $30, profit target $60",
+      "8h session, AI-guided entries only",
+      "Correlation cap 60% — avoids cluster losses",
+    ],
+    risk: { maxDailyLossPct: 0.02, maxDrawdownPct: 0.08, maxExposurePct: 0.60, riskPerTradePct: 0.01, maxOpenPositions: 3, correlationThreshold: 0.60, slippagePct: 0.001, feesPct: 0.001 },
+    botConfig: { paperMode: false, aiEnabled: true, autoTunerEnabled: false, dailyLossLimitUsd: 30, dailyProfitTargetUsd: 60, lossBufferUsd: 8, winBufferUsd: 12, sessionHours: 8, limitOrderOnly: false, adaptiveSentiment: true },
+  },
+  {
+    id: "aggressive",
+    name: "High Risk / High Reward",
+    tag: "HIGH RISK",
+    tagColor: "border-red-500/50 text-red-400 bg-red-500/5",
+    icon: Zap,
+    iconColor: "text-red-400",
+    description: "More positions, higher risk per trade — calculated aggression, not gambling.",
+    bullets: [
+      "Risk 3% per trade, up to 8 open positions",
+      "Daily loss cap $100, profit target $200",
+      "12h session, auto-tuner ON to adapt fast",
+      "Higher exposure — suitable for proven edge only",
+    ],
+    risk: { maxDailyLossPct: 0.05, maxDrawdownPct: 0.20, maxExposurePct: 0.90, riskPerTradePct: 0.03, maxOpenPositions: 8, correlationThreshold: 0.80, slippagePct: 0.001, feesPct: 0.001 },
+    botConfig: { paperMode: false, aiEnabled: true, autoTunerEnabled: true, dailyLossLimitUsd: 100, dailyProfitTargetUsd: 200, lossBufferUsd: 25, winBufferUsd: 40, sessionHours: 12, limitOrderOnly: false, adaptiveSentiment: true },
+  },
+  {
+    id: "experimental",
+    name: "Experimental",
+    tag: "PAPER MODE",
+    tagColor: "border-violet-500/50 text-violet-400 bg-violet-500/5",
+    icon: FlaskConical,
+    iconColor: "text-violet-400",
+    description: "Tests all strategies in paper mode 24/7. Use this to benchmark before going live.",
+    bullets: [
+      "Paper mode — zero real money risk",
+      "All strategies enabled, 24h session",
+      "Auto-tuner + AI both active",
+      "Loose risk limits to see strategy potential",
+    ],
+    risk: { maxDailyLossPct: 0.04, maxDrawdownPct: 0.20, maxExposurePct: 0.85, riskPerTradePct: 0.02, maxOpenPositions: 6, correlationThreshold: 0.75, slippagePct: 0.001, feesPct: 0.001 },
+    botConfig: { paperMode: true, aiEnabled: true, autoTunerEnabled: true, dailyLossLimitUsd: 0, dailyProfitTargetUsd: 0, lossBufferUsd: 0, winBufferUsd: 0, sessionHours: 24, limitOrderOnly: false, adaptiveSentiment: true },
+  },
+];
+
 export default function Presets() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -41,6 +117,8 @@ export default function Presets() {
   const [editDesc, setEditDesc] = useState("");
   const [importJson, setImportJson] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+  const [applying, setApplying] = useState<string | null>(null);
+  const [applied, setApplied] = useState<string | null>(null);
 
   const { data: presets = [], isLoading } = useQuery<Preset[]>({
     queryKey: ["presets"],
@@ -73,6 +151,33 @@ export default function Presets() {
       toast({ title: `Applied preset: ${data.preset.name}` });
     },
   });
+
+  const applyBuiltinPreset = async (preset: BuiltinPreset) => {
+    setApplying(preset.id);
+    try {
+      await Promise.all([
+        fetch("/api/risk/settings", {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(preset.risk),
+        }),
+        fetch("/api/bot/config", {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(preset.botConfig),
+        }),
+      ]);
+      setApplied(preset.id);
+      toast({ title: `Applied: ${preset.name}`, description: "Risk settings and bot config updated." });
+      setTimeout(() => setApplied(null), 3000);
+    } catch {
+      toast({ title: "Apply failed", variant: "destructive" });
+    } finally {
+      setApplying(null);
+    }
+  };
 
   const saveCurrentConfig = () => {
     if (!newName.trim()) { toast({ title: "Name required", variant: "destructive" }); return; }
@@ -131,6 +236,54 @@ export default function Presets() {
             <Button size="sm" className="text-[10px] font-mono" onClick={importPreset}>Import</Button>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Built-in recommended presets */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Recommended Presets</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {BUILTIN_PRESETS.map((preset) => {
+            const Icon = preset.icon;
+            const isApplying = applying === preset.id;
+            const isApplied = applied === preset.id;
+            return (
+              <Card key={preset.id} className="border-border bg-card">
+                <CardContent className="p-4 flex flex-col gap-3 h-full">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Icon size={15} className={preset.iconColor} />
+                      <span className="text-[11px] font-mono font-bold text-foreground">{preset.name}</span>
+                    </div>
+                    <Badge variant="outline" className={`text-[9px] font-mono shrink-0 ${preset.tagColor}`}>{preset.tag}</Badge>
+                  </div>
+                  <p className="text-[10px] font-mono text-muted-foreground leading-relaxed flex-1">{preset.description}</p>
+                  <ul className="space-y-0.5">
+                    {preset.bullets.map((b, i) => (
+                      <li key={i} className="text-[9px] font-mono text-muted-foreground flex items-start gap-1">
+                        <span className="text-primary mt-0.5 shrink-0">›</span>{b}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    size="sm"
+                    variant={isApplied ? "default" : "outline"}
+                    className={`h-7 text-[10px] font-mono w-full gap-1.5 mt-auto ${isApplied ? "bg-green-600 hover:bg-green-700 border-0" : ""}`}
+                    disabled={isApplying || isApplied}
+                    onClick={() => applyBuiltinPreset(preset)}
+                  >
+                    {isApplied ? (
+                      <><CheckCircle size={10} /> Applied!</>
+                    ) : isApplying ? (
+                      "Applying…"
+                    ) : (
+                      <><Play size={10} /> Apply Preset</>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {/* Save new preset */}

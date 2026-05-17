@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 function fmt(n: number, dec = 2) {
   return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -169,6 +170,12 @@ export default function Dashboard() {
     refetchInterval: 15_000,
   });
   const botOnline = connStatus?.pythonBot?.connected ?? false;
+
+  const { data: sessionEquity } = useQuery({
+    queryKey: ["session-equity"],
+    queryFn: () => fetch("/api/analytics/session-equity", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 60_000,
+  });
 
   const qc = useQueryClient();
   const startEngine = useStartEngine();
@@ -349,6 +356,43 @@ export default function Dashboard() {
             <span>Unrealised P&L: <span className={pnlUp ? "text-green-400" : "text-red-400"}>{pnlUp ? "+" : ""}{fmtUsd(totalPnl)}</span></span>
             <span>Avg per trade: <span className="text-foreground">{fmtUsd(totalPnl / positions.length)}</span></span>
           </div>
+        );
+      })()}
+
+      {/* Intraday Session Chart */}
+      {sessionEquity && sessionEquity.length > 1 && (() => {
+        const first = sessionEquity[0].equity;
+        const last = sessionEquity[sessionEquity.length - 1].equity;
+        const delta = last - first;
+        const up = delta >= 0;
+        const chartData = sessionEquity.map((p: any) => ({
+          t: new Date(p.t).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+          equity: p.equity,
+        }));
+        const ttStyle = { background: "#0d0f12", border: "1px solid #1f2937", fontSize: 9, fontFamily: "monospace", color: "#e5e7eb" };
+        return (
+          <Card className="bg-card border-card-border">
+            <CardHeader className="py-2 px-3 border-b border-border flex-row items-center justify-between">
+              <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <BarChart2 size={11} />
+                Today's Equity — 24h
+              </CardTitle>
+              <span className={cn("text-[10px] font-mono font-bold", up ? "text-green-400" : "text-red-400")}>
+                {up ? "+" : ""}{delta >= 0 ? "" : "-"}${Math.abs(delta).toFixed(2)} today
+              </span>
+            </CardHeader>
+            <CardContent className="p-3">
+              <ResponsiveContainer width="100%" height={80}>
+                <LineChart data={chartData} margin={{ top: 2, right: 8, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="t" tick={{ fontSize: 8, fontFamily: "monospace", fill: "#6b7280" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis hide domain={["auto", "auto"]} />
+                  <Tooltip contentStyle={ttStyle} formatter={(v: any) => [`$${v.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, "Equity"]} />
+                  <ReferenceLine y={first} stroke="rgba(255,255,255,0.1)" strokeDasharray="2 2" />
+                  <Line type="monotone" dataKey="equity" stroke={up ? "#22c55e" : "#ef4444"} strokeWidth={1.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         );
       })()}
 
