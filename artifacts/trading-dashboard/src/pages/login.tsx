@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, Eye, EyeOff, ArrowLeft, CheckCircle2, Mail } from "lucide-react";
+import { TrendingUp, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 
 const STORAGE_KEY = "westrade_remembered";
-
 type View = "login" | "register" | "forgot" | "reset-code";
 
 export default function LoginPage() {
@@ -42,7 +41,7 @@ export default function LoginPage() {
     const endpoint = view === "register" ? "/api/auth/register" : "/api/auth/login";
     const body = view === "register"
       ? { username: regUsername || email.split("@")[0], email, password }
-      : { username: email, password };
+      : { username: email, password, rememberMe: remember };
     try {
       const res = await fetch(endpoint, {
         method: "POST",
@@ -110,269 +109,268 @@ export default function LoginPage() {
     }
   }
 
-  const features = [
-    "AI-powered entries with Gemini analysis",
-    "Real-time risk management & kill switch",
-    "Brain Gym: weekly strategy post-mortem",
-    "Live MT5 connection with paper trade mode",
-  ];
-
   return (
-    <div className="min-h-screen flex">
-
-      {/* ── Left branding panel (desktop only) ── */}
-      <div className="hidden lg:flex flex-col justify-between w-[460px] shrink-0 bg-[#070b12] p-12 relative overflow-hidden">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `linear-gradient(rgba(59,130,246,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.06) 1px, transparent 1px)`,
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: "#070b12" }}
+    >
+      {/* Background grid */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px)`,
           backgroundSize: "48px 48px",
-        }} />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-blue-600/8 rounded-full blur-3xl pointer-events-none" />
+        }}
+      />
+      {/* Glow blobs */}
+      <div className="absolute top-[-120px] left-[-80px] w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      <div className="absolute bottom-[-100px] right-[-60px] w-[400px] h-[400px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(168,85,247,0.14) 0%, transparent 70%)", filter: "blur(40px)" }} />
 
-        {/* Logo */}
-        <div className="relative flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
-            <TrendingUp size={18} className="text-blue-400" />
-          </div>
-          <span className="text-xl font-bold text-white tracking-tight">Westrade</span>
+      {/* Logo */}
+      <div className="relative flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 8px 28px -6px #6366f1aa" }}>
+          <TrendingUp size={20} className="text-white" />
         </div>
-
-        {/* Copy */}
-        <div className="relative space-y-8">
-          <div>
-            <h2 className="text-[30px] font-bold text-white leading-tight">
-              Algorithmic trading,<br />
-              <span className="text-blue-400">institutional grade.</span>
-            </h2>
-            <p className="text-sm text-slate-400 mt-3 leading-relaxed">
-              Your automated trading desk — AI analysis, real-time risk controls, and full MT5 integration in one dashboard.
-            </p>
-          </div>
-          <ul className="space-y-3">
-            {features.map((f, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                <span className="w-5 h-5 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                </span>
-                {f}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <p className="relative text-[11px] text-slate-700 font-mono">© {new Date().getFullYear()} Westrade. All rights reserved.</p>
+        <span className="text-xl font-bold text-white tracking-tight">Westrade</span>
       </div>
 
-      {/* ── Right form panel ── */}
-      <div className="flex-1 flex items-center justify-center bg-background p-6">
-        <div className="w-full max-w-[380px] space-y-6">
-
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-8 h-8 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center">
-              <TrendingUp size={15} className="text-primary" />
+      {/* Card */}
+      <div
+        className="relative w-full max-w-[420px] rounded-2xl p-8 space-y-6"
+        style={{
+          background: "rgba(15, 17, 28, 0.85)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          backdropFilter: "blur(24px)",
+          boxShadow: "0 32px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)",
+        }}
+      >
+        {/* ── Reset code entry ── */}
+        {view === "reset-code" && (
+          <div className="space-y-5">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)" }}>
+              <Mail size={22} className="text-indigo-400" />
             </div>
-            <span className="text-lg font-bold text-foreground">Westrade</span>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Check your email</h1>
+              <p className="text-sm mt-1.5" style={{ color: "#8a8fa3" }}>
+                We sent a 6-digit code to <span className="text-white font-medium">{forgotEmail}</span>. Enter it below with your new password.
+              </p>
+            </div>
+            <form onSubmit={handleReset} className="space-y-4">
+              <Field label="Reset code">
+                <Input
+                  value={resetCode}
+                  onChange={e => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  required maxLength={6}
+                  className="h-11 font-mono tracking-widest text-center text-xl bg-transparent border-white/10 text-white placeholder:text-white/20"
+                  autoComplete="one-time-code"
+                />
+              </Field>
+              <Field label="New password">
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  required minLength={8}
+                  className="h-11 bg-transparent border-white/10 text-white placeholder:text-white/20"
+                  autoComplete="new-password"
+                />
+              </Field>
+              <PrimaryBtn loading={loading} disabled={resetCode.length < 6}>Reset password</PrimaryBtn>
+            </form>
+            <button onClick={() => setView("forgot")} className="flex items-center gap-1.5 text-sm transition-colors" style={{ color: "#8a8fa3" }}>
+              <ArrowLeft size={13} /> Didn't receive it? Try again
+            </button>
           </div>
+        )}
 
-          {/* ── Reset code entry ── */}
-          {view === "reset-code" ? (
-            <div className="space-y-6">
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                <Mail size={22} className="text-blue-400" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Check your email</h1>
-                <p className="text-sm text-muted-foreground mt-1.5">
-                  We sent a 6-digit code to <span className="text-foreground font-medium">{forgotEmail}</span>. Enter it below along with your new password.
-                </p>
-              </div>
-              <form onSubmit={handleReset} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="code" className="text-sm font-medium">Reset code</Label>
-                  <Input
-                    id="code"
-                    value={resetCode}
-                    onChange={e => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="123456"
-                    required
-                    maxLength={6}
-                    className="h-10 font-mono tracking-widest text-center text-lg"
-                    autoComplete="one-time-code"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-password" className="text-sm font-medium">New password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    required
-                    minLength={8}
-                    className="h-10"
-                    autoComplete="new-password"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-10 font-medium" disabled={loading || resetCode.length < 6}>
-                  {loading ? "Resetting…" : "Reset password"}
-                </Button>
-              </form>
-              <button onClick={() => setView("forgot")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                <ArrowLeft size={13} /> Didn't get it? Try again
+        {/* ── Forgot password ── */}
+        {view === "forgot" && (
+          <div className="space-y-5">
+            <div>
+              <button onClick={() => setView("login")} className="flex items-center gap-1.5 text-sm mb-5 transition-colors hover:text-white" style={{ color: "#8a8fa3" }}>
+                <ArrowLeft size={13} /> Back to sign in
               </button>
+              <h1 className="text-2xl font-bold text-white">Forgot password?</h1>
+              <p className="text-sm mt-1.5" style={{ color: "#8a8fa3" }}>No worries — we'll send a reset code to your email.</p>
+            </div>
+            <form onSubmit={handleForgot} className="space-y-4">
+              <Field label="Email address">
+                <Input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="h-11 bg-transparent border-white/10 text-white placeholder:text-white/20"
+                  autoComplete="email"
+                />
+              </Field>
+              <PrimaryBtn loading={loading}>Send reset code</PrimaryBtn>
+            </form>
+          </div>
+        )}
+
+        {/* ── Login / Register ── */}
+        {(view === "login" || view === "register") && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-white">
+                {view === "login" ? "Welcome back" : "Create account"}
+              </h1>
+              <p className="text-sm mt-1" style={{ color: "#8a8fa3" }}>
+                {view === "login" ? "Sign in to your trading dashboard" : "Set up your Westrade account"}
+              </p>
             </div>
 
-          ) : view === "forgot" ? (
-            /* ── Forgot password ── */
-            <div className="space-y-6">
-              <div>
-                <button onClick={() => setView("login")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5">
-                  <ArrowLeft size={13} /> Back to sign in
-                </button>
-                <h1 className="text-2xl font-bold text-foreground">Forgot password?</h1>
-                <p className="text-sm text-muted-foreground mt-1.5">No worries. Enter your email and we'll send a reset code.</p>
-              </div>
-              <form onSubmit={handleForgot} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="forgot-email" className="text-sm font-medium">Email address</Label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Field label="Email">
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                  className="h-11 bg-transparent border-white/10 text-white placeholder:text-white/20 focus-visible:border-indigo-500/60 focus-visible:ring-indigo-500/20"
+                />
+              </Field>
+
+              {view === "register" && (
+                <Field label={<>Username <span style={{ color: "#8a8fa3", fontSize: "12px", fontWeight: 400 }}>(optional)</span></>}>
                   <Input
-                    id="forgot-email"
-                    type="email"
-                    value={forgotEmail}
-                    onChange={e => setForgotEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    className="h-10"
-                    autoComplete="email"
+                    value={regUsername}
+                    onChange={e => setRegUsername(e.target.value)}
+                    placeholder="your_username"
+                    minLength={3}
+                    autoComplete="username"
+                    className="h-11 bg-transparent border-white/10 text-white placeholder:text-white/20 focus-visible:border-indigo-500/60 focus-visible:ring-indigo-500/20"
                   />
-                </div>
-                <Button type="submit" className="w-full h-10 font-medium" disabled={loading}>
-                  {loading ? "Sending…" : "Send reset code"}
-                </Button>
-              </form>
-            </div>
+                </Field>
+              )}
 
-          ) : (
-            /* ── Login / Register ── */
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {view === "login" ? "Welcome back" : "Create account"}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {view === "login" ? "Sign in to your trading dashboard" : "Set up your Westrade account"}
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    autoComplete="email"
-                    className="h-10"
-                  />
-                </div>
-
-                {view === "register" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="reg-username" className="text-sm font-medium">
-                      Username <span className="text-muted-foreground font-normal text-xs">(optional)</span>
-                    </Label>
-                    <Input
-                      id="reg-username"
-                      value={regUsername}
-                      onChange={e => setRegUsername(e.target.value)}
-                      placeholder="your_username"
-                      minLength={3}
-                      autoComplete="username"
-                      className="h-10"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                    {view === "login" && (
-                      <button
-                        type="button"
-                        onClick={() => setView("forgot")}
-                        className="text-xs text-primary hover:underline underline-offset-2"
-                      >
-                        Forgot password?
-                      </button>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder={view === "register" ? "At least 8 characters" : "••••••••"}
-                      required
-                      minLength={view === "register" ? 8 : 1}
-                      autoComplete={view === "login" ? "current-password" : "new-password"}
-                      className="h-10 pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(s => !s)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              <Field label={
+                <div className="flex items-center justify-between w-full">
+                  <span>Password</span>
+                  {view === "login" && (
+                    <button type="button" onClick={() => setView("forgot")}
+                      className="text-xs font-medium transition-colors hover:text-indigo-300"
+                      style={{ color: "#818cf8" }}>
+                      Forgot password?
                     </button>
-                  </div>
+                  )}
                 </div>
-
-                {view === "login" && (
-                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      onChange={e => setRemember(e.target.checked)}
-                      className="h-4 w-4 rounded border-border accent-primary"
-                    />
-                    <span className="text-sm text-muted-foreground">Remember me</span>
-                  </label>
-                )}
-
-                <Button type="submit" className="w-full h-10 font-medium" disabled={loading}>
-                  {loading ? "Please wait…" : view === "login" ? "Sign in" : "Create account"}
-                </Button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border" />
+              }>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder={view === "register" ? "At least 8 characters" : "••••••••"}
+                    required
+                    minLength={view === "register" ? 8 : 1}
+                    autoComplete={view === "login" ? "current-password" : "new-password"}
+                    className="h-11 pr-10 bg-transparent border-white/10 text-white placeholder:text-white/20 focus-visible:border-indigo-500/60 focus-visible:ring-indigo-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(s => !s)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors hover:text-white"
+                    style={{ color: "#8a8fa3" }}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-background px-3 text-xs text-muted-foreground">
-                    {view === "login" ? "New to Westrade?" : "Already have an account?"}
-                  </span>
-                </div>
-              </div>
+              </Field>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-10 font-medium text-sm"
-                onClick={() => setView(view === "login" ? "register" : "login")}
-              >
-                {view === "login" ? "Create an account" : "Sign in instead"}
-              </Button>
+              {view === "login" && (
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={e => setRemember(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20"
+                    style={{ accentColor: "#6366f1" }}
+                  />
+                  <span className="text-sm" style={{ color: "#8a8fa3" }}>Remember me</span>
+                </label>
+              )}
+
+              <PrimaryBtn loading={loading}>
+                {view === "login" ? "Sign in" : "Create account"}
+              </PrimaryBtn>
+            </form>
+
+            {/* Divider */}
+            <div className="relative flex items-center gap-3">
+              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+              <span className="text-xs" style={{ color: "#8a8fa3" }}>
+                {view === "login" ? "New to Westrade?" : "Already have an account?"}
+              </span>
+              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
             </div>
-          )}
-        </div>
+
+            <button
+              type="button"
+              onClick={() => setView(view === "login" ? "register" : "login")}
+              className="w-full h-11 rounded-xl text-sm font-medium transition-all hover:text-white"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "#8a8fa3",
+              }}
+            >
+              {view === "login" ? "Create an account" : "Sign in instead"}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Feature pills */}
+      {(view === "login" || view === "register") && (
+        <div className="relative flex flex-wrap justify-center gap-2 mt-6 max-w-[420px]">
+          {["AI-powered entries", "Kill switch protection", "Paper trade mode", "Live MT5 connection"].map(f => (
+            <span key={f} className="text-xs px-3 py-1.5 rounded-full"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#8a8fa3" }}>
+              {f}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <p className="relative mt-6 text-xs" style={{ color: "#4a4f60" }}>© {new Date().getFullYear()} Westrade. All rights reserved.</p>
     </div>
+  );
+}
+
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-medium text-white/80">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function PrimaryBtn({ children, loading, disabled }: { children: React.ReactNode; loading?: boolean; disabled?: boolean }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading || disabled}
+      className="w-full h-11 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
+      style={{
+        background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+        boxShadow: loading || disabled ? "none" : "0 8px 24px -8px #6366f1bb",
+      }}
+    >
+      {loading ? "Please wait…" : children}
+    </button>
   );
 }

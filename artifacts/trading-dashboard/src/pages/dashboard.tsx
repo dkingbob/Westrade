@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@/hooks/use-theme";
 import {
   useGetPortfolioSummary,
@@ -13,8 +13,8 @@ import {
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot, UserCircle } from "lucide-react";
-import { Link } from "wouter";
+import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot, UserCircle, Settings, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,6 +153,57 @@ function AlertRow({ alert, darkMode }: { alert: any; darkMode: boolean }) {
   );
 }
 
+function ProfileDropdown({ user }: { user: any }) {
+  const [open, setOpen] = useState(false);
+  const [, setLocation] = useLocation();
+  const { logout } = useAuth();
+  const ref = useRef<HTMLDivElement>(null);
+  const initials = user?.firstName ? user.firstName.slice(0, 2).toUpperCase() : "ME";
+  const name = user?.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "Trader";
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 rounded-full p-0.5 transition-all hover:ring-2 hover:ring-primary/40 focus:outline-none">
+        <Avatar className="w-7 h-7">
+          <AvatarImage src={user?.profileImageUrl ?? undefined} />
+          <AvatarFallback className="bg-primary/20 text-primary text-[10px] font-mono">{initials}</AvatarFallback>
+        </Avatar>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-10 z-50 w-52 rounded-xl overflow-hidden shadow-2xl"
+          style={{ background: "rgba(15,17,28,0.97)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
+          {/* User info */}
+          <div className="px-4 py-3 border-b border-white/5">
+            <p className="text-xs font-semibold text-foreground truncate">{name}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{user?.email ?? "—"}</p>
+          </div>
+          {/* Menu items */}
+          <div className="py-1">
+            <button onClick={() => { setLocation("/settings"); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">
+              <Settings size={12} /> Profile &amp; Settings
+            </button>
+            <button onClick={() => { logout(); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
+              <LogOut size={12} /> Sign out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { mode } = useTheme();
   const { user } = useAuth();
@@ -251,14 +302,7 @@ export default function Dashboard() {
             <span className="hidden sm:inline">{engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}</span>
             <span className="sm:hidden">{engineStatus?.running ? "STOP" : "START"}</span>
           </Button>
-          <Link to="/settings">
-            <Avatar className="w-7 h-7 cursor-pointer ring-1 ring-border hover:ring-primary transition-all">
-              <AvatarImage src={user?.profileImageUrl ?? undefined} />
-              <AvatarFallback className="bg-primary/20 text-primary text-[10px] font-mono">
-                {user?.firstName ? user.firstName.slice(0, 2).toUpperCase() : <UserCircle size={14} />}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+          <ProfileDropdown user={user} />
         </div>
       </div>
 
