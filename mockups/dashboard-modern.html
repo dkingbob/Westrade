@@ -1,273 +1,1197 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Westrade — Modern</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
+<meta charset="utf-8"/>
+<title>Westrade — Modern Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
-  :root{
-    --bg:#0a0a0f; --panel:#11121a; --panel-2:#171823; --line:#1d1f2c; --line-2:#272a3a;
-    --fg:#f4f5fa; --mute:#8a8fa3; --green:#22c55e; --red:#f43f5e; --blue:#6366f1; --violet:#a855f7; --amber:#f59e0b;
-    --grad: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
-  .mono{font-family:'Geist Mono',ui-monospace,monospace}
+:root{
+  --bg:#09090f;--panel:rgba(255,255,255,0.03);--panel-s:rgba(255,255,255,0.05);
+  --line:rgba(255,255,255,0.07);--line2:rgba(255,255,255,0.04);
+  --fg:#f1f2f7;--mute:#6b7280;--mute2:#4b5563;
+  --green:#22c55e;--red:#f43f5e;--amber:#f59e0b;--blue:#6366f1;--violet:#a855f7;
+  --grad:linear-gradient(135deg,#6366f1,#a855f7);
+  --shadow:0 24px 48px -12px rgba(0,0,0,0.6);
+}
+.crypto{--green:#f7931a;--blue:#f7931a;--accent:#f7931a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+button,a{background:none;border:none;color:inherit;cursor:pointer;text-decoration:none;font-family:inherit;font-size:inherit;transition:all .15s}
+.mono{font-family:'JetBrains Mono',monospace}
 
-  /* ambient glow */
-  body::before{
-    content:"";position:fixed;inset:-100px;z-index:-1;
-    background:
-      radial-gradient(600px 400px at 10% -10%, rgba(99,102,241,.18), transparent 60%),
-      radial-gradient(700px 500px at 100% 110%, rgba(236,72,153,.10), transparent 60%);
-    pointer-events:none;
-  }
+/* ambient */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(900px 600px at 5% 0%,rgba(99,102,241,.12),transparent 60%),
+             radial-gradient(800px 600px at 95% 100%,rgba(168,85,247,.08),transparent 60%)}
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px) 0 0/48px 48px,
+             linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px) 0 0/48px 48px}
+.crypto body::before{background:radial-gradient(900px 600px at 5% 0%,rgba(249,115,22,.12),transparent 60%),radial-gradient(800px 600px at 95% 100%,rgba(234,88,12,.08),transparent 60%)}
 
-  /* layout */
-  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-  aside{padding:20px 14px;border-right:1px solid var(--line)}
-  main{padding:24px 32px}
+/* layout */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;position:relative;z-index:1}
 
-  /* brand */
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:-.01em;margin-bottom:24px}
-  .brand .logo{width:28px;height:28px;border-radius:8px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 6px 20px -6px #6366f1aa}
+/* sidebar */
+aside{border-right:1px solid var(--line);padding:16px 10px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto;background:rgba(9,9,15,.6);backdrop-filter:blur(20px)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:-.01em;padding:6px 8px;margin-bottom:10px}
+.brand .logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;box-shadow:0 6px 20px -6px rgba(99,102,241,.6);flex-shrink:0}
+.crypto .brand .logo{background:linear-gradient(135deg,#f7931a,#f59e0b);box-shadow:0 6px 20px -6px rgba(249,115,22,.5)}
+.nav-group{font-size:10px;color:var(--mute2);text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:14px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;color:var(--mute);font-weight:500;font-size:13px;border:1px solid transparent;position:relative}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--fg)}
+.nav-item.active{background:rgba(99,102,241,.1);color:var(--fg);border-color:rgba(99,102,241,.2)}
+.crypto .nav-item.active{background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.2)}
+.nav-item.active .nav-ico{color:#a78bfa}
+.crypto .nav-item.active .nav-ico{color:#f7931a}
+.nav-ico{width:16px;height:16px;flex-shrink:0;opacity:.8}
+.nav-badge{margin-left:auto;background:#f43f5e;color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700}
+.sidebar-user{margin-top:auto;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);display:flex;gap:10px;align-items:center}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0}
+.sidebar-user .uname{font-size:13px;font-weight:600;line-height:1.2}
+.sidebar-user .usub{font-size:10px;color:var(--mute)}
 
-  /* nav */
-  nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--mute);text-decoration:none;font-weight:500;font-size:13px;transition:all .15s}
-  nav a:hover{background:#1a1c28;color:var(--fg)}
-  nav a.active{background:#1a1c28;color:var(--fg)}
-  nav a.active .ico{color:#a855f7}
-  nav .group{font-size:10px;color:#525870;text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin:18px 10px 6px}
-  .ico{width:16px;height:16px;flex-shrink:0;opacity:.9}
+/* mode toggle */
+.mode-row{display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:4px}
+.mode-row span{font-size:10px;color:var(--mute);flex:1}
+.mode-pill{display:flex;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:2px;gap:1px}
+.mode-pill button{padding:3px 10px;border-radius:999px;font-size:10px;font-weight:600;color:var(--mute);letter-spacing:.04em}
+.mode-pill button.on{background:var(--grad);color:#fff}
+.crypto .mode-pill button.on{background:linear-gradient(135deg,#f7931a,#f59e0b)}
 
-  /* user card bottom */
-  .user{margin-top:auto;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px;display:flex;gap:10px;align-items:center}
-  .avatar{width:36px;height:36px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px}
-  .user .name{font-size:13px;font-weight:600}
-  .user .sub{font-size:11px;color:var(--mute)}
+/* main */
+main{padding:28px 32px;overflow-x:hidden}
 
-  /* header */
-  header.top{display:flex;align-items:center;gap:16px;margin-bottom:24px}
-  header h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.02em}
-  header .sub{color:var(--mute);font-size:13px;margin-top:2px}
-  .spacer{flex:1}
-  .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(34,197,94,.1);color:var(--green);font-size:11px;font-weight:600;border:1px solid rgba(34,197,94,.25)}
-  .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;background:var(--grad);color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;box-shadow:0 8px 20px -10px #6366f1cc;transition:transform .15s, box-shadow .15s}
-  .btn:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px #6366f1cc}
-  .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line-2);box-shadow:none}
-  .btn.ghost:hover{background:#1a1c28;border-color:#3a3d51}
-  .btn.danger{background:linear-gradient(135deg,#f43f5e,#ec4899)}
+/* section */
+.section{display:none}
+.section.active{display:block}
 
-  /* metric grid */
-  .grid{display:grid;gap:16px}
-  .g-4{grid-template-columns:repeat(4,1fr)}
-  .g-3{grid-template-columns:2fr 1fr 1fr}
-  .g-2{grid-template-columns:2fr 1fr}
+/* header */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.page-sub{font-size:12px;color:var(--mute);margin-top:3px}
+.hdr-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;position:relative;overflow:hidden;transition:border .2s, transform .2s}
-  .card:hover{border-color:var(--line-2)}
-  .card .l{font-size:12px;color:var(--mute);font-weight:500}
-  .card .v{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:6px}
-  .card .delta{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px}
-  .delta.up{color:var(--green);background:rgba(34,197,94,.12)}
-  .delta.down{color:var(--red);background:rgba(244,63,94,.12)}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;font-weight:600;font-size:12px;border:none;cursor:pointer}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 6px 20px -8px rgba(99,102,241,.7)}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--fg)}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
+.btn-danger{background:rgba(244,63,94,.15);border:1px solid rgba(244,63,94,.3);color:#f43f5e}
+.btn-danger:hover{background:rgba(244,63,94,.25)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:8px}
+.crypto .btn-primary{background:linear-gradient(135deg,#f7931a,#f59e0b);box-shadow:0 6px 20px -8px rgba(249,115,22,.6)}
 
-  .card .icon-circle{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(99,102,241,.12);color:#a5a8ff}
+/* status badge */
+.status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid}
+.status-badge.live{background:rgba(34,197,94,.08);color:var(--green);border-color:rgba(34,197,94,.2)}
+.status-badge .pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.crypto .status-badge.live{color:#f7931a;border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.08)}
+.crypto .status-badge .pulse{background:#f7931a}
 
-  /* chart card */
-  .chart-card{padding:22px}
-  .chart-card .ttl{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
-  .chart-card .ttl h3{margin:0;font-size:14px;font-weight:600}
-  .chart-card .ttl .v{font-family:'Geist Mono',monospace;font-size:24px;font-weight:700;letter-spacing:-.02em}
-  .legend{display:flex;gap:14px;font-size:11px;color:var(--mute);margin-top:6px}
-  .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
-  .tabs{display:flex;gap:2px;background:#1a1c28;border-radius:8px;padding:3px;font-size:11px}
-  .tabs span{padding:5px 10px;border-radius:5px;color:var(--mute);cursor:pointer;font-weight:500}
-  .tabs span.on{background:var(--panel-2);color:var(--fg);box-shadow:0 1px 0 rgba(255,255,255,.04)}
+/* grid helpers */
+.g{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g23{grid-template-columns:2fr 1fr}
+.g32{grid-template-columns:3fr 2fr}
 
-  /* table */
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line)}
-  th{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-  td.right,th.right{text-align:right}
-  td.sym{font-weight:600}
-  .chip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600}
-  .chip.long{background:rgba(34,197,94,.12);color:var(--green)}
-  .chip.short{background:rgba(244,63,94,.12);color:var(--red)}
+/* card */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:rgba(255,255,255,.12)}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line2)}
+.card-title{font-size:12px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:7px}
+.card-body{padding:18px}
 
-  /* progress ring */
-  .ring{position:relative;width:120px;height:120px;margin:auto}
-  .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
-  .ring .bg{fill:none;stroke:#1d1f2c;stroke-width:10}
-  .ring .fg{fill:none;stroke:url(#g);stroke-width:10;stroke-linecap:round;stroke-dasharray:339.292;stroke-dashoffset:75}
-  .ring .lbl{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
-  .ring .lbl .num{font-size:24px;font-weight:700;letter-spacing:-.02em}
-  .ring .lbl .sub{font-size:11px;color:var(--mute)}
+/* metric card */
+.metric-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;position:relative;overflow:hidden}
+.metric-card::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.02),transparent);pointer-events:none}
+.metric-label{font-size:11px;color:var(--mute);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.metric-value{font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:6px;font-family:'JetBrains Mono',monospace}
+.metric-sub{font-size:11px;color:var(--mute);margin-top:6px;display:flex;align-items:center;gap:5px}
+.delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px}
+.delta.up{background:rgba(34,197,94,.1);color:var(--green)}
+.delta.dn{background:rgba(244,63,94,.1);color:var(--red)}
+.metric-icon{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px}
 
-  /* alerts list */
-  .alert{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
-  .alert:last-child{border:none}
-  .alert .dotc{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
-  .alert.info .dotc{background:var(--blue)} .alert.warn .dotc{background:var(--amber)} .alert.err .dotc{background:var(--red)}
-  .alert .ttl{font-size:13px;font-weight:500}
-  .alert .meta{font-size:11px;color:var(--mute);margin-top:2px}
+/* table */
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line2);font-size:12px}
+th{font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.07em;font-weight:600;border-bottom:1px solid var(--line)}
+th:not(:first-child),td:not(:first-child){text-align:right}
+tr:hover td{background:rgba(255,255,255,.02)}
+.sym{font-weight:600;font-family:'JetBrains Mono',monospace}
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.chip.long{background:rgba(34,197,94,.12);color:var(--green)}
+.chip.short{background:rgba(244,63,94,.12);color:var(--red)}
+.chip.neutral{background:rgba(107,114,128,.12);color:var(--mute)}
+.up{color:var(--green)}.dn{color:var(--red)}
 
-  /* mini sparks */
-  .spark{height:30px;width:100%}
+/* pill tabs */
+.pill-tabs{display:flex;gap:2px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:3px}
+.pill-tabs button{padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;color:var(--mute)}
+.pill-tabs button.on{background:rgba(255,255,255,.08);color:var(--fg)}
+
+/* progress bar */
+.prog-bar{height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.prog-bar .fill{height:100%;border-radius:999px;background:var(--grad)}
+.crypto .prog-bar .fill{background:linear-gradient(90deg,#f7931a,#f59e0b)}
+
+/* gauge */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+
+/* alerts */
+.alert-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2)}
+.alert-row:last-child{border:none}
+.alert-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.alert-dot.crit{background:#f43f5e;box-shadow:0 0 8px #f43f5e}
+.alert-dot.warn{background:#f59e0b}
+.alert-dot.info{background:#6366f1}
+.alert-msg{font-size:12px;font-weight:500;line-height:1.4}
+.alert-meta{font-size:10px;color:var(--mute);margin-top:2px}
+.sev-chip{font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;margin-left:auto;flex-shrink:0}
+.sev-chip.crit{background:rgba(244,63,94,.15);color:#f43f5e;border:1px solid rgba(244,63,94,.3)}
+.sev-chip.warn{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+.sev-chip.info{background:rgba(99,102,241,.1);color:#a78bfa;border:1px solid rgba(99,102,241,.25)}
+
+/* settings tabs */
+.settings-tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:24px}
+.settings-tabs button{padding:10px 16px;font-size:12px;font-weight:500;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
+.settings-tabs button.on{color:var(--fg);border-bottom-color:#a855f7}
+
+/* connection card */
+.conn-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px}
+.conn-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex-shrink:0}
+.conn-status{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;margin-top:3px}
+.dot-on{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
+.dot-off{width:7px;height:7px;border-radius:50%;background:var(--mute2)}
+.crypto .dot-on{background:#f7931a;box-shadow:0 0 8px #f7931a}
+
+/* strategy card */
+.strat-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.strat-header{display:flex;align-items:center;justify-content:space-between}
+.toggle{width:36px;height:20px;border-radius:999px;background:rgba(255,255,255,.1);position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.toggle.on::after{left:18px}
+.crypto .toggle.on{background:#f7931a}
+
+/* input */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select,.field textarea{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--fg);font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border .15s;width:100%}
+.field input:focus,.field select:focus{border-color:rgba(99,102,241,.5);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.field input::placeholder{color:var(--mute2)}
+select option{background:#1a1b2e}
+
+/* accordion */
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:14px 0;font-weight:500;cursor:pointer}
+.faq-q:hover{color:#a78bfa}
+.faq-a{font-size:12px;color:var(--mute);padding-bottom:14px;line-height:1.7;display:none}
+.faq-item.open .faq-a{display:block}
+.faq-item.open .faq-q{color:#a78bfa}
+
+/* chart SVG */
+.chart-svg{width:100%;overflow:visible}
+
+/* bot feed */
+.feed-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line2);font-size:11px}
+.feed-item:last-child{border:none}
+.feed-time{color:var(--mute2);flex-shrink:0;font-family:'JetBrains Mono',monospace;width:46px}
+.feed-tag{font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700;flex-shrink:0;height:fit-content;margin-top:1px}
+.feed-tag.buy{background:rgba(34,197,94,.12);color:var(--green)}
+.feed-tag.sell{background:rgba(244,63,94,.12);color:var(--red)}
+.feed-tag.info{background:rgba(99,102,241,.12);color:#a78bfa}
+.feed-tag.warn{background:rgba(245,158,11,.1);color:#f59e0b}
+
+/* preset card */
+.preset-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.preset-card:hover{border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.04)}
+.preset-card.selected{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.08)}
+.preset-card::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad);opacity:0;transition:.2s}
+.preset-card.selected::after{opacity:1}
+.crypto .preset-card:hover{border-color:rgba(249,115,22,.3)}
+.crypto .preset-card.selected{border-color:rgba(249,115,22,.5);background:rgba(249,115,22,.06)}
+.crypto .preset-card::after{background:linear-gradient(90deg,#f7931a,#f59e0b)}
+
+/* heatmap cell */
+.hm-cell{width:100%;aspect-ratio:1;border-radius:4px;display:grid;place-items:center;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* mb utils */
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}.mb24{margin-bottom:24px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.flex{display:flex}.flex-center{align-items:center}.gap8{gap:8px}.gap12{gap:12px}.gap16{gap:16px}.flex1{flex:1}.text-right{text-align:right}
+.text-mute{color:var(--mute)}.text-green{color:var(--green)}.text-red{color:var(--red)}.text-amber{color:var(--amber)}
+.fw6{font-weight:600}.fw7{font-weight:700}.fs10{font-size:10px}.fs11{font-size:11px}.fs12{font-size:12px}.fs14{font-size:14px}.fs18{font-size:18px}
 </style>
 </head>
 <body>
-<div class="app">
-  <aside style="display:flex;flex-direction:column">
-    <div class="brand"><div class="logo">W</div> Westrade</div>
-    <nav style="display:flex;flex-direction:column;gap:2px;flex:1">
-      <a class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>Trades</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2 12 22 M2 12 22 12"/></svg>Portfolio</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 4 9 8 10 4-1 8-5 8-10V6z"/></svg>Risk Engine</a>
-      <div class="group">AI</div>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5"/></svg>Brain Gym</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg>Bot Feed</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2 M12 20v2 M2 12h2 M20 12h2"/></svg>Auto-Tuner</a>
-      <div class="group">System</div>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>Connections</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></svg>Alerts</a>
-      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12c0-.5 0-1-.1-1.5l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2.6-1.5L13.5 3h-3l-.4 2A7 7 0 0 0 7.5 6.5l-2.4-1-2 3.5 2 1.5"/></svg>Settings</a>
-    </nav>
-    <div class="user">
-      <div class="avatar">IL</div>
-      <div style="flex:1;min-width:0">
-        <div class="name">Ilyes</div>
-        <div class="sub">Pro · Live MT5</div>
-      </div>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--mute)"><polyline points="6 9 12 15 18 9"/></svg>
+<div class="app" id="app">
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside>
+  <div class="brand">
+    <div class="logo">W</div>
+    <span id="brand-text">Westrade</span>
+  </div>
+
+  <div class="mode-row">
+    <span>Mode</span>
+    <div class="mode-pill">
+      <button class="on" onclick="setMode('forex')" id="btn-forex">FOREX</button>
+      <button onclick="setMode('crypto')" id="btn-crypto">₿ BTC</button>
     </div>
-  </aside>
+  </div>
 
-  <main>
-    <header class="top">
-      <div>
-        <h1>Good evening, Ilyes</h1>
-        <div class="sub">Friday, May 17 · Session 06:42:11</div>
-      </div>
-      <div class="spacer"></div>
-      <span class="badge"><span class="dot"></span> Engine running</span>
-      <button class="btn ghost">⏸  Pause</button>
-      <button class="btn">+ New strategy</button>
-    </header>
+  <nav style="display:flex;flex-direction:column;gap:2px;flex:1">
+    <a class="nav-item active" onclick="nav('dashboard')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" onclick="nav('trades')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/></svg>
+      Trades
+    </a>
+    <a class="nav-item" onclick="nav('portfolio')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v10l4 4"/></svg>
+      Portfolio
+    </a>
+    <a class="nav-item" onclick="nav('analytics')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </a>
+    <a class="nav-item" onclick="nav('strategies')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 4 9 8 10 4-1 8-5 8-10V6z"/></svg>
+      Strategies
+    </a>
+    <a class="nav-item" onclick="nav('risk')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Risk Engine
+    </a>
+    <div class="nav-group">AI Tools</div>
+    <a class="nav-item" onclick="nav('presets')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Presets
+    </a>
+    <a class="nav-item" onclick="nav('braingym')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l14.14 14.14M4.93 19.07 19.07 4.93"/></svg>
+      Brain Gym
+    </a>
+    <a class="nav-item" onclick="nav('botfeed')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Bot Feed
+    </a>
+    <a class="nav-item" onclick="nav('autotuner')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>
+      Auto-Tuner
+    </a>
+    <a class="nav-item" onclick="nav('sentiment')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+      Sentiment
+    </a>
+    <div class="nav-group">System</div>
+    <a class="nav-item" onclick="nav('connections')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Connections
+    </a>
+    <a class="nav-item" onclick="nav('alerts')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alerts
+      <span class="nav-badge">3</span>
+    </a>
+    <a class="nav-item" onclick="nav('settings')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a class="nav-item" onclick="nav('help')">
+      <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Help
+    </a>
+  </nav>
 
-    <!-- metric cards -->
-    <div class="grid g-4" style="margin-bottom:16px">
-      <div class="card">
-        <div class="icon-circle">$</div>
-        <div class="l">Equity</div>
-        <div class="v mono">$14,231.50</div>
-        <span class="delta up">▲ +$420.18 (3.04%)</span>
-      </div>
-      <div class="card">
-        <div class="icon-circle" style="background:rgba(34,197,94,.12);color:#86efac">📈</div>
-        <div class="l">Daily P&L</div>
-        <div class="v mono" style="color:var(--green)">+$420.18</div>
-        <span class="delta up">▲ 70% to target</span>
-      </div>
-      <div class="card">
-        <div class="icon-circle" style="background:rgba(168,85,247,.12);color:#d8b4fe">⚡</div>
-        <div class="l">Sharpe ratio</div>
-        <div class="v mono">1.62</div>
-        <span class="delta up">Target 1.5 ✓</span>
-      </div>
-      <div class="card">
-        <div class="icon-circle" style="background:rgba(244,63,94,.12);color:#fda4af">⚠</div>
-        <div class="l">Max drawdown</div>
-        <div class="v mono">−4.21%</div>
-        <span class="delta down">Risk 28/100</span>
-      </div>
+  <div class="sidebar-user">
+    <div class="avatar">IL</div>
+    <div style="flex:1;min-width:0">
+      <div class="uname">Ilyes</div>
+      <div class="usub" id="user-sub">Pro · Live MT5</div>
     </div>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--mute);flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+</aside>
 
-    <!-- Main chart + risk ring -->
-    <div class="grid g-2" style="margin-bottom:16px">
-      <div class="card chart-card">
-        <div class="ttl">
-          <div>
-            <h3>Equity curve</h3>
-            <div class="legend"><span><i style="background:#22c55e"></i>Equity</span><span><i style="background:#6366f1"></i>Benchmark</span></div>
-          </div>
-          <div style="text-align:right">
-            <div class="v mono">$14,231.50</div>
-            <div class="tabs" style="margin-top:6px"><span>1H</span><span class="on">24H</span><span>7D</span><span>30D</span><span>ALL</span></div>
-          </div>
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main>
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div class="section active" id="s-dashboard">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Good evening, Ilyes 👋</div>
+      <div class="page-sub" id="dash-date">Saturday, May 17 · Session active</div>
+    </div>
+    <div class="hdr-actions">
+      <div class="status-badge live"><span class="pulse"></span> Engine running</div>
+      <button class="btn btn-ghost btn-sm">⏸ Pause</button>
+      <button class="btn btn-primary btn-sm">+ New strategy</button>
+    </div>
+  </div>
+
+  <!-- metric row -->
+  <div class="g g4 mb16">
+    <div class="metric-card">
+      <div class="metric-icon" style="background:rgba(99,102,241,.12)">💰</div>
+      <div class="metric-label">Equity</div>
+      <div class="metric-value" id="m-equity">$14,231</div>
+      <div class="metric-sub"><span class="delta up">▲ +3.04%</span> today</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon" style="background:rgba(34,197,94,.1)">📈</div>
+      <div class="metric-label">Daily P&L</div>
+      <div class="metric-value up" id="m-dpnl">+$420</div>
+      <div class="metric-sub"><span class="delta up">▲ 70%</span> to target</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon" style="background:rgba(168,85,247,.1)">⚡</div>
+      <div class="metric-label">Win Rate</div>
+      <div class="metric-value" id="m-wr">67.4%</div>
+      <div class="metric-sub text-mute">Profit factor <strong style="color:var(--fg)" id="m-pf">2.31</strong></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon" style="background:rgba(244,63,94,.1)">🛡</div>
+      <div class="metric-label">Max Drawdown</div>
+      <div class="metric-value dn" id="m-dd">−4.2%</div>
+      <div class="metric-sub"><span class="delta dn">Risk 28/100</span></div>
+    </div>
+  </div>
+
+  <!-- chart + target ring -->
+  <div class="g g23 mb16">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/></svg>
+          Equity Curve
         </div>
-        <svg viewBox="0 0 800 260" style="width:100%;height:260px">
+        <div class="pill-tabs">
+          <button>1H</button><button class="on">24H</button><button>7D</button><button>30D</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding-bottom:8px">
+        <svg viewBox="0 0 640 160" class="chart-svg" style="height:160px">
           <defs>
-            <linearGradient id="grad-eq" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stop-color="#22c55e" stop-opacity=".4"/>
+            <linearGradient id="eq-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#22c55e" stop-opacity=".35"/>
               <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
             </linearGradient>
-            <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#ec4899"/>
+            <linearGradient id="grad-stroke" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#22c55e"/>
             </linearGradient>
           </defs>
-          <g stroke="#1d1f2c" stroke-dasharray="2 4"><line x1="0" x2="800" y1="60" y2="60"/><line x1="0" x2="800" y1="120" y2="120"/><line x1="0" x2="800" y1="180" y2="180"/></g>
-          <path d="M0,200 L60,190 L120,195 L180,160 L240,170 L300,135 L360,148 L420,108 L480,118 L540,80 L600,90 L660,55 L720,62 L800,38 L800,260 L0,260 Z" fill="url(#grad-eq)"/>
-          <path d="M0,200 L60,190 L120,195 L180,160 L240,170 L300,135 L360,148 L420,108 L480,118 L540,80 L600,90 L660,55 L720,62 L800,38" fill="none" stroke="#22c55e" stroke-width="2.2"/>
-          <path d="M0,210 L120,200 L240,188 L360,170 L480,148 L600,130 L720,108 L800,90" fill="none" stroke="#6366f1" stroke-width="1.6" stroke-dasharray="4 4" opacity=".7"/>
-          <circle cx="800" cy="38" r="5" fill="#22c55e"/>
-          <circle cx="800" cy="38" r="12" fill="none" stroke="#22c55e" stroke-opacity=".35"><animate attributeName="r" values="8;16;8" dur="1.8s" repeatCount="indefinite"/></circle>
+          <g stroke="rgba(255,255,255,.05)" stroke-dasharray="2 4">
+            <line x1="0" x2="640" y1="40" y2="40"/>
+            <line x1="0" x2="640" y1="80" y2="80"/>
+            <line x1="0" x2="640" y1="120" y2="120"/>
+          </g>
+          <path d="M0,140 L45,132 L90,136 L135,114 L180,122 L225,96 L270,108 L315,76 L360,88 L405,56 L450,68 L495,38 L540,48 L595,24 L640,18 L640,160 L0,160Z" fill="url(#eq-fill)"/>
+          <path d="M0,140 L45,132 L90,136 L135,114 L180,122 L225,96 L270,108 L315,76 L360,88 L405,56 L450,68 L495,38 L540,48 L595,24 L640,18" fill="none" stroke="#22c55e" stroke-width="2"/>
+          <path d="M0,148 L160,136 L320,118 L480,96 L640,74" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="4 4" opacity=".5"/>
+          <circle cx="640" cy="18" r="4" fill="#22c55e"/>
+          <circle cx="640" cy="18" r="10" fill="none" stroke="#22c55e" stroke-opacity=".3">
+            <animate attributeName="r" values="6;14;6" dur="2s" repeatCount="indefinite"/>
+          </circle>
         </svg>
-      </div>
-
-      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
-        <h3 style="margin:0 0 0;font-size:14px;align-self:flex-start">Daily target</h3>
-        <div class="ring">
-          <svg viewBox="0 0 120 120">
-            <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#22c55e"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
-            <circle class="bg" cx="60" cy="60" r="54"/>
-            <circle class="fg" cx="60" cy="60" r="54"/>
-          </svg>
-          <div class="lbl"><div><div class="num mono">70%</div><div class="sub">of $600</div></div></div>
-        </div>
-        <div style="display:flex;gap:18px;width:100%;justify-content:center;font-size:12px">
-          <div style="text-align:center"><div class="mono" style="font-weight:700;color:var(--green)">+$420</div><div style="color:var(--mute);font-size:11px">Realized</div></div>
-          <div style="text-align:center"><div class="mono" style="font-weight:700">$180</div><div style="color:var(--mute);font-size:11px">Remaining</div></div>
+        <div class="flex flex-center gap16 mt8" style="font-size:11px;color:var(--mute)">
+          <span><span style="display:inline-block;width:10px;height:3px;background:#22c55e;border-radius:2px;margin-right:5px;vertical-align:middle"></span>Equity</span>
+          <span><span style="display:inline-block;width:10px;height:3px;background:#6366f1;border-radius:2px;margin-right:5px;vertical-align:middle"></span>Benchmark</span>
         </div>
       </div>
     </div>
 
-    <!-- Open positions + alerts -->
-    <div class="grid g-2">
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <h3 style="margin:0;font-size:14px;font-weight:600">Open positions</h3>
-          <span style="color:var(--mute);font-size:12px">3 active</span>
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="card-header"><div class="card-title">Daily Target</div></div>
+      <div class="card-body" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+        <svg viewBox="0 0 120 120" width="120" height="120" style="transform:rotate(-90deg)">
+          <defs><linearGradient id="ring-g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#22c55e"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="10"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="url(#ring-g)" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="98"/>
+        </svg>
+        <div style="margin-top:-100px;text-align:center">
+          <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace">70%</div>
+          <div style="font-size:11px;color:var(--mute)">of $600</div>
         </div>
-        <table>
-          <thead><tr><th>Symbol</th><th>Side</th><th class="right">Qty</th><th class="right">Entry</th><th class="right">Mark</th><th class="right">P&L</th></tr></thead>
-          <tbody>
-            <tr><td class="sym">EURUSD</td><td><span class="chip long">Long</span></td><td class="right mono">0.50</td><td class="right mono">1.0823</td><td class="right mono">1.0874</td><td class="right mono" style="color:var(--green);font-weight:600">+$255.00</td></tr>
-            <tr><td class="sym">XAUUSD</td><td><span class="chip long">Long</span></td><td class="right mono">0.20</td><td class="right mono">2,318.00</td><td class="right mono">2,341.20</td><td class="right mono" style="color:var(--green);font-weight:600">+$460.00</td></tr>
-            <tr><td class="sym">GBPUSD</td><td><span class="chip short">Short</span></td><td class="right mono">0.30</td><td class="right mono">1.2702</td><td class="right mono">1.2711</td><td class="right mono" style="color:var(--red);font-weight:600">−$27.00</td></tr>
+        <div style="margin-top:56px;display:flex;gap:24px;font-size:12px;text-align:center">
+          <div><div class="mono fw7 text-green">+$420</div><div class="text-mute fs10">Realized</div></div>
+          <div><div class="mono fw7">$180</div><div class="text-mute fs10">To go</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- positions + fear&greed -->
+  <div class="g g23 mb16">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Open Positions <span id="pos-count" style="color:var(--fg);margin-left:4px">3</span></div>
+        <button class="btn btn-ghost btn-sm">View all</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="pos-table">
+          <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>P&L</th><th>Strategy</th></tr></thead>
+          <tbody id="pos-tbody">
+            <tr><td class="sym">EURUSD</td><td><span class="chip long">Long</span></td><td class="mono">0.50</td><td class="mono">1.0823</td><td class="mono">1.0874</td><td class="mono up">+$255</td><td class="text-mute">Mean-Rev</td></tr>
+            <tr><td class="sym">XAUUSD</td><td><span class="chip long">Long</span></td><td class="mono">0.20</td><td class="mono">2,318</td><td class="mono">2,341</td><td class="mono up">+$460</td><td class="text-mute">Breakout</td></tr>
+            <tr><td class="sym">GBPUSD</td><td><span class="chip short">Short</span></td><td class="mono">0.30</td><td class="mono">1.2702</td><td class="mono">1.2711</td><td class="mono dn">−$27</td><td class="text-mute">Carry</td></tr>
           </tbody>
         </table>
       </div>
+    </div>
 
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <h3 style="margin:0;font-size:14px;font-weight:600">Activity</h3>
-          <a style="color:var(--blue);font-size:12px;text-decoration:none">View all →</a>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Fear &amp; Greed</div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <svg viewBox="0 0 120 80" width="160">
+          <path d="M 10 70 A 50 50 0 0 1 110 70" fill="none" stroke="#ef4444" stroke-width="9" stroke-linecap="butt"/>
+          <path d="M 28 35 A 50 50 0 0 1 60 20" fill="none" stroke="#f97316" stroke-width="9" stroke-linecap="butt"/>
+          <path d="M 60 20 A 50 50 0 0 1 92 35" fill="none" stroke="#eab308" stroke-width="9" stroke-linecap="butt"/>
+          <path d="M 92 35 A 50 50 0 0 1 110 70" fill="none" stroke="#22c55e" stroke-width="9" stroke-linecap="butt"/>
+          <line x1="60" y1="70" x2="88" y2="34" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="60" cy="70" r="4" fill="white"/>
+          <text x="60" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="#22c55e" font-family="JetBrains Mono,monospace">72</text>
+        </svg>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">Greed</div>
+        <div style="font-size:10px;color:var(--mute);text-align:center">Updated 5 min ago · Alternative.me</div>
+        <div class="flex gap8 mt8" style="font-size:11px;text-align:center">
+          <div style="background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:6px 10px"><div class="mono fw7">48</div><div class="text-mute fs10">Yesterday</div></div>
+          <div style="background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:6px 10px"><div class="mono fw7">61</div><div class="text-mute fs10">Last week</div></div>
         </div>
-        <div class="alert info"><div class="dotc"></div><div><div class="ttl">Brain identified mean-rev on EURUSD</div><div class="meta">6:42 PM · entered 0.5 lot long</div></div></div>
-        <div class="alert info"><div class="dotc"></div><div><div class="ttl">Auto-Tuner raised correlation cap → 0.60</div><div class="meta">6:38 PM</div></div></div>
-        <div class="alert warn"><div class="dotc"></div><div><div class="ttl">Slippage on GBPUSD entry +0.8 pips</div><div class="meta">6:31 PM</div></div></div>
-        <div class="alert info"><div class="dotc"></div><div><div class="ttl">XAU trail closed at +99 pips</div><div class="meta">6:22 PM · +$460</div></div></div>
-        <div class="alert err"><div class="dotc"></div><div><div class="ttl">Carry strategy disabled (sharpe 0.3)</div><div class="meta">6:14 PM</div></div></div>
       </div>
     </div>
-  </main>
+  </div>
+
+  <!-- market hours -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">Market Hours</div></div>
+    <div class="card-body">
+      <div class="g g3">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0">
+          <div style="font-size:22px">☀️</div>
+          <div style="font-weight:600">New York</div>
+          <div style="font-size:11px;color:var(--green)">54m left</div>
+          <div style="font-size:10px;color:var(--mute)">13:00–21:00 UTC</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;border-left:1px solid var(--line2);border-right:1px solid var(--line2)">
+          <div style="font-size:22px">🌙</div>
+          <div style="font-weight:600">London</div>
+          <div style="font-size:11px;color:var(--mute)">3h 57m to go</div>
+          <div style="font-size:10px;color:var(--mute)">07:00–16:00 UTC</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0">
+          <div style="font-size:22px">🌙</div>
+          <div style="font-weight:600">Tokyo</div>
+          <div style="font-size:11px;color:var(--mute)">51m to go</div>
+          <div style="font-size:10px;color:var(--mute)">00:00–09:00 UTC</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- ══════════ TRADES ══════════ -->
+<div class="section" id="s-trades">
+  <div class="page-header">
+    <div><div class="page-title">Trade History</div><div class="page-sub" id="trades-sub">Last 30 days · 48 closed trades</div></div>
+    <div class="hdr-actions">
+      <div class="pill-tabs"><button class="on">All</button><button>Wins</button><button>Losses</button></div>
+      <button class="btn btn-ghost btn-sm">Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="overflow-x:auto">
+      <table id="trades-table">
+        <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>P&L</th><th>Duration</th><th>Strategy</th><th>Date</th></tr></thead>
+        <tbody id="trades-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PORTFOLIO ══════════ -->
+<div class="section" id="s-portfolio">
+  <div class="page-header">
+    <div><div class="page-title">Portfolio</div><div class="page-sub">Allocation &amp; exposure overview</div></div>
+  </div>
+  <div class="g g2 mb16">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Allocation by Asset</div></div>
+      <div class="card-body">
+        <svg viewBox="0 0 200 200" width="160" style="display:block;margin:0 auto 16px">
+          <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="30"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#6366f1" stroke-width="30" stroke-dasharray="176 264" stroke-dashoffset="0" stroke-linecap="butt"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#22c55e" stroke-width="30" stroke-dasharray="110 330" stroke-dashoffset="-176" stroke-linecap="butt"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#f59e0b" stroke-width="30" stroke-dasharray="66 374" stroke-dashoffset="-286" stroke-linecap="butt"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#f43f5e" stroke-width="30" stroke-dasharray="44 396" stroke-dashoffset="-352" stroke-linecap="butt"/>
+          <text x="100" y="96" text-anchor="middle" font-size="18" font-weight="700" fill="white" font-family="JetBrains Mono,monospace">$14.2k</text>
+          <text x="100" y="112" text-anchor="middle" font-size="10" fill="#6b7280">Equity</text>
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="flex flex-center gap8"><span style="width:10px;height:10px;border-radius:3px;background:#6366f1;flex-shrink:0"></span><span style="flex:1">EURUSD</span><span class="mono">40%</span><span class="text-mute fs11">$5,692</span></div>
+          <div class="flex flex-center gap8"><span style="width:10px;height:10px;border-radius:3px;background:#22c55e;flex-shrink:0"></span><span style="flex:1">XAUUSD</span><span class="mono">25%</span><span class="text-mute fs11">$3,558</span></div>
+          <div class="flex flex-center gap8"><span style="width:10px;height:10px;border-radius:3px;background:#f59e0b;flex-shrink:0"></span><span style="flex:1">GBPUSD</span><span class="mono">15%</span><span class="text-mute fs11">$2,135</span></div>
+          <div class="flex flex-center gap8"><span style="width:10px;height:10px;border-radius:3px;background:#f43f5e;flex-shrink:0"></span><span style="flex:1">Other</span><span class="mono">20%</span><span class="text-mute fs11">$2,846</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Performance Summary</div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div><div class="flex flex-center mb8"><span class="flex1 fs11 text-mute">Total Return</span><span class="mono fw7 text-green">+42.3%</span></div><div class="prog-bar"><div class="fill" style="width:42%"></div></div></div>
+        <div><div class="flex flex-center mb8"><span class="flex1 fs11 text-mute">Win Rate</span><span class="mono fw7">67.4%</span></div><div class="prog-bar"><div class="fill" style="width:67%"></div></div></div>
+        <div><div class="flex flex-center mb8"><span class="flex1 fs11 text-mute">Profit Factor</span><span class="mono fw7">2.31</span></div><div class="prog-bar"><div class="fill" style="width:77%"></div></div></div>
+        <div><div class="flex flex-center mb8"><span class="flex1 fs11 text-mute">Sharpe Ratio</span><span class="mono fw7">1.62</span></div><div class="prog-bar"><div class="fill" style="width:54%"></div></div></div>
+        <div><div class="flex flex-center mb8"><span class="flex1 fs11 text-mute">Max Drawdown</span><span class="mono fw7 dn">4.2%</span></div><div class="prog-bar"><div class="fill" style="width:4%;background:#f43f5e"></div></div></div>
+        <div style="margin-top:8px;padding-top:14px;border-top:1px solid var(--line2);display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+          <div><div class="mono fw7">148</div><div class="text-mute fs10">Total Trades</div></div>
+          <div><div class="mono fw7 text-green">99</div><div class="text-mute fs10">Wins</div></div>
+          <div><div class="mono fw7 dn">49</div><div class="text-mute fs10">Losses</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ANALYTICS ══════════ -->
+<div class="section" id="s-analytics">
+  <div class="page-header">
+    <div><div class="page-title">Analytics</div><div class="page-sub">Deep performance analysis</div></div>
+    <div class="hdr-actions">
+      <div class="pill-tabs"><button>7D</button><button class="on">30D</button><button>90D</button><button>All</button></div>
+    </div>
+  </div>
+  <div class="g g2 mb16">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Monthly Returns</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">
+          ${[["Jan","+8.2"],["Feb","+4.1"],["Mar","-2.3"],["Apr","+11.4"],["May","+6.8"],["Jun","+3.2"],["Jul","+9.1"],["Aug","-1.8"],["Sep","+5.4"],["Oct","+7.2"],["Nov","+4.9"],["Dec","+3.1"]].map(([m,v])=>{const up=v[0]==='+';return`<div style="background:${up?'rgba(34,197,94,.15)':'rgba(244,63,94,.15)'};border-radius:8px;padding:8px 4px;text-align:center"><div style="font-size:10px;color:var(--mute);margin-bottom:3px">${m}</div><div style="font-size:11px;font-weight:700;font-family:JetBrains Mono,monospace;color:${up?'var(--green)':'var(--red)'}">${v}%</div></div>`}).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Trade Distribution</div></div>
+      <div class="card-body">
+        <svg viewBox="0 0 300 140" class="chart-svg" style="height:140px">
+          ${[40,65,55,80,45,90,70,60,85,50,75,40,95,65,55].map((h,i)=>`<rect x="${i*20+2}" y="${140-h}" width="16" height="${h}" rx="4" fill="${h>70?'rgba(34,197,94,.6)':'rgba(99,102,241,.5)'}" />`).join('')}
+        </svg>
+        <div class="flex gap12 mt8" style="font-size:11px;color:var(--mute)">
+          <span><span style="display:inline-block;width:10px;height:10px;background:rgba(34,197,94,.6);border-radius:3px;margin-right:5px;vertical-align:middle"></span>Win</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:rgba(99,102,241,.5);border-radius:3px;margin-right:5px;vertical-align:middle"></span>Loss</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card mb16">
+    <div class="card-header"><div class="card-title">Drawdown Chart</div></div>
+    <div class="card-body">
+      <svg viewBox="0 0 640 100" class="chart-svg" style="height:100px">
+        <defs><linearGradient id="dd-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#f43f5e" stop-opacity=".3"/><stop offset="100%" stop-color="#f43f5e" stop-opacity="0"/></linearGradient></defs>
+        <path d="M0,0 L80,0 L120,20 L160,35 L200,28 L240,0 L300,0 L340,15 L380,42 L420,38 L460,10 L500,0 L560,0 L600,8 L640,0 L640,100 L0,100Z" fill="url(#dd-fill)"/>
+        <path d="M0,0 L80,0 L120,20 L160,35 L200,28 L240,0 L300,0 L340,15 L380,42 L420,38 L460,10 L500,0 L560,0 L600,8 L640,0" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ STRATEGIES ══════════ -->
+<div class="section" id="s-strategies">
+  <div class="page-header">
+    <div><div class="page-title">Strategies</div><div class="page-sub" id="strat-sub">3 active · 2 paused</div></div>
+    <button class="btn btn-primary btn-sm">+ New strategy</button>
+  </div>
+  <div class="g g3" id="strat-grid"></div>
+</div>
+
+<!-- ══════════ RISK ══════════ -->
+<div class="section" id="s-risk">
+  <div class="page-header">
+    <div><div class="page-title">Risk Engine</div><div class="page-sub">Real-time exposure monitoring</div></div>
+    <button class="btn btn-danger btn-sm">☠ Kill Switch</button>
+  </div>
+  <div class="g g4 mb16">
+    <div class="metric-card" style="text-align:center">
+      <div class="metric-label" style="text-align:center">Risk Score</div>
+      <div style="font-size:40px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#f59e0b;margin:8px 0">28</div>
+      <div class="delta" style="display:inline-flex;margin:0 auto">Low Risk</div>
+    </div>
+    <div class="metric-card"><div class="metric-label">Open Exposure</div><div class="metric-value">$9,240</div><div class="metric-sub">65% of equity</div></div>
+    <div class="metric-card"><div class="metric-label">Daily Loss Limit</div><div class="metric-value">$600</div><div class="metric-sub text-green">$180 remaining</div></div>
+    <div class="metric-card"><div class="metric-label">Margin Used</div><div class="metric-value">38%</div><div class="metric-sub">Safe zone</div></div>
+  </div>
+  <div class="g g2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Exposure by Symbol</div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        ${[["EURUSD",65,"#6366f1"],["XAUUSD",28,"#f59e0b"],["GBPUSD",18,"#22c55e"],["USDJPY",9,"#a855f7"]].map(([s,p,c])=>`<div><div class="flex flex-center mb8"><span class="flex1 fw6">${s}</span><span class="mono text-mute fs11">${p}%</span></div><div class="prog-bar"><div class="fill" style="width:${p}%;background:${c}"></div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Risk Limits</div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="field"><label>Max Daily Loss ($)</label><input type="number" value="600"/></div>
+        <div class="field"><label>Max Drawdown (%)</label><input type="number" value="10"/></div>
+        <div class="field"><label>Max Positions</label><input type="number" value="5"/></div>
+        <div class="field"><label>Max Lot Size</label><input type="number" value="1.0" step="0.1"/></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center">Save limits</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PRESETS ══════════ -->
+<div class="section" id="s-presets">
+  <div class="page-header">
+    <div><div class="page-title">Presets</div><div class="page-sub">Bot configuration profiles</div></div>
+  </div>
+  <div class="g g3" id="presets-grid"></div>
+</div>
+
+<!-- ══════════ BRAIN GYM ══════════ -->
+<div class="section" id="s-braingym">
+  <div class="page-header">
+    <div><div class="page-title">Brain Gym</div><div class="page-sub">Replay &amp; train the bot on historical sessions</div></div>
+  </div>
+  <div class="g g23 mb16">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Session Replay</div></div>
+      <div class="card-body">
+        <div class="g g2 mb16">
+          <div class="field"><label>Symbol</label>
+            <select id="gym-sym"><option>EURUSD</option><option>XAUUSD</option><option>GBPUSD</option><option>USDJPY</option><option id="crypto-opt" style="display:none">BTCUSD</option><option id="crypto-opt2" style="display:none">ETHUSD</option></select>
+          </div>
+          <div class="field"><label>Date Range</label><input type="date" value="2024-01-01"/></div>
+          <div class="field"><label>Timeframe</label><select><option>M1</option><option>M5</option><option selected>M15</option><option>H1</option><option>H4</option></select></div>
+          <div class="field"><label>Strategy</label><select><option>Mean Reversion</option><option>Breakout</option><option>Carry Trade</option></select></div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:12px;color:var(--mute)">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Chart replay will play here
+        </div>
+        <div class="flex flex-center gap8 mt12">
+          <button class="btn btn-ghost btn-sm">⏮ Reset</button>
+          <button class="btn btn-primary" style="flex:1;justify-content:center">▶ Play session</button>
+          <button class="btn btn-ghost btn-sm">⏭ Skip</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Session Results</div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="flex flex-center"><span class="flex1 text-mute fs11">Trades taken</span><span class="mono fw7">24</span></div>
+        <div class="flex flex-center"><span class="flex1 text-mute fs11">Win rate</span><span class="mono fw7 text-green">71%</span></div>
+        <div class="flex flex-center"><span class="flex1 text-mute fs11">Net P&L</span><span class="mono fw7 text-green">+$842</span></div>
+        <div class="flex flex-center"><span class="flex1 text-mute fs11">Profit factor</span><span class="mono fw7">2.44</span></div>
+        <div class="flex flex-center"><span class="flex1 text-mute fs11">Max DD</span><span class="mono fw7 dn">3.1%</span></div>
+        <div style="border-top:1px solid var(--line2);margin-top:4px;padding-top:12px">
+          <button class="btn btn-primary" style="width:100%;justify-content:center">Save to training data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BOT FEED ══════════ -->
+<div class="section" id="s-botfeed">
+  <div class="page-header">
+    <div><div class="page-title">Bot Feed</div><div class="page-sub">Live decisions from the trading engine</div></div>
+    <div class="hdr-actions">
+      <div class="pill-tabs"><button class="on">All</button><button>Entries</button><button>Exits</button><button>Warnings</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="padding:4px 18px 0;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line2)">
+      <span class="pulse" style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite;display:inline-block"></span>
+      <span style="font-size:11px;color:var(--mute);padding:10px 0">Live · 142 events today</span>
+    </div>
+    <div style="padding:4px 18px 14px" id="feed-list"></div>
+  </div>
+</div>
+
+<!-- ══════════ AUTO-TUNER ══════════ -->
+<div class="section" id="s-autotuner">
+  <div class="page-header">
+    <div><div class="page-title">Auto-Tuner</div><div class="page-sub">AI-optimized parameter suggestions</div></div>
+    <button class="btn btn-primary btn-sm">Apply all suggestions</button>
+  </div>
+  <div class="g g2 mb16">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Parameter Comparison</div></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Parameter</th><th>Current</th><th>Suggested</th><th>Impact</th></tr></thead>
+          <tbody>
+            <tr><td>RSI Period</td><td class="mono">14</td><td class="mono text-green">12</td><td><span class="delta up">+4.2%</span></td></tr>
+            <tr><td>ATR Multiplier</td><td class="mono">2.0</td><td class="mono text-green">1.8</td><td><span class="delta up">+2.8%</span></td></tr>
+            <tr><td>Correlation Cap</td><td class="mono">0.50</td><td class="mono text-green">0.60</td><td><span class="delta up">+1.9%</span></td></tr>
+            <tr><td>Min Confidence</td><td class="mono">0.65</td><td class="mono text-green">0.70</td><td><span class="delta up">+3.1%</span></td></tr>
+            <tr><td>Max Lot Size</td><td class="mono">1.0</td><td class="mono dn">0.8</td><td><span class="delta dn">−1.2%</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Optimization History</div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="alert-row" style="padding:8px 0"><div class="alert-dot info"></div><div><div class="alert-msg">RSI period 14→12 applied</div><div class="alert-meta">Today 14:22 · Win rate +4.2%</div></div></div>
+        <div class="alert-row" style="padding:8px 0"><div class="alert-dot info"></div><div><div class="alert-msg">Carry strategy disabled (Sharpe 0.3)</div><div class="alert-meta">Today 06:14</div></div></div>
+        <div class="alert-row" style="padding:8px 0"><div class="alert-dot info"></div><div><div class="alert-msg">Correlation cap raised 0.50→0.60</div><div class="alert-meta">Yesterday 21:38</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SENTIMENT ══════════ -->
+<div class="section" id="s-sentiment">
+  <div class="page-header">
+    <div><div class="page-title">Sentiment</div><div class="page-sub">Market sentiment &amp; news analysis</div></div>
+  </div>
+  <div class="g g3 mb16">
+    <div class="metric-card" style="text-align:center"><div class="metric-label">Fear &amp; Greed</div><div style="font-size:36px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--green);margin:8px 0">72</div><div style="font-size:12px;color:var(--green);font-weight:600">Greed</div></div>
+    <div class="metric-card" style="text-align:center"><div class="metric-label">DXY</div><div style="font-size:36px;font-weight:800;font-family:'JetBrains Mono',monospace;margin:8px 0">104.3</div><div class="delta up" style="display:inline-flex">▲ +0.4%</div></div>
+    <div class="metric-card" style="text-align:center"><div class="metric-label">VIX</div><div style="font-size:36px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#f59e0b;margin:8px 0">14.2</div><div style="font-size:12px;color:var(--mute)">Low volatility</div></div>
+  </div>
+  <div class="g g2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">News Sentiment</div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        ${[["USD Fed minutes hint at rate pause","USD","Bullish","#22c55e","+"],["ECB signals continued hawkishness","EUR","Bullish","#22c55e","+"],["Gold demand rises amid uncertainty","XAU","Bullish","#22c55e","+"],["GBP weakens on UK CPI miss","GBP","Bearish","#f43f5e","−"],["JPY strengthens on BoJ comments","JPY","Bearish","#f43f5e","−"]].map(([h,c,s,col,d])=>`<div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--line2)"><div style="font-size:12px;font-weight:500;margin-bottom:6px">${h}</div><div style="display:flex;align-items:center;gap:8px;font-size:10px"><span style="background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px">${c}</span><span style="color:${col};font-weight:600">${d} ${s}</span></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Economic Calendar</div></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Time (UTC)</th><th>Event</th><th>Impact</th><th>Forecast</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:30</td><td>US CPI m/m</td><td><span style="color:#f43f5e;font-weight:700;font-size:11px">HIGH</span></td><td class="mono">0.3%</td></tr>
+            <tr><td class="mono">15:00</td><td>Fed Chair Speech</td><td><span style="color:#f59e0b;font-weight:700;font-size:11px">MED</span></td><td>—</td></tr>
+            <tr><td class="mono">18:00</td><td>US Crude Inv</td><td><span style="color:#6366f1;font-weight:700;font-size:11px">LOW</span></td><td class="mono">-1.2M</td></tr>
+            <tr><td class="mono">Tue</td><td>UK GDP q/q</td><td><span style="color:#f43f5e;font-weight:700;font-size:11px">HIGH</span></td><td class="mono">0.1%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CONNECTIONS ══════════ -->
+<div class="section" id="s-connections">
+  <div class="page-header">
+    <div><div class="page-title">Connections</div><div class="page-sub">API &amp; bot connection status</div></div>
+  </div>
+  <div class="g g2">
+    <div class="conn-card">
+      <div class="conn-icon" style="background:rgba(99,102,241,.1)">📊</div>
+      <div style="flex:1">
+        <div class="fw6 fs14">MetaTrader 5</div>
+        <div class="conn-status"><span class="dot-on"></span><span class="text-green">Connected · Live</span></div>
+        <div style="font-size:10px;color:var(--mute);margin-top:3px">Account #5050486567 · $14,231 equity</div>
+      </div>
+      <button class="btn btn-ghost btn-sm">Disconnect</button>
+    </div>
+    <div class="conn-card">
+      <div class="conn-icon" style="background:rgba(34,197,94,.1)">🤖</div>
+      <div style="flex:1">
+        <div class="fw6 fs14">Python Bot</div>
+        <div class="conn-status"><span class="dot-on"></span><span class="text-green">Online · Paper mode</span></div>
+        <div style="font-size:10px;color:var(--mute);margin-top:3px">Last ping 2s ago · 3 strategies active</div>
+      </div>
+      <button class="btn btn-ghost btn-sm">Restart</button>
+    </div>
+    <div class="conn-card" id="alpaca-card">
+      <div class="conn-icon" style="background:rgba(249,115,22,.1)">₿</div>
+      <div style="flex:1">
+        <div class="fw6 fs14">Alpaca Paper Trading</div>
+        <div class="conn-status"><span class="dot-off"></span><span class="text-mute">Not connected</span></div>
+        <div style="font-size:10px;color:var(--mute);margin-top:3px">Free crypto paper trading · 24/7 including weekends</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="nav('settings');openSettingsTab('crypto')">Connect</button>
+    </div>
+    <div class="conn-card">
+      <div class="conn-icon" style="background:rgba(99,102,241,.1)">🧠</div>
+      <div style="flex:1">
+        <div class="fw6 fs14">AI Engine (Gemini)</div>
+        <div class="conn-status"><span class="dot-on"></span><span class="text-green">Active</span></div>
+        <div style="font-size:10px;color:var(--mute);margin-top:3px">gemini-2.0-flash · 2,841 tokens used today</div>
+      </div>
+      <button class="btn btn-ghost btn-sm">Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ALERTS ══════════ -->
+<div class="section" id="s-alerts">
+  <div class="page-header">
+    <div><div class="page-title">Alerts</div><div class="page-sub">3 unacknowledged</div></div>
+    <button class="btn btn-ghost btn-sm">Mark all read</button>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      ${[["crit","Kill switch triggered: daily loss limit hit","Today 14:22"],["warn","Slippage on GBPUSD entry +2.1 pips above threshold","Today 13:58"],["warn","Correlation limit reached: EURUSD + GBPUSD","Today 12:30"],["info","Auto-Tuner applied RSI period 14→12","Today 10:15"],["info","Brain Gym training session completed: 71% win rate","Yesterday 22:00"],["info","Bot restarted successfully after update","Yesterday 18:34"]].map(([sev,msg,time])=>`<div class="alert-row"><div class="alert-dot ${sev}"></div><div style="flex:1"><div class="alert-msg">${msg}</div><div class="alert-meta">${time}</div></div><span class="sev-chip ${sev}">${sev.toUpperCase()}</span><button class="btn btn-ghost btn-sm" style="margin-left:8px;padding:3px 8px;font-size:10px">✓</button></div>`).join('')}
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SETTINGS ══════════ -->
+<div class="section" id="s-settings">
+  <div class="page-header">
+    <div><div class="page-title">Settings</div></div>
+  </div>
+  <div class="settings-tabs" id="settings-tabs">
+    <button class="on" onclick="setSettingsTab('profile')">Profile</button>
+    <button onclick="setSettingsTab('appearance')">Appearance</button>
+    <button onclick="setSettingsTab('email')">Email Alerts</button>
+    <button onclick="setSettingsTab('crypto')">Crypto API</button>
+    <button onclick="setSettingsTab('bot')">Bot Setup</button>
+    <button onclick="setSettingsTab('plan')">Plan</button>
+  </div>
+  <!-- Profile -->
+  <div id="stab-profile" class="g g2">
+    <div class="card"><div class="card-header"><div class="card-title">Account Info</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>Full Name</label><input value="Ilyes"/></div>
+      <div class="field"><label>Email</label><input type="email" value="ilyes@example.com"/></div>
+      <div class="field"><label>Username</label><input value="ilyes_trades"/></div>
+      <button class="btn btn-primary" style="align-self:flex-start">Save changes</button>
+    </div></div>
+    <div class="card"><div class="card-header"><div class="card-title">Change Password</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>Current password</label><input type="password" placeholder="••••••••"/></div>
+      <div class="field"><label>New password</label><input type="password" placeholder="Min 8 characters"/></div>
+      <div class="field"><label>Confirm new password</label><input type="password" placeholder="Repeat"/></div>
+      <button class="btn btn-primary" style="align-self:flex-start">Update password</button>
+    </div></div>
+  </div>
+  <!-- Appearance -->
+  <div id="stab-appearance" style="display:none" class="g g2">
+    <div class="card"><div class="card-header"><div class="card-title">Theme</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>Color Theme</label><select><option>Dark (default)</option><option>Darker</option><option>Light</option></select></div>
+      <div class="field"><label>Accent Color</label><select><option>Indigo + Violet</option><option>Green</option><option>Blue</option></select></div>
+      <div class="field"><label>Font Size</label><select><option>Small (11px)</option><option selected>Medium (13px)</option><option>Large (15px)</option></select></div>
+      <button class="btn btn-primary" style="align-self:flex-start">Apply</button>
+    </div></div>
+  </div>
+  <!-- Email Alerts -->
+  <div id="stab-email" style="display:none" class="g g2">
+    <div class="card"><div class="card-header"><div class="card-title">SMTP Settings (Brevo recommended)</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>SMTP Host</label><input value="smtp-relay.brevo.com"/></div>
+      <div class="field"><label>Port</label><input value="587"/></div>
+      <div class="field"><label>Username</label><input placeholder="ab28c7001@smtp-brevo.com"/></div>
+      <div class="field"><label>API Key (Password)</label><input type="password" placeholder="Get from Brevo → Settings → SMTP &amp; API → API Keys"/></div>
+      <button class="btn btn-primary" style="align-self:flex-start">Save SMTP</button>
+    </div></div>
+    <div class="card"><div class="card-header"><div class="card-title">Alert Preferences</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+      ${[["Trade opened","On"],["Trade closed","On"],["Kill switch triggered","On"],["Daily P&L target hit","On"],["Bot goes offline","On"],["Drawdown warning","On"]].map(([l,s])=>`<div class="flex flex-center"><span class="flex1 fs12">${l}</span><div class="toggle on"></div></div>`).join('')}
+    </div></div>
+  </div>
+  <!-- Crypto API -->
+  <div id="stab-crypto" style="display:none">
+    <div class="g g2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">₿ Alpaca Paper Trading</div>
+          <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(249,115,22,.1);color:#f7931a;border:1px solid rgba(249,115,22,.25)">FREE · 24/7 weekends</span>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:12px;font-size:12px;color:#fdba74;line-height:1.6">
+            Alpaca gives you a free paper trading account with real-time crypto prices and simulated money — no real funds at risk. Crypto trades 24/7 including weekends, perfect for weekend bot training.<br/><br/>
+            <strong style="color:#f7931a">Sign up free at alpaca.markets → Paper Trading → Get API Keys</strong>
+          </div>
+          <div class="field"><label>API Key ID</label><input placeholder="PKXXXXXXXXXXXXXXXXXXXXXX"/></div>
+          <div class="field"><label>Secret Key</label><input type="password" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"/></div>
+          <div class="field"><label>Account Type</label>
+            <select><option value="paper">Paper (recommended — free, simulated)</option><option value="live">Live (real money — requires approval)</option></select>
+          </div>
+          <div class="field"><label>Base URL</label><input value="https://paper-api.alpaca.markets" readonly style="color:var(--mute)"/></div>
+          <button class="btn" style="background:linear-gradient(135deg,#f7931a,#f59e0b);color:#000;font-weight:700;align-self:flex-start">Connect Alpaca</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Supported Crypto Pairs</div></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            ${["BTC/USD","ETH/USD","SOL/USD","AVAX/USD","DOGE/USD","LINK/USD","UNI/USD","MATIC/USD"].map(p=>`<div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.15);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace">${p}</div>`).join('')}
+          </div>
+          <div style="margin-top:14px;font-size:11px;color:var(--mute)">Weekend trading hours: 24/7 · Crypto never closes · Bot trains same as weekdays</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Bot Setup -->
+  <div id="stab-bot" style="display:none" class="g g2">
+    <div class="card"><div class="card-header"><div class="card-title">Python Bot</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>MT5 Login</label><input value="5050486567"/></div>
+      <div class="field"><label>MT5 Server</label><input value="ICMarkets-Demo"/></div>
+      <div class="field"><label>Gemini API Key</label><input type="password" placeholder="AIzaSy..."/></div>
+      <div class="field"><label>DeepSeek API Key</label><input type="password" placeholder="sk-..."/></div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:12px">
+        <div style="font-size:10px;color:var(--mute);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Start command (PowerShell)</div>
+        <code style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#a78bfa;word-break:break-all">cd C:\Users\Ilyes\westrade\artifacts\python-bot; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py</code>
+      </div>
+      <button class="btn btn-primary" style="align-self:flex-start">Save &amp; restart bot</button>
+    </div></div>
+  </div>
+  <!-- Plan -->
+  <div id="stab-plan" style="display:none">
+    <div class="card" style="max-width:560px"><div class="card-header"><div class="card-title">Current Plan</div></div><div class="card-body">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+        <div style="width:50px;height:50px;border-radius:14px;background:var(--grad);display:grid;place-items:center;font-size:22px">⚡</div>
+        <div><div style="font-size:18px;font-weight:700">Pro Plan</div><div style="color:var(--mute);font-size:12px">$29/month · renews Jun 17</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+        ${["Unlimited strategies","Live MT5 connection","AI-powered entries","Kill switch protection","Priority support","Crypto paper trading"].map(f=>`<div class="flex flex-center gap8"><span style="color:var(--green)">✓</span>${f}</div>`).join('')}
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ══════════ HELP ══════════ -->
+<div class="section" id="s-help">
+  <div class="page-header">
+    <div><div class="page-title">Help &amp; Docs</div></div>
+  </div>
+  <div class="g g2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">FAQ</div></div>
+      <div class="card-body">
+        ${[["How do I start the Python bot?","Open PowerShell on your PC and paste the start command from Settings → Bot Setup. The bot connects to MT5 and sends signals to the dashboard."],["What is paper trading mode?","Paper mode simulates trades with real market prices but no real money. Enable it in the bot banner or Settings → Bot Setup. For crypto, use Alpaca paper trading."],["How does the Kill Switch work?","The kill switch immediately closes all open positions and stops the bot. It triggers automatically when daily loss limit is hit, or you can activate it manually from Risk Engine."],["Can I trade crypto on weekends?","Yes — connect Alpaca paper trading (Settings → Crypto API). Crypto markets run 24/7 including weekends, so the bot can train and trade any time."],["How does Brain Gym work?","Brain Gym lets you replay historical sessions and have the bot trade them. The results are saved as training data to improve the AI's future decisions."]].map(([q,a],i)=>`<div class="faq-item${i===0?' open':''}"><div class="faq-q" onclick="toggleFaq(this)">${q}<span>${i===0?'▲':'▼'}</span></div><div class="faq-a">${a}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Keyboard Shortcuts</div></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Action</th><th style="text-align:right">Shortcut</th></tr></thead>
+          <tbody>
+            <tr><td>Go to Dashboard</td><td class="mono" style="text-align:right">G D</td></tr>
+            <tr><td>Go to Trades</td><td class="mono" style="text-align:right">G T</td></tr>
+            <tr><td>Go to Settings</td><td class="mono" style="text-align:right">G S</td></tr>
+            <tr><td>Toggle Engine</td><td class="mono" style="text-align:right">Ctrl E</td></tr>
+            <tr><td>Kill Switch</td><td class="mono" style="text-align:right">Ctrl K</td></tr>
+            <tr><td>New Strategy</td><td class="mono" style="text-align:right">Ctrl N</td></tr>
+            <tr><td>Toggle Mode</td><td class="mono" style="text-align:right">Ctrl M</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div><!-- /app -->
+
+<script>
+// ── mode ──
+let currentMode = 'forex';
+const forexPositions = [
+  {sym:'EURUSD',side:'long',qty:'0.50',entry:'1.0823',mark:'1.0874',pnl:'+$255',strat:'Mean-Rev'},
+  {sym:'XAUUSD',side:'long',qty:'0.20',entry:'2,318',mark:'2,341',pnl:'+$460',strat:'Breakout'},
+  {sym:'GBPUSD',side:'short',qty:'0.30',entry:'1.2702',mark:'1.2711',pnl:'−$27',strat:'Carry'},
+];
+const cryptoPositions = [
+  {sym:'BTC/USD',side:'long',qty:'0.05',entry:'62,400',mark:'63,850',pnl:'+$72.50',strat:'Momentum'},
+  {sym:'ETH/USD',side:'long',qty:'0.80',entry:'3,420',mark:'3,508',pnl:'+$70.40',strat:'Mean-Rev'},
+  {sym:'SOL/USD',side:'short',qty:'5',entry:'148.20',mark:'144.80',pnl:'+$17.00',strat:'Breakout'},
+];
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('app').classList.toggle('crypto', m === 'crypto');
+  document.getElementById('btn-forex').classList.toggle('on', m === 'forex');
+  document.getElementById('btn-crypto').classList.toggle('on', m === 'crypto');
+  document.getElementById('brand-text').textContent = m === 'crypto' ? '₿ Westrade' : 'Westrade';
+  document.getElementById('user-sub').textContent = m === 'crypto' ? 'Pro · Alpaca Paper' : 'Pro · Live MT5';
+  document.getElementById('dash-date').textContent = m === 'crypto'
+    ? 'Saturday, May 17 · Crypto 24/7 open'
+    : 'Saturday, May 17 · Session active';
+  // metrics
+  document.getElementById('m-equity').textContent = m === 'crypto' ? '$5,840' : '$14,231';
+  document.getElementById('m-dpnl').textContent = m === 'crypto' ? '+$159.90' : '+$420';
+  document.getElementById('m-wr').textContent = m === 'crypto' ? '61.0%' : '67.4%';
+  document.getElementById('m-pf').textContent = m === 'crypto' ? '1.88' : '2.31';
+  document.getElementById('m-dd').textContent = m === 'crypto' ? '−2.8%' : '−4.2%';
+  // positions
+  const pos = m === 'crypto' ? cryptoPositions : forexPositions;
+  document.getElementById('pos-count').textContent = pos.length;
+  document.getElementById('pos-tbody').innerHTML = pos.map(p =>
+    `<tr><td class="sym">${p.sym}</td><td><span class="chip ${p.side}">${p.side.charAt(0).toUpperCase()+p.side.slice(1)}</span></td><td class="mono">${p.qty}</td><td class="mono">${p.entry}</td><td class="mono">${p.mark}</td><td class="mono ${p.pnl.startsWith('+') ? 'up' : 'dn'}">${p.pnl}</td><td class="text-mute">${p.strat}</td></tr>`
+  ).join('');
+  // trades sub
+  document.getElementById('trades-sub').textContent = m === 'crypto'
+    ? 'Last 30 days · 22 closed trades (Alpaca Paper)'
+    : 'Last 30 days · 48 closed trades';
+  // strat sub
+  document.getElementById('strat-sub').textContent = m === 'crypto'
+    ? '2 active · 1 paused (crypto strategies)'
+    : '3 active · 2 paused';
+  // gym sym
+  document.getElementById('crypto-opt').style.display = m === 'crypto' ? '' : 'none';
+  document.getElementById('crypto-opt2').style.display = m === 'crypto' ? '' : 'none';
+  // rebuild strategies
+  buildStrategies();
+  buildPresets();
+}
+
+// ── nav ──
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(a => a.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('active');
+  event && event.currentTarget && event.currentTarget.classList.add('active');
+  // find matching nav item
+  document.querySelectorAll('.nav-item').forEach(a => {
+    if (a.getAttribute('onclick') && a.getAttribute('onclick').includes("'"+id+"'")) a.classList.add('active');
+  });
+}
+
+// ── settings tabs ──
+function setSettingsTab(tab) {
+  ['profile','appearance','email','crypto','bot','plan'].forEach(t => {
+    const el = document.getElementById('stab-' + t);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('#settings-tabs button').forEach((b, i) => {
+    b.classList.toggle('on', b.getAttribute('onclick').includes("'"+tab+"'"));
+  });
+}
+function openSettingsTab(tab) { setSettingsTab(tab); }
+
+// ── faq ──
+function toggleFaq(el) {
+  const item = el.parentElement;
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => {
+    i.classList.remove('open');
+    i.querySelector('.faq-q span').textContent = '▼';
+  });
+  if (!isOpen) { item.classList.add('open'); el.querySelector('span').textContent = '▲'; }
+}
+
+// ── trades table ──
+const forexTrades = [
+  {sym:'EURUSD',side:'long',qty:'0.50',entry:'1.0784',exit:'1.0823',pnl:'+$195',dur:'2h 14m',strat:'Mean-Rev',date:'May 17'},
+  {sym:'XAUUSD',side:'long',qty:'0.20',entry:'2,298',exit:'2,318',pnl:'+$400',dur:'4h 02m',strat:'Breakout',date:'May 17'},
+  {sym:'GBPUSD',side:'short',qty:'0.30',entry:'1.2740',exit:'1.2702',pnl:'+$114',dur:'58m',strat:'Carry',date:'May 16'},
+  {sym:'USDJPY',side:'long',qty:'0.40',entry:'153.20',exit:'152.80',pnl:'−$104',dur:'1h 28m',strat:'Trend',date:'May 16'},
+  {sym:'EURUSD',side:'short',qty:'0.25',entry:'1.0830',exit:'1.0810',pnl:'+$50',dur:'32m',strat:'Scalp',date:'May 15'},
+  {sym:'XAUUSD',side:'long',qty:'0.10',entry:'2,280',exit:'2,295',pnl:'+$150',dur:'6h 40m',strat:'Breakout',date:'May 14'},
+];
+const cryptoTrades = [
+  {sym:'BTC/USD',side:'long',qty:'0.05',entry:'61,200',exit:'63,100',pnl:'+$95',dur:'5h 12m',strat:'Momentum',date:'May 17'},
+  {sym:'ETH/USD',side:'long',qty:'0.50',entry:'3,380',exit:'3,440',pnl:'+$30',dur:'3h 18m',strat:'Mean-Rev',date:'May 17'},
+  {sym:'SOL/USD',side:'short',qty:'4',entry:'152',exit:'148',pnl:'+$16',dur:'2h 45m',strat:'Breakout',date:'May 16'},
+  {sym:'BTC/USD',side:'short',qty:'0.03',entry:'64,200',exit:'63,800',pnl:'+$12',dur:'1h 05m',strat:'Scalp',date:'May 16'},
+  {sym:'DOGE/USD',side:'long',qty:'1000',entry:'0.158',exit:'0.152',pnl:'−$6',dur:'48m',strat:'Momentum',date:'May 15'},
+];
+
+function buildTrades() {
+  const trades = currentMode === 'crypto' ? cryptoTrades : forexTrades;
+  document.getElementById('trades-tbody').innerHTML = trades.map(t =>
+    `<tr><td class="sym">${t.sym}</td><td><span class="chip ${t.side}">${t.side.charAt(0).toUpperCase()+t.side.slice(1)}</span></td><td class="mono">${t.qty}</td><td class="mono">${t.entry}</td><td class="mono">${t.exit}</td><td class="mono ${t.pnl.startsWith('+') ? 'up' : 'dn'}">${t.pnl}</td><td class="text-mute">${t.dur}</td><td class="text-mute">${t.strat}</td><td class="text-mute">${t.date}</td></tr>`
+  ).join('');
+}
+buildTrades();
+
+// ── strategies ──
+const forexStrats = [
+  {name:'EURUSD Mean Reversion',desc:'RSI divergence + BB squeeze on M15',pnl:'+$1,240',wr:'71%',trades:34,on:true,color:'#6366f1'},
+  {name:'XAU Breakout',desc:'ATR breakout on H1 with trail stop',pnl:'+$2,180',wr:'64%',trades:22,on:true,color:'#f59e0b'},
+  {name:'GBP Carry Trade',desc:'Interest rate differential long-term',pnl:'+$340',wr:'58%',trades:18,on:true,color:'#22c55e'},
+  {name:'USD/JPY Trend',desc:'EMA crossover on H4',pnl:'−$120',wr:'44%',trades:12,on:false,color:'#a855f7'},
+  {name:'Gold Scalper',desc:'M5 momentum scalping',pnl:'+$680',wr:'69%',trades:52,on:false,color:'#f59e0b'},
+];
+const cryptoStrats = [
+  {name:'BTC Momentum',desc:'24h volume surge + RSI breakout',pnl:'+$95',wr:'65%',trades:18,on:true,color:'#f7931a'},
+  {name:'ETH Mean-Rev',desc:'Bollinger Band reversion on M30',pnl:'+$30',wr:'60%',trades:14,on:true,color:'#627eea'},
+  {name:'SOL Breakout',desc:'ATR breakout on H1',pnl:'−$8',wr:'48%',trades:8,on:false,color:'#9945ff'},
+];
+
+function buildStrategies() {
+  const strats = currentMode === 'crypto' ? cryptoStrats : forexStrats;
+  document.getElementById('strat-grid').innerHTML = strats.map(s =>
+    `<div class="strat-card">
+      <div class="strat-header">
+        <div>
+          <div style="font-size:13px;font-weight:600">${s.name}</div>
+          <div style="font-size:11px;color:var(--mute);margin-top:2px">${s.desc}</div>
+        </div>
+        <div class="toggle${s.on?' on':''}" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border-radius:8px;overflow:hidden;height:6px;margin:4px 0">
+        <div style="height:100%;width:${s.wr};background:${s.color};border-radius:8px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px;text-align:center;margin-top:4px">
+        <div><div class="mono fw7 ${s.pnl.startsWith('+') ? 'text-green' : 'dn'}">${s.pnl}</div><div class="text-mute fs10">P&L</div></div>
+        <div><div class="mono fw7">${s.wr}</div><div class="text-mute fs10">Win rate</div></div>
+        <div><div class="mono fw7">${s.trades}</div><div class="text-mute fs10">Trades</div></div>
+      </div>
+    </div>`
+  ).join('');
+}
+buildStrategies();
+
+// ── presets ──
+const forexPresets = [
+  {name:'Optimal Profit',desc:'Maximise returns with moderate risk',risk:'Medium',wr:'67%',sharpe:'1.62',selected:true},
+  {name:'Conservative',desc:'Capital preservation first',risk:'Low',wr:'72%',sharpe:'1.20'},
+  {name:'Aggressive',desc:'High risk, high reward scalping',risk:'High',wr:'58%',sharpe:'1.05'},
+  {name:'Scalper',desc:'M1/M5 ultra-fast entries',risk:'High',wr:'61%',sharpe:'0.95'},
+  {name:'Swing Trader',desc:'H4/D1 longer holds',risk:'Low',wr:'74%',sharpe:'1.40'},
+  {name:'Weekend Safe',desc:'No positions held over weekend',risk:'Low',wr:'70%',sharpe:'1.35'},
+];
+const cryptoPresets = [
+  {name:'BTC Momentum',desc:'Follow BTC trend with position sizing',risk:'Medium',wr:'65%',sharpe:'1.30',selected:true},
+  {name:'Altcoin Basket',desc:'Spread across ETH, SOL, AVAX',risk:'Medium',wr:'58%',sharpe:'1.10'},
+  {name:'Crypto Conservative',desc:'BTC only, smaller lots',risk:'Low',wr:'68%',sharpe:'1.25'},
+  {name:'Weekend Grinder',desc:'Run all weekend on Alpaca paper',risk:'Medium',wr:'62%',sharpe:'1.15'},
+];
+
+function buildPresets() {
+  const presets = currentMode === 'crypto' ? cryptoPresets : forexPresets;
+  document.getElementById('presets-grid').innerHTML = presets.map(p =>
+    `<div class="preset-card${p.selected?' selected':''}">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${p.name}</div>
+      <div style="font-size:11px;color:var(--mute);margin-bottom:12px">${p.desc}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px;text-align:center;border-top:1px solid var(--line2);padding-top:12px">
+        <div><div class="fw6">${p.risk}</div><div class="text-mute fs10">Risk</div></div>
+        <div><div class="fw6">${p.wr}</div><div class="text-mute fs10">Win rate</div></div>
+        <div><div class="fw6">${p.sharpe}</div><div class="text-mute fs10">Sharpe</div></div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px">${p.selected ? '✓ Active' : 'Apply preset'}</button>
+    </div>`
+  ).join('');
+}
+buildPresets();
+
+// ── bot feed ──
+const feedData = [
+  {t:'21:42',tag:'buy',tag_cls:'buy',msg:'EURUSD — Long 0.5 lots @ 1.0823 · RSI divergence confirmed · Conf 0.81'},
+  {t:'21:38',tag:'info',tag_cls:'info',msg:'Auto-Tuner: Correlation cap raised 0.50 → 0.60 · Win rate impact +1.9%'},
+  {t:'21:31',tag:'warn',tag_cls:'warn',msg:'Slippage on GBPUSD entry +0.8 pips above threshold'},
+  {t:'21:22',tag:'sell',tag_cls:'sell',msg:'XAUUSD — Trail stop hit @ 2,341 · +$460 · 4h 2m in trade'},
+  {t:'21:14',tag:'info',tag_cls:'info',msg:'Carry strategy disabled · Sharpe 0.3 below minimum threshold 0.8'},
+  {t:'21:08',tag:'buy',tag_cls:'buy',msg:'XAUUSD — Long 0.2 lots @ 2,318 · ATR breakout confirmed · Conf 0.76'},
+  {t:'20:55',tag:'info',tag_cls:'info',msg:'Brain Gym training complete · Session win rate 71% · Saved to dataset'},
+  {t:'20:40',tag:'sell',tag_cls:'sell',msg:'GBPUSD — Short 0.3 lots @ 1.2702 · EMA cross confirmed · Conf 0.69'},
+  {t:'20:28',tag:'warn',tag_cls:'warn',msg:'Daily loss 72% of limit reached — tightening stop losses'},
+  {t:'20:15',tag:'info',tag_cls:'info',msg:'Engine started · 3 strategies loaded · Paper mode OFF'},
+];
+document.getElementById('feed-list').innerHTML = feedData.map(f =>
+  `<div class="feed-item"><span class="feed-time">${f.t}</span><span class="feed-tag ${f.tag_cls}">${f.tag.toUpperCase()}</span><span style="flex:1;padding-left:8px">${f.msg}</span></div>`
+).join('');
+
+// date
+document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) + ' · Session active';
+</script>
 </body>
 </html>
