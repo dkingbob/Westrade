@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme, type ThemeStyle } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
-import { User, Palette, Bell, LogOut, Check, Plus, X, Terminal, Copy, CheckCheck, CreditCard, Eye, EyeOff } from "lucide-react";
+import { User, Palette, Bell, LogOut, Check, Plus, X, Terminal, Copy, CheckCheck, CreditCard, Eye, EyeOff, Bitcoin } from "lucide-react";
 
 function api(path: string, opts?: RequestInit) {
   return fetch(path, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
@@ -31,7 +31,7 @@ export default function Settings() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { style, setStyle } = useTheme();
-  const [tab, setTab] = useState<"profile" | "appearance" | "notifications" | "setup" | "plan">("profile");
+  const [tab, setTab] = useState<"profile" | "appearance" | "notifications" | "crypto" | "setup" | "plan">("profile");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const copyCmd = (text: string, idx: number) => {
@@ -48,6 +48,30 @@ export default function Settings() {
   const [smtpUser, setSmtpUser] = useState("");
   const [smtpPass, setSmtpPass] = useState("");
   const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [alpacaKeyId, setAlpacaKeyId] = useState(() => localStorage.getItem("alpaca_key_id") ?? "");
+  const [alpacaSecret, setAlpacaSecret] = useState(() => localStorage.getItem("alpaca_secret") ?? "");
+  const [alpacaType, setAlpacaType] = useState<"paper" | "live">(() => (localStorage.getItem("alpaca_type") as "paper" | "live") ?? "paper");
+  const [showAlpacaSecret, setShowAlpacaSecret] = useState(false);
+  const [alpacaSaved, setAlpacaSaved] = useState(false);
+
+  function saveAlpacaKeys() {
+    localStorage.setItem("alpaca_key_id", alpacaKeyId);
+    localStorage.setItem("alpaca_secret", alpacaSecret);
+    localStorage.setItem("alpaca_type", alpacaType);
+    setAlpacaSaved(true);
+    setTimeout(() => setAlpacaSaved(false), 2000);
+    toast({ title: "Alpaca API keys saved" });
+  }
+
+  function clearAlpacaKeys() {
+    localStorage.removeItem("alpaca_key_id");
+    localStorage.removeItem("alpaca_secret");
+    localStorage.removeItem("alpaca_type");
+    setAlpacaKeyId("");
+    setAlpacaSecret("");
+    setAlpacaType("paper");
+    toast({ title: "Alpaca keys removed" });
+  }
   const [emailEvents, setEmailEvents] = useState({ killSwitch: true, sessionLimit: true, profitTarget: true, newTrade: false });
 
   const profileInitRef = useRef(false);
@@ -103,6 +127,7 @@ export default function Settings() {
     { key: "profile", label: "Profile", icon: User },
     { key: "appearance", label: "Appearance", icon: Palette },
     { key: "notifications", label: "Email Alerts", icon: Bell },
+    { key: "crypto", label: "Crypto API", icon: Bitcoin },
     { key: "setup", label: "Bot Setup", icon: Terminal },
     { key: "plan", label: "Plan", icon: CreditCard },
   ] as const;
@@ -304,6 +329,116 @@ export default function Settings() {
           </div>
         </div>
       )}
+      {/* Crypto API tab */}
+      {tab === "crypto" && (
+        <div className="space-y-3">
+          <Card className="bg-card border-card-border">
+            <CardHeader className="py-2 px-4 border-b border-border">
+              <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Bitcoin size={11} /> Alpaca Paper Trading — Crypto API
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              <div className="p-3 rounded border text-[10px] font-mono leading-relaxed"
+                style={{ background: "rgba(249,115,22,0.06)", borderColor: "rgba(249,115,22,0.2)", color: "#fdba74" }}>
+                <strong style={{ color: "#fb923c" }}>Free paper trading — no real money.</strong> Alpaca gives you real-time crypto prices with a simulated account. Works 24/7 including weekends — perfect for training the bot Saturday/Sunday.<br /><br />
+                Sign up free at <strong style={{ color: "#fb923c" }}>alpaca.markets</strong> → Paper Trading → API Keys → Generate new key
+              </div>
+
+              {alpacaKeyId && (
+                <div className="flex items-center gap-2 p-2 rounded border border-green-500/30 bg-green-500/5">
+                  <Check size={10} className="text-green-400 shrink-0" />
+                  <span className="text-[10px] font-mono text-green-400">API key saved — Alpaca connected</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <Label className="text-[9px] font-mono text-muted-foreground uppercase">API Key ID</Label>
+                <Input
+                  className="h-7 text-xs font-mono bg-background"
+                  placeholder="PKXXXXXXXXXXXXXXXXXXXXXX"
+                  value={alpacaKeyId}
+                  onChange={e => setAlpacaKeyId(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[9px] font-mono text-muted-foreground uppercase">Secret Key</Label>
+                <div className="relative">
+                  <Input
+                    className="h-7 text-xs font-mono bg-background pr-7"
+                    type={showAlpacaSecret ? "text" : "password"}
+                    placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    value={alpacaSecret}
+                    onChange={e => setAlpacaSecret(e.target.value)}
+                  />
+                  <button type="button" onClick={() => setShowAlpacaSecret(v => !v)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showAlpacaSecret ? <EyeOff size={11} /> : <Eye size={11} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[9px] font-mono text-muted-foreground uppercase">Account type</Label>
+                <div className="flex gap-2">
+                  {(["paper", "live"] as const).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setAlpacaType(t)}
+                      className={cn(
+                        "flex-1 h-7 rounded text-[10px] font-mono font-semibold border transition-all",
+                        alpacaType === t
+                          ? t === "paper"
+                            ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
+                            : "bg-orange-500/15 border-orange-500/40 text-orange-300"
+                          : "border-border text-muted-foreground hover:border-muted-foreground"
+                      )}
+                    >
+                      {t === "paper" ? "📄 Paper (recommended)" : "⚡ Live (real money)"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[9px] font-mono text-muted-foreground uppercase">Base URL</Label>
+                <Input
+                  className="h-7 text-xs font-mono bg-background text-muted-foreground"
+                  value={alpacaType === "paper" ? "https://paper-api.alpaca.markets" : "https://api.alpaca.markets"}
+                  readOnly
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 h-7 text-[10px] font-mono"
+                  disabled={!alpacaKeyId || !alpacaSecret}
+                  onClick={saveAlpacaKeys}
+                  style={alpacaKeyId && alpacaSecret ? { background: "linear-gradient(135deg,#f7931a,#f59e0b)", color: "#000" } : undefined}
+                >
+                  {alpacaSaved ? <><Check size={10} className="mr-1" /> Saved!</> : "Save API Keys"}
+                </Button>
+                {alpacaKeyId && (
+                  <Button variant="outline" className="h-7 text-[10px] font-mono text-red-400 border-red-500/40 hover:bg-red-500/10" onClick={clearAlpacaKeys}>
+                    Remove
+                  </Button>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-border">
+                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Supported pairs</p>
+                <div className="flex flex-wrap gap-1">
+                  {["BTC/USD", "ETH/USD", "SOL/USD", "AVAX/USD", "DOGE/USD", "LINK/USD", "UNI/USD", "MATIC/USD"].map(p => (
+                    <span key={p} className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-border text-muted-foreground">{p}</span>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Bot Setup tab */}
       {tab === "setup" && (() => {
         const oneliner = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; python bot.py`;

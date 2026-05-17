@@ -13,7 +13,7 @@ import {
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot, UserCircle, Settings, LogOut, RefreshCw } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot, UserCircle, Settings, LogOut, RefreshCw, ExternalLink } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -154,11 +154,6 @@ function AlertRow({ alert, darkMode }: { alert: any; darkMode: boolean }) {
   );
 }
 
-const CRYPTO_MOCK_POSITIONS = [
-  { id: "c1", symbol: "BTC/USD", side: "long",  quantity: 0.05, entryPrice: 62400, currentPrice: 63850, pnl: 72.50,  pnlPct: 0.0232, strategy: "Momentum" },
-  { id: "c2", symbol: "ETH/USD", side: "long",  quantity: 0.80, entryPrice: 3420,  currentPrice: 3508,  pnl: 70.40,  pnlPct: 0.0257, strategy: "Mean-Rev" },
-  { id: "c3", symbol: "SOL/USD", side: "short", quantity: 5,    entryPrice: 148.2, currentPrice: 144.8, pnl: 17.00,  pnlPct: 0.0229, strategy: "Breakout" },
-];
 
 function ModeSwitch({ tradingMode, onToggle }: { tradingMode: "forex" | "crypto"; onToggle: () => void }) {
   const isCrypto = tradingMode === "crypto";
@@ -318,7 +313,8 @@ export default function Dashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bot-config-dash"] }),
   });
 
-  const displayPositions = isCrypto ? CRYPTO_MOCK_POSITIONS : positions;
+  const alpacaConnected = !!(localStorage.getItem("alpaca_key_id") && localStorage.getItem("alpaca_secret"));
+  const displayPositions = isCrypto ? [] : positions;
   const unreviewedAlerts = alerts?.filter((a) => !a.acknowledged) ?? [];
   const dailyUp = (summary?.dailyPnl ?? 0) >= 0;
   const totalUp = (summary?.totalPnl ?? 0) >= 0;
@@ -363,41 +359,62 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Python Bot banner */}
-      {!botOnline && (
-        <div className="flex flex-wrap items-start gap-3 px-3 py-2 rounded border border-amber-500/40 bg-amber-500/5">
-          <Bot size={12} className="text-amber-400 shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] font-mono text-amber-300 font-semibold">Python Bot OFFLINE</span>
-            <span className="text-[10px] font-mono text-muted-foreground ml-2 hidden sm:inline">— Open PowerShell on your PC and paste:</span>
-            <code className="block text-[9px] font-mono text-primary mt-0.5 break-all">{BOT_CMD}</code>
+      {/* Bot banner — forex vs crypto */}
+      {isCrypto ? (
+        alpacaConnected ? (
+          <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 rounded border border-orange-500/30 bg-orange-500/5">
+            <span className="text-base leading-none">₿</span>
+            <span className="text-[10px] font-mono text-orange-400 font-semibold">Alpaca Paper Trading</span>
+            <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">— connected · paper-api.alpaca.markets · 24/7 including weekends</span>
+            <Link to="/settings" className="ml-auto text-[9px] font-mono px-2 py-0.5 rounded border border-orange-400/40 text-orange-400 hover:bg-orange-400/10 transition-colors">
+              Manage keys
+            </Link>
           </div>
-          <Button size="sm" variant="outline" className="h-6 px-2 text-[9px] font-mono shrink-0 border-amber-500/40 text-amber-400"
-            onClick={copyBotCmd}>
-            <Copy size={9} className="mr-1" />{copied ? "Copied!" : "Copy"}
-          </Button>
-        </div>
-      )}
-      {botOnline && (
-        <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 rounded border border-green-500/30 bg-green-500/5">
-          <Bot size={12} className="text-green-400 shrink-0" />
-          <span className="text-[10px] font-mono text-green-400 font-semibold">Python Bot ONLINE</span>
-          <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">
-            — {paperMode ? "PAPER MODE (simulated)" : "LIVE MODE (real MT5 orders)"}
-          </span>
-          <button
-            onClick={() => toggleMode.mutate(!paperMode)}
-            disabled={toggleMode.isPending}
-            className={cn(
-              "ml-auto text-[9px] font-mono px-2 py-0.5 rounded border transition-colors",
-              paperMode
-                ? "border-blue-400/40 text-blue-400 hover:bg-blue-400/10"
-                : "border-green-400/40 text-green-400 hover:bg-green-400/10"
-            )}
-          >
-            {paperMode ? "→ LIVE" : "→ PAPER"}
-          </button>
-        </div>
+        ) : (
+          <div className="flex flex-wrap items-start gap-3 px-3 py-2 rounded border border-orange-500/40 bg-orange-500/5">
+            <span className="text-base leading-none shrink-0">₿</span>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-mono text-orange-300 font-semibold">Alpaca not connected</span>
+              <span className="text-[10px] font-mono text-muted-foreground ml-2">— add your free paper trading API key to start crypto bot</span>
+              <p className="text-[9px] font-mono text-muted-foreground mt-0.5">Sign up free at alpaca.markets → Paper Trading → API Keys</p>
+            </div>
+            <Link to="/settings">
+              <Button size="sm" variant="outline" className="h-6 px-2 text-[9px] font-mono shrink-0 border-orange-500/40 text-orange-400">
+                Add API Key
+              </Button>
+            </Link>
+          </div>
+        )
+      ) : (
+        <>
+          {!botOnline && (
+            <div className="flex flex-wrap items-start gap-3 px-3 py-2 rounded border border-amber-500/40 bg-amber-500/5">
+              <Bot size={12} className="text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-mono text-amber-300 font-semibold">Python Bot OFFLINE</span>
+                <span className="text-[10px] font-mono text-muted-foreground ml-2 hidden sm:inline">— Open PowerShell on your PC and paste:</span>
+                <code className="block text-[9px] font-mono text-primary mt-0.5 break-all">{BOT_CMD}</code>
+              </div>
+              <Button size="sm" variant="outline" className="h-6 px-2 text-[9px] font-mono shrink-0 border-amber-500/40 text-amber-400" onClick={copyBotCmd}>
+                <Copy size={9} className="mr-1" />{copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          )}
+          {botOnline && (
+            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 rounded border border-green-500/30 bg-green-500/5">
+              <Bot size={12} className="text-green-400 shrink-0" />
+              <span className="text-[10px] font-mono text-green-400 font-semibold">Python Bot ONLINE</span>
+              <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">
+                — {paperMode ? "PAPER MODE (simulated)" : "LIVE MODE (real MT5 orders)"}
+              </span>
+              <button onClick={() => toggleMode.mutate(!paperMode)} disabled={toggleMode.isPending}
+                className={cn("ml-auto text-[9px] font-mono px-2 py-0.5 rounded border transition-colors",
+                  paperMode ? "border-blue-400/40 text-blue-400 hover:bg-blue-400/10" : "border-green-400/40 text-green-400 hover:bg-green-400/10")}>
+                {paperMode ? "→ LIVE" : "→ PAPER"}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Key metrics */}
@@ -519,19 +536,33 @@ export default function Dashboard() {
             <CardHeader className="py-2 px-3 border-b border-border">
               <CardTitle className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Activity size={11} />
-                Open Positions ({displayPositions?.length ?? 0})
-                {isCrypto && <span className="ml-1 text-[9px] text-orange-400 border border-orange-500/30 rounded px-1">₿ Paper</span>}
+                Open Positions {isCrypto ? "(Alpaca Paper)" : `(${positions?.length ?? 0})`}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {!botOnline && !isCrypto && positions && positions.length > 0 && (
+              {!botOnline && !isCrypto && positions && (positions?.length ?? 0) > 0 && (
                 <div className="mx-4 mt-3 mb-2 p-2 rounded border border-amber-500/30 bg-amber-500/5 flex items-center gap-2">
                   <AlertTriangle size={11} className="text-amber-400 shrink-0" />
                   <p className={cn("text-[10px] font-mono", mode === "dark" ? "text-amber-300" : "text-amber-700")}>Bot offline — positions shown may be stale. Start the bot to sync.</p>
                 </div>
               )}
               <div className="p-3 pt-0">
-              {posLoading && !isCrypto ? (
+              {isCrypto ? (
+                <div className="flex flex-col items-center justify-center h-20 gap-2">
+                  {alpacaConnected ? (
+                    <p className="text-[11px] font-mono text-muted-foreground">No open crypto positions</p>
+                  ) : (
+                    <>
+                      <p className="text-[11px] font-mono text-muted-foreground">Alpaca not connected — no positions to show</p>
+                      <Link to="/settings">
+                        <Button size="sm" variant="outline" className="h-6 px-3 text-[9px] font-mono border-orange-500/40 text-orange-400">
+                          Connect Alpaca in Settings → Crypto API
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
+              ) : posLoading ? (
                 <div className="space-y-1 pt-3">
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-6 w-full" />)}
                 </div>
