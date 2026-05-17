@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AgeLapse · Volt — Bold Minimal</title>
+<style>
+:root{
+  --white:#ffffff;--off:#f5f5f5;--off2:#ebebeb;
+  --ink:#0a0a0a;--ink2:#3a3a3a;--ink3:#8a8a8a;
+  --volt:#00e5ff;--volt2:#00b8d4;--pink:#ff2d55;
+  --grn:#00c853;--ylw:#ffd600;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#e8e8e8;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:48px 20px 60px;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+}
+
+/* Style switcher */
+.switcher{
+  display:flex;gap:6px;margin-bottom:36px;
+  background:rgba(0,0,0,.06);border:2px solid rgba(0,0,0,.1);
+  padding:5px;border-radius:14px;
+}
+.switcher a{
+  padding:8px 18px;border-radius:10px;font-size:12px;font-weight:800;
+  text-decoration:none;color:rgba(0,0,0,.35);
+  transition:all .2s;letter-spacing:.05em;text-transform:uppercase;
+}
+.switcher a.on{background:var(--ink);color:var(--volt)}
+.switcher a:hover:not(.on){color:rgba(0,0,0,.7);background:rgba(0,0,0,.06)}
+
+/* Phone */
+.phone{
+  width:390px;height:844px;background:var(--white);
+  border-radius:52px;overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 0 0 3px var(--ink),0 30px 60px rgba(0,0,0,.3);
+}
+
+/* Status bar */
+.sb{
+  flex-shrink:0;height:50px;display:flex;
+  align-items:flex-end;justify-content:space-between;
+  padding:0 28px 10px;font-size:13px;font-weight:800;color:var(--ink);
+  position:relative;z-index:30;background:var(--white);
+}
+.notch{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:126px;height:36px;background:var(--ink);border-radius:0 0 24px 24px;
+}
+.sb-r{display:flex;gap:5px;align-items:center;font-size:12px}
+
+/* Screen area */
+.sa{flex:1;overflow:hidden;position:relative}
+.sc{
+  position:absolute;inset:0;overflow-y:auto;
+  opacity:0;pointer-events:none;transition:opacity .2s ease;padding-bottom:24px;
+}
+.sc::-webkit-scrollbar{display:none}
+.sc.on{opacity:1;pointer-events:all}
+
+/* Bottom nav */
+.bnav{
+  flex-shrink:0;height:84px;background:var(--white);
+  border-top:2.5px solid var(--ink);
+  display:flex;align-items:center;justify-content:space-around;
+  padding:0 8px 16px;
+}
+.ni{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;padding:8px 12px;
+  transition:all .15s;min-width:56px;
+  position:relative;
+}
+.ni::after{
+  content:'';position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);
+  width:0;height:3px;background:var(--ink);border-radius:2px;
+  transition:width .2s;
+}
+.ni.on::after{width:24px}
+.ni.on .ni-ic,.ni.on .ni-lb{color:var(--ink)}
+.ni-ic{font-size:20px;color:var(--ink3);transition:color .15s;line-height:1}
+.ni-lb{font-size:10px;color:var(--ink3);font-weight:800;transition:color .15s;letter-spacing:.04em;text-transform:uppercase}
+.ni-cam{
+  width:58px;height:58px;border-radius:50%;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:22px;
+  border:3px solid var(--volt);
+  transition:all .15s;margin-top:-10px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);
+}
+.ni-cam:hover{transform:scale(1.08);box-shadow:0 0 0 3px var(--volt),0 6px 20px rgba(0,0,0,.3)}
+
+/* ── HOME ─────────────────────── */
+/* Giant streak header */
+.h-top{
+  background:var(--ink);padding:24px 24px 28px;
+  position:relative;overflow:hidden;
+}
+.h-top::before{
+  content:'';position:absolute;top:-80px;right:-80px;
+  width:220px;height:220px;
+  background:var(--volt);opacity:.08;border-radius:50%;
+}
+.h-greet{font-size:11px;color:rgba(255,255,255,.45);font-weight:800;text-transform:uppercase;letter-spacing:.12em}
+.h-name{font-size:22px;font-weight:900;color:#fff;margin-top:4px;letter-spacing:-.03em}
+.streak-block{margin-top:16px;display:flex;align-items:flex-end;gap:0}
+.streak-n{font-size:88px;font-weight:900;line-height:.9;color:var(--volt);letter-spacing:-.05em}
+.streak-u{font-size:18px;font-weight:800;color:rgba(255,255,255,.6);margin-left:6px;margin-bottom:8px}
+.streak-sub{font-size:12px;color:rgba(255,255,255,.45);margin-top:6px;font-weight:600;letter-spacing:.02em}
+.streak-prog{margin-top:12px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.streak-fill{height:100%;width:73%;background:var(--volt);border-radius:2px}
+.streak-meta{display:flex;justify-content:space-between;margin-top:5px}
+.streak-meta span{font-size:10px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:.04em}
+
+/* Stats row */
+.srow{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--off2)}
+.sbox{
+  padding:16px 12px;text-align:center;
+  border-right:2px solid var(--off2);
+}
+.sbox:last-child{border-right:none}
+.sn{font-size:26px;font-weight:900;color:var(--ink);display:block;letter-spacing:-.03em}
+.sl{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;display:block;font-weight:800}
+
+/* Section headers */
+.sh{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px 12px;
+  border-bottom:2px solid var(--off2);
+}
+.sh-t{font-size:14px;font-weight:900;color:var(--ink);text-transform:uppercase;letter-spacing:.04em}
+.sh-a{font-size:11px;color:var(--ink);cursor:pointer;font-weight:800;
+  border:2px solid var(--ink);padding:4px 10px;border-radius:6px;
+  transition:all .15s;letter-spacing:.03em;
+}
+.sh-a:hover{background:var(--ink);color:#fff}
+
+/* Recent strip */
+.rstrip{display:flex;gap:3px;padding:0;overflow-x:auto;border-bottom:2px solid var(--off2)}
+.rstrip::-webkit-scrollbar{display:none}
+.rc{
+  flex-shrink:0;cursor:pointer;transition:opacity .15s;
+  position:relative;
+}
+.rc:hover{opacity:.85}
+.rc-img{
+  width:86px;height:110px;
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  position:relative;
+}
+.rc-d{
+  position:absolute;bottom:0;left:0;right:0;
+  background:rgba(0,0,0,.7);
+  padding:8px 6px 6px;font-size:9px;color:#fff;font-weight:800;
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.rc-new{
+  position:absolute;top:0;left:0;right:0;
+  background:var(--volt);color:var(--ink);font-size:9px;font-weight:900;
+  padding:3px 6px;text-transform:uppercase;letter-spacing:.05em;
+}
+
+/* Feature rows */
+.feat{
+  display:flex;align-items:center;padding:16px 24px;
+  border-bottom:2px solid var(--off2);cursor:pointer;transition:background .15s;
+}
+.feat:hover{background:var(--off)}
+.feat-num{
+  font-size:32px;font-weight:900;color:var(--off2);
+  margin-right:16px;letter-spacing:-.04em;flex-shrink:0;min-width:40px;
+  line-height:1;
+}
+.feat-body h4{font-size:14px;font-weight:900;color:var(--ink);text-transform:uppercase;letter-spacing:.03em}
+.feat-body p{font-size:12px;color:var(--ink3);margin-top:3px;font-weight:500}
+.feat-tag{
+  margin-left:auto;flex-shrink:0;
+  font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;
+  padding:4px 10px;border-radius:4px;
+}
+.feat-tag.new{background:var(--volt);color:var(--ink)}
+.feat-tag.hot{background:var(--pink);color:#fff}
+
+/* ── TIMELINE ─────────────────── */
+.tl-top{
+  background:var(--ink);padding:22px 24px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+}
+.tl-t{font-size:32px;font-weight:900;color:#fff;letter-spacing:-.04em;line-height:1}
+.tl-count{font-size:12px;color:rgba(255,255,255,.45);font-weight:800;margin-bottom:4px;text-align:right;text-transform:uppercase;letter-spacing:.05em}
+
+.chips{display:flex;gap:0;border-bottom:2px solid var(--off2);overflow-x:auto}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex-shrink:0;padding:10px 16px;font-size:11px;font-weight:800;
+  cursor:pointer;color:var(--ink3);background:var(--white);
+  border-right:2px solid var(--off2);text-transform:uppercase;letter-spacing:.05em;
+  transition:all .15s;border-bottom:none;
+}
+.chip.on{background:var(--ink);color:var(--volt)}
+.chip:last-child{border-right:none}
+
+.yrsec{padding:0}
+.yrlbl{
+  font-size:11px;font-weight:900;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.1em;
+  padding:12px 24px 10px;background:var(--off);
+  border-bottom:2px solid var(--off2);
+}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px}
+.pc{
+  aspect-ratio:3/4;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;cursor:pointer;position:relative;overflow:hidden;transition:opacity .15s;
+}
+.pc:hover{opacity:.8}
+.pclbl{
+  position:absolute;bottom:0;left:0;right:0;
+  background:var(--ink);color:#fff;
+  font-size:9px;font-weight:900;padding:3px 5px;
+  text-transform:uppercase;letter-spacing:.05em;
+}
+
+/* ── CAPTURE ─────────────────── */
+.cv{
+  width:100%;height:460px;
+  background:var(--ink);
+  position:relative;display:flex;align-items:center;justify-content:center;
+}
+/* Rule-of-thirds grid */
+.cgrid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,229,255,.12) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,.12) 1px,transparent 1px);
+  background-size:33.33% 25%;
+}
+.foval{
+  width:190px;height:240px;
+  border:2px solid var(--volt);
+  border-radius:50% 50% 46% 46%;
+  position:relative;z-index:2;
+  box-shadow:0 0 0 1px rgba(0,229,255,.2),0 0 30px rgba(0,229,255,.1);
+}
+.cscore{
+  position:absolute;top:0;right:0;z-index:3;
+  background:var(--volt);padding:10px 16px;
+}
+.cs-n{font-size:24px;font-weight:900;color:var(--ink);line-height:1}
+.cs-l{font-size:9px;color:rgba(0,0,0,.6);font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+.cprev{
+  position:absolute;bottom:0;left:0;z-index:3;
+  width:54px;height:66px;
+  border-right:2px solid var(--volt);border-top:2px solid var(--volt);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.cday{
+  position:absolute;top:0;left:0;z-index:3;
+  background:var(--ink);border-bottom:2px solid var(--volt);border-right:2px solid var(--volt);
+  padding:6px 12px;font-size:11px;font-weight:900;color:var(--volt);
+  text-transform:uppercase;letter-spacing:.06em;
+}
+
+.cctrl{background:var(--white);padding:22px 28px 20px;border-top:3px solid var(--ink)}
+.ctips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+.ctip{display:flex;align-items:center;gap:4px;padding:5px 11px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;border:2px solid}
+.ctip.ok{color:var(--grn);border-color:var(--grn);background:rgba(0,200,83,.06)}
+.ctip.warn{color:var(--ylw);border-color:var(--ylw);background:rgba(255,214,0,.06)}
+.cbtns{display:flex;align-items:center;justify-content:space-between}
+.csb{
+  width:46px;height:46px;border:2.5px solid var(--ink);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;
+  transition:all .15s;
+}
+.csb:hover{background:var(--ink);filter:invert(1)}
+.cmain{
+  width:74px;height:74px;border-radius:50%;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+  cursor:pointer;transition:all .15s;
+  box-shadow:4px 4px 0 var(--volt);
+}
+.cmain:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--volt)}
+
+/* ── INSIGHTS ─────────────────── */
+.ins-h{background:var(--ink);padding:24px}
+.ins-t{font-size:30px;font-weight:900;color:#fff;letter-spacing:-.04em;line-height:1}
+.ins-s{font-size:12px;color:rgba(255,255,255,.45);margin-top:5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+
+/* Big age number */
+.age-block{
+  border-bottom:2px solid var(--off2);
+  display:grid;grid-template-columns:1fr auto;align-items:center;
+  padding:0;
+}
+.age-left{padding:20px 24px}
+.age-lbl{font-size:10px;font-weight:900;color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.age-big{font-size:84px;font-weight:900;line-height:.9;color:var(--ink);letter-spacing:-.05em}
+.age-tag{
+  margin-top:10px;display:inline-block;
+  background:var(--grn);color:#fff;
+  font-size:11px;font-weight:900;padding:4px 12px;
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.age-right{
+  background:var(--volt);width:100px;align-self:stretch;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:16px 8px;
+}
+.ar-n{font-size:32px;font-weight:900;color:var(--ink);line-height:1}
+.ar-l{font-size:9px;font-weight:900;color:rgba(0,0,0,.6);text-transform:uppercase;letter-spacing:.05em;text-align:center;margin-top:4px}
+
+/* Metrics */
+.metric-row{
+  display:flex;align-items:stretch;border-bottom:2px solid var(--off2);
+}
+.mr-label{
+  padding:14px 24px;flex:1;
+  font-size:14px;font-weight:800;color:var(--ink);
+  text-transform:uppercase;letter-spacing:.03em;
+  border-right:2px solid var(--off2);
+  display:flex;align-items:center;
+}
+.mr-bar-wrap{
+  width:120px;padding:14px 16px;display:flex;align-items:center;
+  border-right:2px solid var(--off2);
+}
+.mr-bar{height:8px;background:var(--off2);border-radius:0;flex:1}
+.mr-fill{height:100%;border-radius:0;transition:width .8s ease}
+.mr-val{
+  width:56px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:900;color:var(--ink);
+}
+
+/* Chart section */
+.chart-sec{padding:20px 24px;border-bottom:2px solid var(--off2)}
+.chart-lbl{font-size:10px;font-weight:900;color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+.cbars{display:flex;gap:3px;align-items:flex-end;height:72px}
+.cb{flex:1;border-radius:0;transition:opacity .15s;cursor:pointer;border-top:2px solid transparent}
+.cb:hover{opacity:.75;border-color:var(--ink)}
+.cxlbl{display:flex;justify-content:space-between;margin-top:6px}
+.cxlbl span{font-size:9px;color:var(--ink3);font-weight:800}
+
+/* Journal */
+.journal-sec{padding:20px 24px}
+.j-lbl{font-size:10px;font-weight:900;color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+.jentry{
+  border-left:3px solid var(--ink);padding-left:14px;
+  margin-bottom:16px;
+}
+.je-dt{font-size:10px;font-weight:900;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.je-tx{font-size:13px;color:var(--ink2);line-height:1.5;font-weight:500}
+.je-mo{font-size:11px;font-weight:800;color:var(--ink);margin-top:6px;text-transform:uppercase;letter-spacing:.04em}
+.add-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:14px 20px;
+  background:var(--ink);border:none;
+  font-size:12px;font-weight:900;color:var(--volt);cursor:pointer;
+  text-transform:uppercase;letter-spacing:.06em;
+  transition:all .15s;box-shadow:3px 3px 0 var(--volt);width:100%;
+}
+.add-btn:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--volt)}
+
+/* ── PROFILE ─────────────────── */
+.pf-h{
+  background:var(--ink);padding:22px 24px;
+  border-bottom:3px solid var(--volt);
+}
+.pf-t{font-size:30px;font-weight:900;color:#fff;letter-spacing:-.04em}
+
+.pcard{
+  display:flex;align-items:center;padding:18px 24px;
+  border-bottom:2px solid var(--off2);gap:14px;
+}
+.pav{
+  width:56px;height:56px;border-radius:0;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+  border:2px solid var(--volt);
+}
+.pi h3{font-size:16px;font-weight:900;color:var(--ink);text-transform:uppercase;letter-spacing:.03em}
+.pi p{font-size:11px;color:var(--ink3);margin-top:2px;font-weight:600}
+.pbdg{
+  margin-left:auto;background:var(--ink);
+  color:var(--volt);font-size:10px;font-weight:900;
+  padding:5px 12px;letter-spacing:.06em;text-transform:uppercase;
+  border:2px solid var(--volt);flex-shrink:0;
+}
+
+.sg{padding:0}
+.sglbl{
+  font-size:9px;font-weight:900;color:var(--ink3);text-transform:uppercase;letter-spacing:.12em;
+  padding:8px 24px;background:var(--off);border-bottom:2px solid var(--off2);
+}
+.si{
+  display:flex;align-items:center;padding:14px 24px;
+  border-bottom:2px solid var(--off2);cursor:pointer;transition:background .15s;
+}
+.si:hover{background:var(--off)}
+.si-ic{font-size:15px;margin-right:12px}
+.si-lb{font-size:13px;color:var(--ink);flex:1;font-weight:700}
+.si-vl{font-size:12px;color:var(--ink3);font-weight:700}
+.tog{
+  width:38px;height:22px;border-radius:0;background:var(--ink);
+  position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;
+  border:2px solid var(--ink);
+}
+.tog::after{
+  content:'';position:absolute;width:14px;height:14px;border-radius:0;
+  background:var(--volt);top:2px;right:2px;transition:all .2s;
+}
+.tog.off{background:var(--off2);border-color:var(--off2)}
+.tog.off::after{background:var(--ink3);right:auto;left:2px}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <a href="agelapse-ui-1-void.html">① Void · Dark</a>
+  <a href="agelapse-ui-2-amber.html">② Amber · Warm</a>
+  <a href="agelapse-ui-3-volt.html" class="on">③ Volt · Bold</a>
+</div>
+
+<div class="phone">
+  <div class="sb">
+    <span>9:41</span>
+    <div class="notch"></div>
+    <div class="sb-r">
+      <svg width="16" height="12" fill="none"><rect x="0" y="4" width="3" height="8" rx="0" fill="rgba(10,10,10,.9)"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="0" fill="rgba(10,10,10,.9)"/><rect x="9" y="0" width="3" height="12" rx="0" fill="rgba(10,10,10,.9)"/><rect x="13.5" y="1" width="2.5" height="10" rx="0" fill="rgba(10,10,10,.25)"/></svg>
+      <svg width="15" height="12" fill="rgba(10,10,10,.9)"><path d="M7.5 2.8C5 2.8 2.8 4 1.2 5.8L0 4.5C2 2.3 4.6.9 7.5.9s5.5 1.4 7.5 3.6L13.8 5.8C12.2 4 10 2.8 7.5 2.8z"/><path d="M7.5 5.6C5.9 5.6 4.5 6.3 3.5 7.4L2.3 6.1C3.6 4.7 5.4 3.8 7.5 3.8s3.9.9 5.2 2.3L11.5 7.4C10.5 6.3 9.1 5.6 7.5 5.6z"/><circle cx="7.5" cy="10" r="1.5"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="0" stroke="rgba(10,10,10,.4)" stroke-width="1.5" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="0" fill="rgba(10,10,10,.4)"/><rect x="1.5" y="2.5" width="16" height="7" rx="0" fill="rgba(10,10,10,.9)"/></svg>
+    </div>
+  </div>
+
+  <div class="sa">
+    <!-- HOME -->
+    <div class="sc on" id="s-home">
+      <div class="h-top">
+        <div class="h-greet">Good morning</div>
+        <div class="h-name">ALEX RIVERA</div>
+        <div class="streak-block">
+          <span class="streak-n">847</span><span class="streak-u">DAYS</span>
+        </div>
+        <div class="streak-sub">LONGEST STREAK EVER · PERSONAL BEST 🔥</div>
+        <div class="streak-prog"><div class="streak-fill"></div></div>
+        <div class="streak-meta"><span>NEXT MILESTONE: 1,000 DAYS</span><span>73% THERE</span></div>
+      </div>
+      <div class="srow">
+        <div class="sbox"><span class="sn">2.4K</span><span class="sl">Photos</span></div>
+        <div class="sbox"><span class="sn">6</span><span class="sl">Videos</span></div>
+        <div class="sbox"><span class="sn">7YR</span><span class="sl">Span</span></div>
+      </div>
+      <div class="rstrip">
+        <div class="rc">
+          <div class="rc-img" style="background:#1a1a2e"><div class="rc-new">NEW</div>🧑<div class="rc-d">TODAY</div></div>
+        </div>
+        <div class="rc"><div class="rc-img" style="background:#16213e">🧑<div class="rc-d">MAY 14</div></div></div>
+        <div class="rc"><div class="rc-img" style="background:#0f3460">🧑<div class="rc-d">MAY 7</div></div></div>
+        <div class="rc"><div class="rc-img" style="background:#533483">🧑<div class="rc-d">APR 30</div></div></div>
+      </div>
+      <div class="feat" onclick="showS('insights')">
+        <span class="feat-num">01</span>
+        <div class="feat-body">
+          <h4>AI Face Insights</h4>
+          <p>Weekly analysis ready — symmetry up 2.3%</p>
+        </div>
+        <span class="feat-tag new">New</span>
+      </div>
+      <div class="feat" onclick="showS('insights')">
+        <span class="feat-num">02</span>
+        <div class="feat-body">
+          <h4>Time Capsule</h4>
+          <p>3 journal entries this month</p>
+        </div>
+        <span class="feat-tag hot">Hot</span>
+      </div>
+      <div class="feat" onclick="showS('timeline')">
+        <span class="feat-num">03</span>
+        <div class="feat-body">
+          <h4>Create Timelapse</h4>
+          <p>Export your 7-year journey</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="sc" id="s-timeline">
+      <div class="tl-top">
+        <div class="tl-t">TIMELINE</div>
+        <div>
+          <div class="tl-count">2,412 PHOTOS</div>
+          <div class="tl-count">JAN 2019 – NOW</div>
+        </div>
+      </div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip">2025</div>
+        <div class="chip">2024</div>
+        <div class="chip">2023</div>
+        <div class="chip">2022</div>
+        <div class="chip">2021</div>
+      </div>
+      <div class="yrsec">
+        <div class="yrlbl">2025 / 142 PHOTOS</div>
+        <div class="pgrid" id="g2025"></div>
+      </div>
+      <div class="yrsec">
+        <div class="yrlbl">2024 / 366 PHOTOS</div>
+        <div class="pgrid" id="g2024"></div>
+      </div>
+      <div class="yrsec">
+        <div class="yrlbl">2023 / 365 PHOTOS</div>
+        <div class="pgrid" id="g2023"></div>
+      </div>
+    </div>
+
+    <!-- CAPTURE -->
+    <div class="sc" id="s-capture">
+      <div class="cv">
+        <div class="cgrid"></div>
+        <div class="foval"></div>
+        <div class="cscore"><div class="cs-n">94%</div><div class="cs-l">Aligned</div></div>
+        <div class="cprev" style="background:#1a1a2e">🧑</div>
+        <div class="cday">DAY 847</div>
+      </div>
+      <div class="cctrl">
+        <div class="ctips">
+          <div class="ctip ok">✓ CENTERED</div>
+          <div class="ctip ok">✓ LIGHTING</div>
+          <div class="ctip warn">⚠ TILT LEFT</div>
+        </div>
+        <div class="cbtns">
+          <div class="csb">🖼</div>
+          <div class="cmain">📸</div>
+          <div class="csb">🔄</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="sc" id="s-insights">
+      <div class="ins-h">
+        <div class="ins-t">INSIGHTS</div>
+        <div class="ins-s">2,412 PHOTOS · 7 YEARS · AI POWERED</div>
+      </div>
+      <div class="age-block">
+        <div class="age-left">
+          <div class="age-lbl">Apparent Age</div>
+          <div class="age-big">28</div>
+          <div class="age-tag">−2 YRS YOUNGER</div>
+        </div>
+        <div class="age-right">
+          <div class="ar-n">↑2.3</div>
+          <div class="ar-l">Symmetry this week</div>
+        </div>
+      </div>
+      <div class="metric-row">
+        <span class="mr-label">Symmetry</span>
+        <div class="mr-bar-wrap"><div class="mr-bar"><div class="mr-fill" style="width:87%;background:var(--volt)"></div></div></div>
+        <div class="mr-val" style="color:var(--volt2)">87.4</div>
+      </div>
+      <div class="metric-row">
+        <span class="mr-label">Skin</span>
+        <div class="mr-bar-wrap"><div class="mr-bar"><div class="mr-fill" style="width:72%;background:var(--ylw)"></div></div></div>
+        <div class="mr-val" style="color:#c8a800">72.1</div>
+      </div>
+      <div class="metric-row">
+        <span class="mr-label">Happiness</span>
+        <div class="mr-bar-wrap"><div class="mr-bar"><div class="mr-fill" style="width:81%;background:var(--grn)"></div></div></div>
+        <div class="mr-val" style="color:var(--grn)">81.0</div>
+      </div>
+      <div class="chart-sec">
+        <div class="chart-lbl">Symmetry Score · 7 Year History</div>
+        <div class="cbars" id="chart"></div>
+        <div class="cxlbl"><span>2019</span><span>2020</span><span>2021</span><span>2022</span><span>2023</span><span>2024</span><span>2025</span></div>
+      </div>
+      <div class="journal-sec">
+        <div class="j-lbl">Time Capsule · Journal</div>
+        <div class="jentry">
+          <div class="je-dt">MAY 14, 2025</div>
+          <div class="je-tx">Started new workout routine. Feeling more energized and motivated lately.</div>
+          <div class="je-mo">😊 HAPPY · ENERGIZED</div>
+        </div>
+        <div class="jentry">
+          <div class="je-dt">APR 2, 2025</div>
+          <div class="je-tx">Got a new haircut! Big change — curious what future me will think.</div>
+          <div class="je-mo">😄 EXCITED · CURIOUS</div>
+        </div>
+        <div class="jentry" style="margin-bottom:16px">
+          <div class="je-dt">MAR 15, 2025</div>
+          <div class="je-tx">Back from 3-week Japan trip. Sun exposure shows in this month's photos.</div>
+          <div class="je-mo">😌 REFLECTIVE · RESTED</div>
+        </div>
+        <div class="add-btn">+ ADD JOURNAL ENTRY</div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="sc" id="s-profile">
+      <div class="pf-h"><div class="pf-t">PROFILE</div></div>
+      <div class="pcard">
+        <div class="pav">🧑</div>
+        <div class="pi"><h3>Alex Rivera</h3><p>Member since Jan 2019 · 7 yrs</p></div>
+        <div class="pbdg">PRO</div>
+      </div>
+      <div class="sg">
+        <div class="sglbl">Capture Settings</div>
+        <div class="si"><span class="si-ic">⏰</span><span class="si-lb">Daily Reminder</span><span class="si-vl">9:00 AM</span></div>
+        <div class="si"><span class="si-ic">📐</span><span class="si-lb">Alignment Mode</span><span class="si-vl">Strict</span></div>
+        <div class="si"><span class="si-ic">📦</span><span class="si-lb">Photo Quality</span><span class="si-vl">4K RAW</span></div>
+        <div class="si"><span class="si-ic">🔔</span><span class="si-lb">Missed Day Alert</span><div class="tog"></div></div>
+      </div>
+      <div class="sg">
+        <div class="sglbl">Features</div>
+        <div class="si"><span class="si-ic">🧬</span><span class="si-lb">AI Face Analysis</span><div class="tog"></div></div>
+        <div class="si"><span class="si-ic">📔</span><span class="si-lb">Daily Journal</span><div class="tog"></div></div>
+        <div class="si"><span class="si-ic">🕰</span><span class="si-lb">Time Capsule Reveals</span><div class="tog"></div></div>
+        <div class="si"><span class="si-ic">👥</span><span class="si-lb">Share Timeline</span><div class="tog off"></div></div>
+      </div>
+      <div class="sg">
+        <div class="sglbl">Export</div>
+        <div class="si"><span class="si-ic">🎬</span><span class="si-lb">Create Timelapse Video</span><span class="si-vl">›</span></div>
+        <div class="si"><span class="si-ic">☁️</span><span class="si-lb">Cloud Backup</span><span class="si-vl">›</span></div>
+        <div class="si"><span class="si-ic">📤</span><span class="si-lb">Export All Photos</span><span class="si-vl">›</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bnav">
+    <div class="ni on" id="n-home" onclick="showS('home')">
+      <svg class="ni-ic" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="ni-lb">Home</span>
+    </div>
+    <div class="ni" id="n-timeline" onclick="showS('timeline')">
+      <svg class="ni-ic" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+      <span class="ni-lb">Timeline</span>
+    </div>
+    <div class="ni-cam" onclick="showS('capture')">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/><circle cx="12" cy="13" r="3"/></svg>
+    </div>
+    <div class="ni" id="n-insights" onclick="showS('insights')">
+      <svg class="ni-ic" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      <span class="ni-lb">Insights</span>
+    </div>
+    <div class="ni" id="n-profile" onclick="showS('profile')">
+      <svg class="ni-ic" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span class="ni-lb">Me</span>
+    </div>
+  </div>
+</div>
+
+<script>
+function showS(name){
+  document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  const s=document.getElementById('s-'+name);
+  if(s)s.classList.add('on');
+  const n=document.getElementById('n-'+name);
+  if(n)n.classList.add('on');
+}
+
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function makeGrid(id,palettes,count){
+  const el=document.getElementById(id);
+  if(!el)return;
+  let h='';
+  for(let i=0;i<count;i++){
+    const pal=palettes[i%palettes.length];
+    const m=months[Math.floor(i*12/count)],d=(i%28)+1;
+    h+=`<div class="pc" style="background:${pal[0]}"><span style="font-size:18px">🧑</span><span class="pclbl">${m} ${d}</span></div>`;
+  }
+  el.innerHTML=h;
+}
+const p1=[['#0d1b2a'],['#1b2838'],['#2d3a4a'],['#1a1a2e'],['#16213e'],['#0f3460'],['#533483'],['#1b1b2f'],['#2c2c54']];
+makeGrid('g2025',p1,18);
+makeGrid('g2024',p1,21);
+makeGrid('g2023',p1,21);
+
+const vals=[38,46,44,55,58,52,65,70,72,78,82,85,88,84,90,88,92];
+const chart=document.getElementById('chart');
+if(chart)chart.innerHTML=vals.map(v=>`<div class="cb" style="height:${v}%;background:rgba(0,229,255,0.9)"></div>`).join('');
+
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',function(){
+    this.closest('.chips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    this.classList.add('on');
+  });
+});
+
+document.querySelectorAll('.tog').forEach(t=>{
+  t.addEventListener('click',function(){this.classList.toggle('off')});
+});
+</script>
+</body>
+</html>
