@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Westrade — Modern</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0a0a0f; --panel:#11121a; --panel-2:#171823; --line:#1d1f2c; --line-2:#272a3a;
+    --fg:#f4f5fa; --mute:#8a8fa3; --green:#22c55e; --red:#f43f5e; --blue:#6366f1; --violet:#a855f7; --amber:#f59e0b;
+    --grad: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'Geist Mono',ui-monospace,monospace}
+
+  /* ambient glow */
+  body::before{
+    content:"";position:fixed;inset:-100px;z-index:-1;
+    background:
+      radial-gradient(600px 400px at 10% -10%, rgba(99,102,241,.18), transparent 60%),
+      radial-gradient(700px 500px at 100% 110%, rgba(236,72,153,.10), transparent 60%);
+    pointer-events:none;
+  }
+
+  /* layout */
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  aside{padding:20px 14px;border-right:1px solid var(--line)}
+  main{padding:24px 32px}
+
+  /* brand */
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:-.01em;margin-bottom:24px}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 6px 20px -6px #6366f1aa}
+
+  /* nav */
+  nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--mute);text-decoration:none;font-weight:500;font-size:13px;transition:all .15s}
+  nav a:hover{background:#1a1c28;color:var(--fg)}
+  nav a.active{background:#1a1c28;color:var(--fg)}
+  nav a.active .ico{color:#a855f7}
+  nav .group{font-size:10px;color:#525870;text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin:18px 10px 6px}
+  .ico{width:16px;height:16px;flex-shrink:0;opacity:.9}
+
+  /* user card bottom */
+  .user{margin-top:auto;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px;display:flex;gap:10px;align-items:center}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px}
+  .user .name{font-size:13px;font-weight:600}
+  .user .sub{font-size:11px;color:var(--mute)}
+
+  /* header */
+  header.top{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+  header h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.02em}
+  header .sub{color:var(--mute);font-size:13px;margin-top:2px}
+  .spacer{flex:1}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(34,197,94,.1);color:var(--green);font-size:11px;font-weight:600;border:1px solid rgba(34,197,94,.25)}
+  .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;background:var(--grad);color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;box-shadow:0 8px 20px -10px #6366f1cc;transition:transform .15s, box-shadow .15s}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px #6366f1cc}
+  .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line-2);box-shadow:none}
+  .btn.ghost:hover{background:#1a1c28;border-color:#3a3d51}
+  .btn.danger{background:linear-gradient(135deg,#f43f5e,#ec4899)}
+
+  /* metric grid */
+  .grid{display:grid;gap:16px}
+  .g-4{grid-template-columns:repeat(4,1fr)}
+  .g-3{grid-template-columns:2fr 1fr 1fr}
+  .g-2{grid-template-columns:2fr 1fr}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;position:relative;overflow:hidden;transition:border .2s, transform .2s}
+  .card:hover{border-color:var(--line-2)}
+  .card .l{font-size:12px;color:var(--mute);font-weight:500}
+  .card .v{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:6px}
+  .card .delta{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px}
+  .delta.up{color:var(--green);background:rgba(34,197,94,.12)}
+  .delta.down{color:var(--red);background:rgba(244,63,94,.12)}
+
+  .card .icon-circle{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(99,102,241,.12);color:#a5a8ff}
+
+  /* chart card */
+  .chart-card{padding:22px}
+  .chart-card .ttl{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  .chart-card .ttl h3{margin:0;font-size:14px;font-weight:600}
+  .chart-card .ttl .v{font-family:'Geist Mono',monospace;font-size:24px;font-weight:700;letter-spacing:-.02em}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--mute);margin-top:6px}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .tabs{display:flex;gap:2px;background:#1a1c28;border-radius:8px;padding:3px;font-size:11px}
+  .tabs span{padding:5px 10px;border-radius:5px;color:var(--mute);cursor:pointer;font-weight:500}
+  .tabs span.on{background:var(--panel-2);color:var(--fg);box-shadow:0 1px 0 rgba(255,255,255,.04)}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  td.right,th.right{text-align:right}
+  td.sym{font-weight:600}
+  .chip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600}
+  .chip.long{background:rgba(34,197,94,.12);color:var(--green)}
+  .chip.short{background:rgba(244,63,94,.12);color:var(--red)}
+
+  /* progress ring */
+  .ring{position:relative;width:120px;height:120px;margin:auto}
+  .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring .bg{fill:none;stroke:#1d1f2c;stroke-width:10}
+  .ring .fg{fill:none;stroke:url(#g);stroke-width:10;stroke-linecap:round;stroke-dasharray:339.292;stroke-dashoffset:75}
+  .ring .lbl{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+  .ring .lbl .num{font-size:24px;font-weight:700;letter-spacing:-.02em}
+  .ring .lbl .sub{font-size:11px;color:var(--mute)}
+
+  /* alerts list */
+  .alert{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .alert:last-child{border:none}
+  .alert .dotc{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+  .alert.info .dotc{background:var(--blue)} .alert.warn .dotc{background:var(--amber)} .alert.err .dotc{background:var(--red)}
+  .alert .ttl{font-size:13px;font-weight:500}
+  .alert .meta{font-size:11px;color:var(--mute);margin-top:2px}
+
+  /* mini sparks */
+  .spark{height:30px;width:100%}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside style="display:flex;flex-direction:column">
+    <div class="brand"><div class="logo">W</div> Westrade</div>
+    <nav style="display:flex;flex-direction:column;gap:2px;flex:1">
+      <a class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>Trades</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2 12 22 M2 12 22 12"/></svg>Portfolio</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 4 9 8 10 4-1 8-5 8-10V6z"/></svg>Risk Engine</a>
+      <div class="group">AI</div>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5"/></svg>Brain Gym</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg>Bot Feed</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2 M12 20v2 M2 12h2 M20 12h2"/></svg>Auto-Tuner</a>
+      <div class="group">System</div>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>Connections</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></svg>Alerts</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12c0-.5 0-1-.1-1.5l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2.6-1.5L13.5 3h-3l-.4 2A7 7 0 0 0 7.5 6.5l-2.4-1-2 3.5 2 1.5"/></svg>Settings</a>
+    </nav>
+    <div class="user">
+      <div class="avatar">IL</div>
+      <div style="flex:1;min-width:0">
+        <div class="name">Ilyes</div>
+        <div class="sub">Pro · Live MT5</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--mute)"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div>
+        <h1>Good evening, Ilyes</h1>
+        <div class="sub">Friday, May 17 · Session 06:42:11</div>
+      </div>
+      <div class="spacer"></div>
+      <span class="badge"><span class="dot"></span> Engine running</span>
+      <button class="btn ghost">⏸  Pause</button>
+      <button class="btn">+ New strategy</button>
+    </header>
+
+    <!-- metric cards -->
+    <div class="grid g-4" style="margin-bottom:16px">
+      <div class="card">
+        <div class="icon-circle">$</div>
+        <div class="l">Equity</div>
+        <div class="v mono">$14,231.50</div>
+        <span class="delta up">▲ +$420.18 (3.04%)</span>
+      </div>
+      <div class="card">
+        <div class="icon-circle" style="background:rgba(34,197,94,.12);color:#86efac">📈</div>
+        <div class="l">Daily P&L</div>
+        <div class="v mono" style="color:var(--green)">+$420.18</div>
+        <span class="delta up">▲ 70% to target</span>
+      </div>
+      <div class="card">
+        <div class="icon-circle" style="background:rgba(168,85,247,.12);color:#d8b4fe">⚡</div>
+        <div class="l">Sharpe ratio</div>
+        <div class="v mono">1.62</div>
+        <span class="delta up">Target 1.5 ✓</span>
+      </div>
+      <div class="card">
+        <div class="icon-circle" style="background:rgba(244,63,94,.12);color:#fda4af">⚠</div>
+        <div class="l">Max drawdown</div>
+        <div class="v mono">−4.21%</div>
+        <span class="delta down">Risk 28/100</span>
+      </div>
+    </div>
+
+    <!-- Main chart + risk ring -->
+    <div class="grid g-2" style="margin-bottom:16px">
+      <div class="card chart-card">
+        <div class="ttl">
+          <div>
+            <h3>Equity curve</h3>
+            <div class="legend"><span><i style="background:#22c55e"></i>Equity</span><span><i style="background:#6366f1"></i>Benchmark</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="v mono">$14,231.50</div>
+            <div class="tabs" style="margin-top:6px"><span>1H</span><span class="on">24H</span><span>7D</span><span>30D</span><span>ALL</span></div>
+          </div>
+        </div>
+        <svg viewBox="0 0 800 260" style="width:100%;height:260px">
+          <defs>
+            <linearGradient id="grad-eq" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#22c55e" stop-opacity=".4"/>
+              <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#ec4899"/>
+            </linearGradient>
+          </defs>
+          <g stroke="#1d1f2c" stroke-dasharray="2 4"><line x1="0" x2="800" y1="60" y2="60"/><line x1="0" x2="800" y1="120" y2="120"/><line x1="0" x2="800" y1="180" y2="180"/></g>
+          <path d="M0,200 L60,190 L120,195 L180,160 L240,170 L300,135 L360,148 L420,108 L480,118 L540,80 L600,90 L660,55 L720,62 L800,38 L800,260 L0,260 Z" fill="url(#grad-eq)"/>
+          <path d="M0,200 L60,190 L120,195 L180,160 L240,170 L300,135 L360,148 L420,108 L480,118 L540,80 L600,90 L660,55 L720,62 L800,38" fill="none" stroke="#22c55e" stroke-width="2.2"/>
+          <path d="M0,210 L120,200 L240,188 L360,170 L480,148 L600,130 L720,108 L800,90" fill="none" stroke="#6366f1" stroke-width="1.6" stroke-dasharray="4 4" opacity=".7"/>
+          <circle cx="800" cy="38" r="5" fill="#22c55e"/>
+          <circle cx="800" cy="38" r="12" fill="none" stroke="#22c55e" stroke-opacity=".35"><animate attributeName="r" values="8;16;8" dur="1.8s" repeatCount="indefinite"/></circle>
+        </svg>
+      </div>
+
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+        <h3 style="margin:0 0 0;font-size:14px;align-self:flex-start">Daily target</h3>
+        <div class="ring">
+          <svg viewBox="0 0 120 120">
+            <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#22c55e"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+            <circle class="bg" cx="60" cy="60" r="54"/>
+            <circle class="fg" cx="60" cy="60" r="54"/>
+          </svg>
+          <div class="lbl"><div><div class="num mono">70%</div><div class="sub">of $600</div></div></div>
+        </div>
+        <div style="display:flex;gap:18px;width:100%;justify-content:center;font-size:12px">
+          <div style="text-align:center"><div class="mono" style="font-weight:700;color:var(--green)">+$420</div><div style="color:var(--mute);font-size:11px">Realized</div></div>
+          <div style="text-align:center"><div class="mono" style="font-weight:700">$180</div><div style="color:var(--mute);font-size:11px">Remaining</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open positions + alerts -->
+    <div class="grid g-2">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h3 style="margin:0;font-size:14px;font-weight:600">Open positions</h3>
+          <span style="color:var(--mute);font-size:12px">3 active</span>
+        </div>
+        <table>
+          <thead><tr><th>Symbol</th><th>Side</th><th class="right">Qty</th><th class="right">Entry</th><th class="right">Mark</th><th class="right">P&L</th></tr></thead>
+          <tbody>
+            <tr><td class="sym">EURUSD</td><td><span class="chip long">Long</span></td><td class="right mono">0.50</td><td class="right mono">1.0823</td><td class="right mono">1.0874</td><td class="right mono" style="color:var(--green);font-weight:600">+$255.00</td></tr>
+            <tr><td class="sym">XAUUSD</td><td><span class="chip long">Long</span></td><td class="right mono">0.20</td><td class="right mono">2,318.00</td><td class="right mono">2,341.20</td><td class="right mono" style="color:var(--green);font-weight:600">+$460.00</td></tr>
+            <tr><td class="sym">GBPUSD</td><td><span class="chip short">Short</span></td><td class="right mono">0.30</td><td class="right mono">1.2702</td><td class="right mono">1.2711</td><td class="right mono" style="color:var(--red);font-weight:600">−$27.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h3 style="margin:0;font-size:14px;font-weight:600">Activity</h3>
+          <a style="color:var(--blue);font-size:12px;text-decoration:none">View all →</a>
+        </div>
+        <div class="alert info"><div class="dotc"></div><div><div class="ttl">Brain identified mean-rev on EURUSD</div><div class="meta">6:42 PM · entered 0.5 lot long</div></div></div>
+        <div class="alert info"><div class="dotc"></div><div><div class="ttl">Auto-Tuner raised correlation cap → 0.60</div><div class="meta">6:38 PM</div></div></div>
+        <div class="alert warn"><div class="dotc"></div><div><div class="ttl">Slippage on GBPUSD entry +0.8 pips</div><div class="meta">6:31 PM</div></div></div>
+        <div class="alert info"><div class="dotc"></div><div><div class="ttl">XAU trail closed at +99 pips</div><div class="meta">6:22 PM · +$460</div></div></div>
+        <div class="alert err"><div class="dotc"></div><div><div class="ttl">Carry strategy disabled (sharpe 0.3)</div><div class="meta">6:14 PM</div></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

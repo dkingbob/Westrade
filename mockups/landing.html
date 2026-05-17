@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Westrade — Trade smarter</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0a0a14;
+    --bg-2:#0f1020;
+    --fg:#f4f5fa;
+    --mute:#9aa0b8;
+    --line:rgba(255,255,255,.08);
+    --grad:linear-gradient(135deg,#5b6cff 0%,#a855f7 50%,#ec4899 100%);
+    --grad-2:linear-gradient(135deg,#22c55e,#06b6d4);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .mono{font-family:'Geist Mono',ui-monospace,monospace}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#a855f7;color:#fff}
+
+  /* ambient gradient blobs */
+  .ambient{position:fixed;inset:-200px;z-index:-1;pointer-events:none;overflow:hidden}
+  .blob{position:absolute;width:700px;height:700px;border-radius:50%;filter:blur(120px);opacity:.35;animation:float 18s ease-in-out infinite}
+  .b1{background:#5b6cff;top:-200px;left:-100px}
+  .b2{background:#ec4899;top:300px;right:-200px;animation-delay:-6s}
+  .b3{background:#22c55e;top:1100px;left:30%;animation-delay:-12s;opacity:.18}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(80px,-60px) scale(1.1)}66%{transform:translate(-60px,80px) scale(.9)}}
+
+  /* nav */
+  nav.top{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(10,10,20,.65);border-bottom:1px solid var(--line);transition:all .3s}
+  .nav-in{max-width:1200px;margin:auto;padding:14px 28px;display:flex;align-items:center;gap:28px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.01em}
+  .brand .logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 6px 24px -4px #5b6cffaa}
+  nav.top a.l{color:var(--mute);font-size:14px;font-weight:500;transition:color .2s;position:relative}
+  nav.top a.l:hover{color:var(--fg)}
+  nav.top a.l::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--grad);border-radius:2px;transform:scaleX(0);transform-origin:left;transition:transform .25s}
+  nav.top a.l:hover::after{transform:scaleX(1)}
+  .nav-cta{margin-left:auto;display:flex;gap:12px;align-items:center}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:10px;font-weight:600;font-size:14px;border:none;cursor:pointer;transition:transform .2s, box-shadow .2s, background .2s}
+  .btn-primary{background:var(--grad);color:#fff;box-shadow:0 12px 30px -10px #a855f7aa}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 20px 40px -10px #a855f7cc}
+  .btn-ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+  .btn-ghost:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18)}
+  .btn-lg{padding:15px 28px;font-size:15px;border-radius:12px}
+  .btn .arrow{transition:transform .25s}
+  .btn:hover .arrow{transform:translateX(4px)}
+
+  /* hero */
+  .hero{padding:140px 28px 80px;text-align:center;max-width:1100px;margin:auto;position:relative}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:13px;color:var(--mute);margin-bottom:24px;transition:all .25s}
+  .eyebrow:hover{background:rgba(255,255,255,.08);transform:translateY(-1px)}
+  .eyebrow .new{background:var(--grad);color:#fff;font-weight:600;font-size:10px;padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+  h1.hero-h{font-size:clamp(40px,7vw,84px);line-height:1.02;letter-spacing:-.035em;font-weight:800;margin:0 0 18px}
+  h1.hero-h .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 200%;animation:hue 6s linear infinite}
+  @keyframes hue{to{background-position:200% 0}}
+  .hero p.sub{font-size:clamp(17px,2vw,21px);color:var(--mute);max-width:680px;margin:0 auto 36px;line-height:1.5}
+  .hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .trust{margin-top:60px;color:var(--mute);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+  .trust-logos{display:flex;justify-content:center;gap:50px;margin-top:18px;flex-wrap:wrap;font-size:18px;font-weight:600;opacity:.5}
+
+  /* product preview (animated tilt) */
+  .preview{max-width:1100px;margin:60px auto 0;padding:0 28px;perspective:2000px}
+  .preview .frame{transform:rotateX(8deg) rotateY(-3deg);transform-style:preserve-3d;transition:transform .8s cubic-bezier(.2,.7,.2,1);border-radius:16px;border:1px solid var(--line);overflow:hidden;background:linear-gradient(180deg,#0f1020,#0a0a14);box-shadow:0 60px 120px -30px rgba(91,108,255,.4), 0 30px 60px -20px rgba(168,85,247,.3)}
+  .preview .frame:hover{transform:rotateX(2deg) rotateY(0deg) scale(1.02)}
+  .preview .titlebar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#0d0e1c;border-bottom:1px solid var(--line)}
+  .preview .titlebar .dot{width:11px;height:11px;border-radius:50%}
+  .preview .titlebar .dot.r{background:#ff5774} .preview .titlebar .dot.y{background:#ffb86b} .preview .titlebar .dot.g{background:#3ddc97}
+  .preview .titlebar .url{margin-left:14px;font-family:'Geist Mono',monospace;font-size:12px;color:var(--mute);background:#0a0a14;padding:5px 12px;border-radius:6px;border:1px solid var(--line)}
+  .preview .body{padding:24px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .mini{background:#11121e;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .mini .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.1em}
+  .mini .v{font-size:22px;font-weight:700;margin-top:6px}
+  .mini .v.up{color:#22c55e}
+  .preview .chart{grid-column:1/-1;height:200px;background:#11121e;border:1px solid var(--line);border-radius:12px;padding:14px}
+
+  /* sections */
+  section{padding:120px 28px;position:relative}
+  .container{max-width:1100px;margin:auto}
+  h2{font-size:clamp(32px,4.5vw,52px);letter-spacing:-.025em;font-weight:800;line-height:1.1;margin:0 0 18px}
+  h2 .grad{background:var(--grad-2);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{font-size:18px;color:var(--mute);max-width:560px;line-height:1.55}
+  .section-head{margin-bottom:64px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:end}
+
+  /* features grid with hover */
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .feature{position:relative;padding:28px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid var(--line);overflow:hidden;transition:transform .3s, border-color .3s, background .3s;cursor:pointer}
+  .feature::before{content:"";position:absolute;inset:0;background:radial-gradient(400px circle at var(--x,50%) var(--y,0%), rgba(168,85,247,.18), transparent 40%);opacity:0;transition:opacity .3s;pointer-events:none}
+  .feature:hover{transform:translateY(-4px);border-color:rgba(168,85,247,.4);background:rgba(255,255,255,.04)}
+  .feature:hover::before{opacity:1}
+  .feature .ico-box{width:42px;height:42px;border-radius:11px;background:rgba(91,108,255,.14);border:1px solid rgba(91,108,255,.3);display:grid;place-items:center;color:#a8b1ff;margin-bottom:18px;transition:transform .25s}
+  .feature:hover .ico-box{transform:rotate(-6deg) scale(1.08)}
+  .feature h3{margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-.01em}
+  .feature p{margin:0;color:var(--mute);font-size:14px;line-height:1.5}
+
+  /* stats strip */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:60px;border-radius:24px;background:linear-gradient(180deg,rgba(91,108,255,.12),rgba(168,85,247,.04));border:1px solid rgba(168,85,247,.18);position:relative;overflow:hidden}
+  .stats::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 200px at 30% 0%, rgba(91,108,255,.25), transparent);pointer-events:none}
+  .stat .n{font-size:48px;font-weight:800;letter-spacing:-.03em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .l{font-size:13px;color:var(--mute);margin-top:6px}
+
+  /* split / two-col */
+  .split{display:grid;grid-template-columns:1.1fr 1fr;gap:60px;align-items:center}
+  .split.rev{grid-template-columns:1fr 1.1fr}
+  .split img,.split .demo{width:100%;border-radius:16px;border:1px solid var(--line);background:#0f1020;padding:24px;box-shadow:0 30px 70px -20px rgba(91,108,255,.3);transition:transform .3s}
+  .split .demo:hover{transform:translateY(-4px) scale(1.01)}
+  ul.check{list-style:none;padding:0;margin:24px 0 0}
+  ul.check li{padding:10px 0 10px 32px;position:relative;color:var(--fg);font-size:15px}
+  ul.check li::before{content:"";position:absolute;left:0;top:14px;width:20px;height:20px;border-radius:50%;background:var(--grad-2);display:block}
+  ul.check li::after{content:"";position:absolute;left:6px;top:18px;width:8px;height:4px;border-left:2px solid #0a0a14;border-bottom:2px solid #0a0a14;transform:rotate(-45deg)}
+
+  /* code block */
+  .code{font-family:'Geist Mono',monospace;font-size:13px;line-height:1.7;color:#cdd2e4}
+  .code .k{color:#a8b1ff} .code .s{color:#86efac} .code .c{color:#6b7290}
+  .terminal{background:#08081a;border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:18px}
+  .terminal .prompt{color:#a855f7}
+
+  /* pricing */
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
+  .plan{padding:32px 28px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.02);transition:all .3s;position:relative}
+  .plan:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.18)}
+  .plan.featured{background:linear-gradient(180deg,rgba(168,85,247,.12),rgba(91,108,255,.04));border-color:rgba(168,85,247,.4);transform:scale(1.04)}
+  .plan.featured::before{content:"Most popular";position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--grad);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:.05em;text-transform:uppercase}
+  .plan h3{margin:0;font-size:18px;font-weight:700}
+  .plan .price{font-size:44px;font-weight:800;margin:12px 0;letter-spacing:-.03em}
+  .plan .price small{font-size:14px;color:var(--mute);font-weight:500}
+  .plan p.desc{color:var(--mute);font-size:14px;margin:0 0 24px}
+  .plan ul{list-style:none;padding:0;margin:24px 0;font-size:14px}
+  .plan li{padding:8px 0;color:var(--mute);position:relative;padding-left:24px}
+  .plan li::before{content:"✓";position:absolute;left:0;color:#22c55e;font-weight:700}
+
+  /* footer */
+  footer{padding:60px 28px 40px;border-top:1px solid var(--line);background:#070710;color:var(--mute);font-size:14px}
+  footer .row{max-width:1100px;margin:auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
+  footer h4{color:var(--fg);font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 14px}
+  footer a{display:block;padding:5px 0;transition:color .2s}
+  footer a:hover{color:var(--fg)}
+  footer .copy{max-width:1100px;margin:40px auto 0;padding-top:24px;border-top:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+
+  /* scroll reveal */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s, transform .8s}
+  .reveal.in{opacity:1;transform:translateY(0)}
+
+  /* mobile */
+  @media (max-width:880px){
+    nav.top a.l{display:none}
+    .features,.preview .body,.stats,.price-grid{grid-template-columns:1fr}
+    .split,.split.rev,.section-head{grid-template-columns:1fr;gap:32px}
+    .stats{padding:30px}
+    .stat .n{font-size:36px}
+    .preview .frame{transform:none}
+  }
+</style>
+</head>
+<body>
+<div class="ambient"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<nav class="top">
+  <div class="nav-in">
+    <div class="brand"><div class="logo">W</div> Westrade</div>
+    <a class="l" href="#product">Product</a>
+    <a class="l" href="#features">Features</a>
+    <a class="l" href="#pricing">Pricing</a>
+    <a class="l" href="#docs">Docs</a>
+    <div class="nav-cta">
+      <a class="btn btn-ghost">Sign in</a>
+      <a class="btn btn-primary">Get started <span class="arrow">→</span></a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <a class="eyebrow"><span class="new">NEW</span> AI Auto-Tuner now in beta · learn more →</a>
+  <h1 class="hero-h">Trade smarter, <br/><span class="grad">not harder.</span></h1>
+  <p class="sub">An AI-powered MT5 trading platform with risk engines, auto-tuning strategies, and real-time analytics. Designed for serious retail traders who treat their account like a quant fund.</p>
+  <div class="hero-cta">
+    <a class="btn btn-primary btn-lg">Start free trial <span class="arrow">→</span></a>
+    <a class="btn btn-ghost btn-lg">▶  Watch demo</a>
+  </div>
+  <div class="trust">Trusted by 12,000+ retail traders</div>
+  <div class="trust-logos">
+    <span>FTMO</span><span>MyForexFunds</span><span>TopstepFX</span><span>The5%ers</span><span>FundedNext</span>
+  </div>
+</header>
+
+<!-- Product preview -->
+<div class="preview reveal">
+  <div class="frame">
+    <div class="titlebar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="url">westrade.app/dashboard</span>
+    </div>
+    <div class="body">
+      <div class="mini"><div class="l">Equity</div><div class="v">$14,231.50</div></div>
+      <div class="mini"><div class="l">Daily P&L</div><div class="v up">+$420.18</div></div>
+      <div class="mini"><div class="l">Sharpe</div><div class="v">1.62</div></div>
+      <div class="mini"><div class="l">Win rate</div><div class="v">64.2%</div></div>
+      <div class="chart">
+        <svg viewBox="0 0 800 170" style="width:100%;height:100%">
+          <defs><linearGradient id="lp" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22c55e" stop-opacity=".45"/><stop offset="1" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,130 L60,125 L120,128 L200,102 L260,108 L340,85 L420,92 L500,62 L580,70 L660,42 L720,48 L800,22 L800,170 L0,170Z" fill="url(#lp)"/>
+          <path d="M0,130 L60,125 L120,128 L200,102 L260,108 L340,85 L420,92 L500,62 L580,70 L660,42 L720,48 L800,22" fill="none" stroke="#22c55e" stroke-width="2"/>
+          <path d="M0,140 L120,132 L240,124 L360,114 L480,98 L600,80 L720,60 L800,46" fill="none" stroke="#6366f1" stroke-width="1.6" stroke-dasharray="4 4" opacity=".6"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <div class="container">
+    <div class="section-head reveal">
+      <div>
+        <div style="font-size:13px;color:#a855f7;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Why Westrade</div>
+        <h2>Everything you need <br/><span class="grad">to trade like a quant.</span></h2>
+      </div>
+      <p class="lead">From signal generation to risk control, every part of the stack is engineered for traders who want reproducible, data-driven performance.</p>
+    </div>
+
+    <div class="features">
+      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
+        <div class="ico-box">⚡</div>
+        <h3>Real-time MT5 bridge</h3>
+        <p>Sub-second order execution to your MetaTrader 5 account with native paper-trade mode for risk-free testing.</p>
+      </div>
+      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
+        <div class="ico-box">🧠</div>
+        <h3>AI Auto-Tuner</h3>
+        <p>Continuously evaluates your strategies and disables under-performing ones based on rolling Sharpe and drawdown.</p>
+      </div>
+      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
+        <div class="ico-box">🛡</div>
+        <h3>Risk engine</h3>
+        <p>Hard daily loss caps, correlation throttling, and a circuit-breaker kill-switch that emails you the moment it trips.</p>
+      </div>
+      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
+        <div class="ico-box">📊</div>
+        <h3>Quant analytics</h3>
+        <p>Sharpe, Sortino, profit factor, drawdown — every metric a prop desk would track, exposed in one dashboard.</p>
+      </div>
+      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
+        <div class="ico-box">🔔</div>
+        <h3>Smart email alerts</h3>
+        <p>Get notified when the bot hits 50% of your loss limit, reaches profit target, or any custom event you define.</p>
+      </div>
+      <div class="feature reveal" onmousemove="cursorGlow(event,this)">
+        <div class="ico-box">🎯</div>
+        <h3>Presets &amp; templates</h3>
+        <p>Save a working configuration once. Snap back to it anytime, or share it with your propfirm cohort.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats strip -->
+<section style="padding:40px 28px">
+  <div class="container">
+    <div class="stats reveal">
+      <div class="stat"><div class="n">$48M+</div><div class="l">Volume traded · last 30d</div></div>
+      <div class="stat"><div class="n">1.6</div><div class="l">Median user Sharpe</div></div>
+      <div class="stat"><div class="n">12,400+</div><div class="l">Active accounts</div></div>
+      <div class="stat"><div class="n">12ms</div><div class="l">Median order latency</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Split: Risk engine -->
+<section>
+  <div class="container">
+    <div class="split">
+      <div class="reveal">
+        <div style="font-size:13px;color:#22c55e;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Risk engine</div>
+        <h2>Hard limits<br/><span class="grad">that actually fire.</span></h2>
+        <p class="lead">Set a daily loss cap once. Westrade closes every position and flatlines the engine the instant it's breached — no manual intervention, no excuses.</p>
+        <ul class="check">
+          <li>Daily loss cap (% of equity or $ amount)</li>
+          <li>Max drawdown trigger with auto-pause</li>
+          <li>Correlation throttle across open positions</li>
+          <li>Kill-switch with email + SMS notification</li>
+        </ul>
+      </div>
+      <div class="demo reveal">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <span class="mono" style="color:#9aa0b8;font-size:12px">RISK_ENGINE.STATUS</span>
+          <span style="padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.12);color:#22c55e;font-size:11px;font-weight:600">● ARMED</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Daily loss cap</span><span class="mono">$300</span></div>
+        <div style="height:8px;background:#1d1f2c;border-radius:4px;overflow:hidden;margin-bottom:14px"><div style="width:0%;height:100%;background:var(--grad-2);border-radius:4px"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Daily profit target</span><span class="mono" style="color:#22c55e">$420 / $600</span></div>
+        <div style="height:8px;background:#1d1f2c;border-radius:4px;overflow:hidden;margin-bottom:14px"><div style="width:70%;height:100%;background:var(--grad);border-radius:4px"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Correlation cap</span><span class="mono">0.60</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span style="color:#9aa0b8">Open risk</span><span class="mono">1.4%</span></div>
+
+        <div class="terminal">
+          <div class="code"><span class="c"># live engine log</span></div>
+          <div class="code"><span class="prompt">›</span> <span class="k">brain</span> opened <span class="s">EURUSD</span> long 0.5lot @ 1.0823</div>
+          <div class="code"><span class="prompt">›</span> <span class="k">risk</span> open risk 1.4% (cap 2%) ✓</div>
+          <div class="code"><span class="prompt">›</span> <span class="k">tuner</span> disabled strategy <span class="s">Carry</span> (sharpe 0.3)</div>
+          <div class="code"><span class="prompt">›</span> <span class="k">brain</span> closed XAU trail @ +99 pips</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Split rev: Brain Gym -->
+<section>
+  <div class="container">
+    <div class="split rev">
+      <div class="demo reveal">
+        <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#9aa0b8;margin-bottom:12px">STRATEGY_PERFORMANCE.30D</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>MeanRev v2</span><span class="mono" style="color:#22c55e">+$1,842</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:var(--grad-2);width:78%;height:100%"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Breakout</span><span class="mono" style="color:#22c55e">+$1,210</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:var(--grad-2);width:58%;height:100%"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Momentum</span><span class="mono" style="color:#22c55e">+$622</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:var(--grad-2);width:34%;height:100%"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Carry</span><span class="mono" style="color:#f43f5e">−$184</span></div><div style="height:10px;background:#1d1f2c;border-radius:5px;overflow:hidden"><div style="background:linear-gradient(90deg,#f43f5e,#ec4899);width:18%;height:100%"></div></div></div>
+        </div>
+        <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:#9aa0b8;line-height:1.6">
+          <strong style="color:#a855f7">Auto-Tuner</strong> disabled <code style="background:#1d1f2c;padding:2px 6px;border-radius:4px;font-size:12px">Carry</code> at 06:14 — rolling Sharpe fell below 0.5 threshold.
+        </div>
+      </div>
+      <div class="reveal">
+        <div style="font-size:13px;color:#a855f7;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Brain Gym</div>
+        <h2>Strategies that <br/><span class="grad">learn from themselves.</span></h2>
+        <p class="lead">Every strategy you run is scored on rolling Sharpe, drawdown, and profit factor. Under-performers get benched automatically while winners get more capital.</p>
+        <ul class="check">
+          <li>Rolling 30-day Sharpe per strategy</li>
+          <li>Auto-disable on sustained drawdown</li>
+          <li>Dynamic capital allocation across strategies</li>
+          <li>Backtest with your own MT5 historical data</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing" style="padding:120px 28px">
+  <div class="container" style="text-align:center">
+    <div class="reveal">
+      <div style="font-size:13px;color:#a855f7;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Pricing</div>
+      <h2>Start free. <span class="grad">Scale when you're ready.</span></h2>
+      <p class="lead" style="margin:0 auto">No credit card required. Cancel anytime. All plans include paper-trade mode.</p>
+    </div>
+    <div class="price-grid">
+      <div class="plan reveal">
+        <h3>Starter</h3>
+        <div class="price">$0<small>/mo</small></div>
+        <p class="desc">For traders evaluating the platform.</p>
+        <a class="btn btn-ghost" style="width:100%;justify-content:center">Get started</a>
+        <ul><li>Paper-trade mode</li><li>1 strategy</li><li>Basic risk engine</li><li>Daily analytics</li></ul>
+      </div>
+      <div class="plan featured reveal">
+        <h3>Pro</h3>
+        <div class="price">$49<small>/mo</small></div>
+        <p class="desc">Live MT5 trading with full toolkit.</p>
+        <a class="btn btn-primary" style="width:100%;justify-content:center">Start 14-day trial</a>
+        <ul><li>Live MT5 execution</li><li>Unlimited strategies</li><li>AI Auto-Tuner</li><li>Email + SMS alerts</li><li>Custom presets</li></ul>
+      </div>
+      <div class="plan reveal">
+        <h3>Quant</h3>
+        <div class="price">$199<small>/mo</small></div>
+        <p class="desc">Multi-account, props firm ready.</p>
+        <a class="btn btn-ghost" style="width:100%;justify-content:center">Contact sales</a>
+        <ul><li>5 MT5 accounts</li><li>Custom indicators</li><li>API access</li><li>Priority support</li><li>Backtest unlimited</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section style="padding:60px 28px 120px">
+  <div class="container" style="text-align:center;padding:80px 28px;border-radius:24px;background:linear-gradient(135deg,rgba(91,108,255,.18),rgba(168,85,247,.08));border:1px solid rgba(168,85,247,.3);position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(600px circle at 50% 0%,rgba(168,85,247,.3),transparent 60%);pointer-events:none"></div>
+    <h2 style="position:relative">Ready to trade smarter?</h2>
+    <p class="lead" style="margin:0 auto 28px;position:relative">Start your free trial — it takes 90 seconds to connect your MT5 account and run the first paper trade.</p>
+    <a class="btn btn-primary btn-lg" style="position:relative">Get started for free <span class="arrow">→</span></a>
+  </div>
+</section>
+
+<footer>
+  <div class="row">
+    <div>
+      <div class="brand" style="margin-bottom:14px"><div class="logo">W</div> Westrade</div>
+      <p style="margin:0;max-width:300px">AI-powered MT5 trading for retail traders who treat their account like a quant fund.</p>
+    </div>
+    <div><h4>Product</h4><a>Dashboard</a><a>Risk engine</a><a>Auto-Tuner</a><a>Pricing</a></div>
+    <div><h4>Resources</h4><a>Docs</a><a>API</a><a>Changelog</a><a>Status</a></div>
+    <div><h4>Company</h4><a>About</a><a>Contact</a><a>Terms</a><a>Privacy</a></div>
+  </div>
+  <div class="copy">
+    <span>© 2026 Westrade. All rights reserved.</span>
+    <span>Trading involves risk. Past performance ≠ future results.</span>
+  </div>
+</footer>
+
+<script>
+  // scroll reveal
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // cursor glow on feature cards
+  function cursorGlow(ev, el){
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--x', (ev.clientX - r.left) + 'px');
+    el.style.setProperty('--y', (ev.clientY - r.top)  + 'px');
+  }
+</script>
+</body>
+</html>

@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme, type ThemeStyle } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
-import { User, Palette, Bell, LogOut, Check, Plus, X, Terminal, Copy, CheckCheck, CreditCard } from "lucide-react";
+import { User, Palette, Bell, LogOut, Check, Plus, X, Terminal, Copy, CheckCheck, CreditCard, Eye, EyeOff } from "lucide-react";
 
 function api(path: string, opts?: RequestInit) {
   return fetch(path, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
@@ -47,6 +47,7 @@ export default function Settings() {
   const [smtpPort, setSmtpPort] = useState("587");
   const [smtpUser, setSmtpUser] = useState("");
   const [smtpPass, setSmtpPass] = useState("");
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [emailEvents, setEmailEvents] = useState({ killSwitch: true, sessionLimit: true, profitTarget: true, newTrade: false });
 
   const profileInitRef = useRef(false);
@@ -256,7 +257,12 @@ export default function Settings() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[9px] font-mono text-muted-foreground uppercase">API Key (Password)</Label>
-                  <Input className="h-7 text-xs font-mono bg-background" type="password" placeholder="Brevo API key" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} />
+                  <div className="relative">
+                    <Input className="h-7 text-xs font-mono bg-background pr-7" type={showSmtpPass ? "text" : "password"} placeholder="Brevo API key" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} />
+                    <button type="button" onClick={() => setShowSmtpPass(v => !v)} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showSmtpPass ? <EyeOff size={11} /> : <Eye size={11} />}
+                    </button>
+                  </div>
                 </div>
               </div>
               <p className="text-[9px] font-mono text-muted-foreground">Brevo: Dashboard → Settings → SMTP &amp; API → API Keys → Generate new key</p>

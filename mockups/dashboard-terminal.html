@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Westrade — Quant Terminal</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#06070a; --panel:#0b0d12; --line:#1a1d26; --line2:#23273236;
+    --fg:#e6e8ee; --mute:#7d8493; --green:#3ddc97; --red:#ff5774; --amber:#ffb86b;
+    --blue:#4ea1ff; --violet:#a78bfa;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;line-height:1.4}
+  a{color:inherit;text-decoration:none}
+  .grid-bg{background:
+    radial-gradient(circle at 20% 0%, #0e1320 0%, transparent 40%),
+    radial-gradient(circle at 80% 100%, #0c1a18 0%, transparent 50%),
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px) 0 0/24px 24px,
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px) 0 0/24px 24px,
+    var(--bg);
+    min-height:100vh}
+
+  /* topbar */
+  .top{display:flex;align-items:center;gap:18px;padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(11,13,18,.7);backdrop-filter:blur(8px);position:sticky;top:0;z-index:10}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.18em}
+  .brand .dot{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 12px var(--green)}
+  .ticker{flex:1;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+  .ticker-track{display:inline-flex;gap:32px;white-space:nowrap;animation:scroll 60s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .tick{color:var(--mute)}
+  .tick .sym{color:var(--fg);margin-right:6px}
+  .tick.up .pct{color:var(--green)} .tick.down .pct{color:var(--red)}
+  .pill{padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:var(--mute)}
+  .pill.live{color:var(--green);border-color:#1e3a2c}
+  .pill.live::before{content:"";display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;margin-right:6px;box-shadow:0 0 8px var(--green);animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.4}}
+
+  /* layout */
+  .wrap{display:grid;grid-template-columns:200px 1fr 280px;gap:12px;padding:12px}
+  .side{display:flex;flex-direction:column;gap:8px}
+  .side a{padding:7px 10px;border-radius:6px;color:var(--mute);display:flex;align-items:center;gap:8px;border:1px solid transparent}
+  .side a:hover{color:var(--fg);background:#10131b}
+  .side a.active{color:var(--fg);background:#11151f;border-color:var(--line)}
+  .side a .k{width:14px;text-align:center;opacity:.6}
+  .side .group{margin-top:10px;font-size:9px;letter-spacing:.2em;color:#4a5063;padding-left:8px;text-transform:uppercase}
+
+  /* panels */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative}
+  .panel h3{margin:0;padding:8px 12px;border-bottom:1px solid var(--line);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--mute);display:flex;align-items:center;justify-content:space-between}
+  .panel h3 .badge{font-size:9px;color:var(--green);padding:1px 6px;border:1px solid #1f3a2c;border-radius:4px}
+  .panel .body{padding:10px 12px}
+
+  /* metrics row */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .metric{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;position:relative;overflow:hidden}
+  .metric .l{font-size:9px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase}
+  .metric .v{font-size:20px;font-weight:700;margin-top:4px}
+  .metric .s{font-size:10px;color:var(--mute);margin-top:2px}
+  .metric.up .v{color:var(--green)} .metric.down .v{color:var(--red)}
+  .metric .spark{position:absolute;right:8px;bottom:8px;width:60px;height:18px;opacity:.7}
+
+  /* center grid */
+  .center{display:flex;flex-direction:column;gap:12px}
+  .row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--line2)}
+  th{font-size:9px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase;font-weight:500}
+  th:first-child,td:first-child{text-align:left}
+  td.sym{color:var(--fg);font-weight:700}
+  td.up{color:var(--green)} td.down{color:var(--red)}
+  tr:hover td{background:#0e1220}
+  .tag{font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+  .tag.long{color:var(--green);border-color:#1e3a2c;background:#0d1a15}
+  .tag.short{color:var(--red);border-color:#3a1f2a;background:#1a0d12}
+
+  /* chart */
+  .chart{height:240px;width:100%;display:block}
+  .chart .grid line{stroke:#1a1d26;stroke-dasharray:2 4}
+  .chart .axis text{font-size:9px;fill:var(--mute);font-family:inherit}
+  .chart .price{fill:none;stroke:var(--green);stroke-width:1.5}
+  .chart .area{fill:url(#g1)}
+  .chart .ema{fill:none;stroke:var(--blue);stroke-dasharray:3 3;stroke-width:1}
+
+  /* orderbook */
+  .ob{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);font-size:10px}
+  .ob > div{background:var(--panel);padding:4px 8px;display:flex;justify-content:space-between;position:relative}
+  .ob .bar{position:absolute;top:0;bottom:0;opacity:.12}
+  .ob .bid .bar{right:0;background:var(--green)}
+  .ob .ask .bar{left:0;background:var(--red)}
+  .ob .bid span:first-child{color:var(--green)}
+  .ob .ask span:first-child{color:var(--red)}
+
+  /* right rail */
+  .right{display:flex;flex-direction:column;gap:12px}
+  .feed{font-size:10px}
+  .feed .item{padding:6px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px;align-items:flex-start}
+  .feed .item .t{color:var(--mute);min-width:36px}
+  .feed .item .b{flex:1}
+  .feed .item .b .who{color:var(--violet)}
+  .feed .item.alert .b{color:var(--amber)}
+  .feed .item.kill .b{color:var(--red)}
+
+  /* heatmap */
+  .heat{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:8px}
+  .heat .c{aspect-ratio:1.3;border-radius:3px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:10px;color:#fff;font-weight:700;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+  .heat .c span{font-size:8px;opacity:.85;font-weight:500}
+
+  /* footer status */
+  .statusbar{display:flex;gap:18px;padding:6px 14px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;border-top:1px solid var(--line);color:var(--mute);background:var(--panel)}
+  .statusbar .ok{color:var(--green)}
+  .statusbar .warn{color:var(--amber)}
+  .blink{animation:blink 1.2s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+</style>
+</head>
+<body class="grid-bg">
+  <div class="top">
+    <div class="brand"><span class="dot"></span> WESTRADE//TERMINAL</div>
+    <div class="ticker"><div class="ticker-track">
+      <span class="tick up"><span class="sym">EURUSD</span> 1.08742 <span class="pct">+0.42%</span></span>
+      <span class="tick down"><span class="sym">GBPUSD</span> 1.27114 <span class="pct">-0.18%</span></span>
+      <span class="tick up"><span class="sym">XAUUSD</span> 2,341.20 <span class="pct">+1.12%</span></span>
+      <span class="tick up"><span class="sym">USDJPY</span> 156.81 <span class="pct">+0.21%</span></span>
+      <span class="tick down"><span class="sym">BTCUSD</span> 71,420 <span class="pct">-2.04%</span></span>
+      <span class="tick up"><span class="sym">SPX500</span> 5,341.4 <span class="pct">+0.68%</span></span>
+      <span class="tick down"><span class="sym">USOIL</span> 78.12 <span class="pct">-0.91%</span></span>
+      <span class="tick up"><span class="sym">EURUSD</span> 1.08742 <span class="pct">+0.42%</span></span>
+      <span class="tick down"><span class="sym">GBPUSD</span> 1.27114 <span class="pct">-0.18%</span></span>
+      <span class="tick up"><span class="sym">XAUUSD</span> 2,341.20 <span class="pct">+1.12%</span></span>
+    </div></div>
+    <span class="pill live">LIVE · MT5</span>
+    <span class="pill">SESSION 06:42:11</span>
+    <span class="pill">v3.2.1</span>
+  </div>
+
+  <div class="wrap">
+    <!-- side -->
+    <nav class="side">
+      <a class="active"><span class="k">D</span> Dashboard</a>
+      <a><span class="k">T</span> Trades</a>
+      <a><span class="k">P</span> Portfolio</a>
+      <a><span class="k">A</span> Analytics</a>
+      <a><span class="k">S</span> Strategies</a>
+      <a><span class="k">R</span> Risk Engine</a>
+      <div class="group">— AI</div>
+      <a><span class="k">B</span> Brain Gym</a>
+      <a><span class="k">F</span> Bot Feed</a>
+      <a><span class="k">Σ</span> Auto-Tuner</a>
+      <div class="group">— System</div>
+      <a><span class="k">C</span> Connections</a>
+      <a><span class="k">N</span> Alerts</a>
+      <a><span class="k">⚙</span> Settings</a>
+    </nav>
+
+    <!-- center -->
+    <section class="center">
+      <div class="metrics">
+        <div class="metric up"><div class="l">Equity</div><div class="v">$14,231.50</div><div class="s">+$420.18 today · 3 open</div>
+          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,12 8,11 16,8 24,9 32,6 40,7 48,3 60,1" fill="none" stroke="#3ddc97" stroke-width="1.4"/></svg></div>
+        <div class="metric up"><div class="l">Daily P&L</div><div class="v">+$420.18</div><div class="s">+3.04% · target +$600</div>
+          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,9 10,10 20,7 30,8 40,4 50,5 60,2" fill="none" stroke="#3ddc97" stroke-width="1.4"/></svg></div>
+        <div class="metric"><div class="l">Sharpe Ratio</div><div class="v">1.62</div><div class="s">target 1.5 ✓</div>
+          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,14 12,12 22,10 34,8 46,7 60,5" fill="none" stroke="#4ea1ff" stroke-width="1.4"/></svg></div>
+        <div class="metric down"><div class="l">Max Drawdown</div><div class="v">-4.21%</div><div class="s">risk score 28/100</div>
+          <svg class="spark" viewBox="0 0 60 18"><polyline points="0,2 10,4 20,6 30,3 40,8 50,11 60,9" fill="none" stroke="#ff5774" stroke-width="1.4"/></svg></div>
+      </div>
+
+      <div class="panel">
+        <h3>Session P&L · 24h <span class="badge">+3.04%</span></h3>
+        <div class="body" style="padding:0">
+          <svg class="chart" viewBox="0 0 800 240" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#3ddc97" stop-opacity=".35"/>
+                <stop offset="100%" stop-color="#3ddc97" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g class="grid">
+              <line x1="0" x2="800" y1="60" y2="60"/><line x1="0" x2="800" y1="120" y2="120"/><line x1="0" x2="800" y1="180" y2="180"/>
+            </g>
+            <path class="area" d="M0,180 L40,170 L80,175 L130,150 L180,158 L230,130 L290,140 L340,110 L400,118 L460,90 L520,100 L580,72 L640,80 L700,55 L760,60 L800,42 L800,240 L0,240 Z"/>
+            <path class="price" d="M0,180 L40,170 L80,175 L130,150 L180,158 L230,130 L290,140 L340,110 L400,118 L460,90 L520,100 L580,72 L640,80 L700,55 L760,60 L800,42"/>
+            <path class="ema" d="M0,190 L80,180 L180,168 L290,150 L400,130 L520,108 L640,88 L760,68 L800,60"/>
+            <g class="axis">
+              <text x="6" y="14" fill="#7d8493">+$600</text>
+              <text x="6" y="74" fill="#7d8493">+$420</text>
+              <text x="6" y="134" fill="#7d8493">+$200</text>
+              <text x="6" y="194" fill="#7d8493">$0</text>
+            </g>
+            <circle cx="800" cy="42" r="4" fill="#3ddc97"/>
+            <circle cx="800" cy="42" r="9" fill="none" stroke="#3ddc97" opacity=".4"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <h3>Open Positions <span class="badge">3 LIVE</span></h3>
+          <div class="body" style="padding:0">
+            <table>
+              <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>P&L</th><th>%</th></tr></thead>
+              <tbody>
+                <tr><td class="sym">EURUSD</td><td><span class="tag long">LONG</span></td><td>0.50</td><td>1.0823</td><td>1.0874</td><td class="up">+$255.00</td><td class="up">+0.47%</td></tr>
+                <tr><td class="sym">XAUUSD</td><td><span class="tag long">LONG</span></td><td>0.20</td><td>2,318</td><td>2,341</td><td class="up">+$460.00</td><td class="up">+0.99%</td></tr>
+                <tr><td class="sym">GBPUSD</td><td><span class="tag short">SHORT</span></td><td>0.30</td><td>1.2702</td><td>1.2711</td><td class="down">-$27.00</td><td class="down">-0.07%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Order Book · EURUSD</h3>
+          <div class="ob">
+            <div class="ask"><div class="bar" style="width:80%"></div><span>1.08750</span><span>2.1M</span></div>
+            <div class="bid"><div class="bar" style="width:40%"></div><span>1.08742</span><span>1.4M</span></div>
+            <div class="ask"><div class="bar" style="width:55%"></div><span>1.08753</span><span>1.8M</span></div>
+            <div class="bid"><div class="bar" style="width:70%"></div><span>1.08740</span><span>2.0M</span></div>
+            <div class="ask"><div class="bar" style="width:32%"></div><span>1.08755</span><span>820K</span></div>
+            <div class="bid"><div class="bar" style="width:90%"></div><span>1.08738</span><span>2.6M</span></div>
+            <div class="ask"><div class="bar" style="width:22%"></div><span>1.08758</span><span>520K</span></div>
+            <div class="bid"><div class="bar" style="width:48%"></div><span>1.08736</span><span>1.5M</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <h3>Strategy P&L · 30d</h3>
+          <div class="body" style="padding:8px 14px">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">MeanRev v2</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#3ddc97,#3ddc9788);width:78%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--green)">+$1,842</div></div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Breakout</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#3ddc97,#3ddc9788);width:58%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--green)">+$1,210</div></div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Momentum</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#3ddc97,#3ddc9788);width:34%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--green)">+$622</div></div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Carry</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#ff5774,#ff577488);width:18%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--red)">-$184</div></div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;color:var(--mute)">Pairs</div><div style="flex:1;height:14px;background:#0e1220;border-radius:3px;overflow:hidden"><div style="background:linear-gradient(90deg,#ff5774,#ff577488);width:28%;height:100%"></div></div><div style="width:70px;text-align:right;color:var(--red)">-$310</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>FX Heatmap · 1D</h3>
+          <div class="heat">
+            <div class="c" style="background:#0f6b41">EUR<span>+0.82</span></div>
+            <div class="c" style="background:#0d8f51">GBP<span>+1.21</span></div>
+            <div class="c" style="background:#7a1f33">USD<span>-0.43</span></div>
+            <div class="c" style="background:#0d8f51">XAU<span>+1.12</span></div>
+            <div class="c" style="background:#5a1928">JPY<span>-0.21</span></div>
+            <div class="c" style="background:#0f6b41">AUD<span>+0.31</span></div>
+            <div class="c" style="background:#a31f3d">BTC<span>-2.04</span></div>
+            <div class="c" style="background:#0d8f51">SPX<span>+0.68</span></div>
+            <div class="c" style="background:#7a1f33">OIL<span>-0.91</span></div>
+            <div class="c" style="background:#0f6b41">NZD<span>+0.42</span></div>
+            <div class="c" style="background:#5a1928">CHF<span>-0.14</span></div>
+            <div class="c" style="background:#0f6b41">CAD<span>+0.55</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- right -->
+    <aside class="right">
+      <div class="panel">
+        <h3>Risk Engine <span class="badge">ARMED</span></h3>
+        <div class="body" style="font-size:10px;line-height:1.7">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Max daily loss</span><span>$300</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Used</span><span class="" style="color:var(--green)">$0</span></div>
+          <div style="height:6px;background:#0e1220;border-radius:3px;margin:6px 0"><div style="width:0%;height:100%;background:var(--green);border-radius:3px"></div></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Daily profit target</span><span>$600</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Used</span><span style="color:var(--green)">$420</span></div>
+          <div style="height:6px;background:#0e1220;border-radius:3px;margin:6px 0"><div style="width:70%;height:100%;background:linear-gradient(90deg,#3ddc97,#a78bfa);border-radius:3px"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px"><span style="color:var(--mute)">Open risk %</span><span>1.4%</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Correlation cap</span><span>0.60</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>AI Activity</h3>
+        <div class="feed">
+          <div class="item"><span class="t">06:42</span><div class="b"><span class="who">brain</span> identified mean-rev setup on EURUSD; entered long 0.5 lot</div></div>
+          <div class="item"><span class="t">06:38</span><div class="b"><span class="who">tuner</span> raised correlation threshold to 0.60</div></div>
+          <div class="item alert"><span class="t">06:31</span><div class="b">⚠ slippage on GBPUSD entry (+0.8 pips)</div></div>
+          <div class="item"><span class="t">06:22</span><div class="b"><span class="who">brain</span> closed XAU trail at +99 pips</div></div>
+          <div class="item"><span class="t">06:14</span><div class="b"><span class="who">tuner</span> disabled Carry strategy (sharpe 0.3)</div></div>
+          <div class="item kill"><span class="t">05:51</span><div class="b">✗ kill-switch test passed (simulated)</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Connections</h3>
+        <div class="body" style="font-size:10px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">MT5 bridge</span><span style="color:var(--green)">● online · 12ms</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">Python bot</span><span style="color:var(--green)">● online · v3.2.1</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">News feed</span><span style="color:var(--green)">● online</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mute)">SMTP (Brevo)</span><span style="color:var(--amber)">● untested</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="statusbar">
+    <span>● <span class="ok">MARKET OPEN</span></span>
+    <span>NY 09:42 · LDN 14:42 · TOK 23:42</span>
+    <span class="ok">▲ EQUITY +3.04%</span>
+    <span>OPEN RISK 1.4%</span>
+    <span class="warn">2 PENDING ALERTS</span>
+    <span style="margin-left:auto" class="blink">▮ AWAITING SIGNAL</span>
+  </div>
+</body>
+</html>
