@@ -120,6 +120,7 @@ export default function Presets() {
   const [applying, setApplying] = useState<string | null>(null);
   const [applied, setApplied] = useState<string | null>(null);
   const [scaledLoss, setScaledLoss] = useState(30); // Optimal Profit loss cap, profit target = 2x
+  const [optimalPaper, setOptimalPaper] = useState(true); // start in paper mode — safer default
 
   const { data: presets = [], isLoading } = useQuery<Preset[]>({
     queryKey: ["presets"],
@@ -253,10 +254,10 @@ export default function Presets() {
 
             const bullets = isOptimal
               ? [
+                  optimalPaper ? "Paper mode — simulated trades, no real money" : "Live mode — real MT5 orders",
                   "Risk 1% per trade, max 3 open positions",
                   `Daily loss cap $${scaledLoss}, profit target $${scaledProfit} (2:1 ratio)`,
-                  "8h session, AI-guided entries only",
-                  "Correlation cap 60% — avoids cluster losses",
+                  "8h session, AI + all analysis active",
                 ]
               : preset.bullets;
 
@@ -279,9 +280,33 @@ export default function Presets() {
                     ))}
                   </ul>
 
-                  {/* Loss / Profit scaler — Optimal Profit only */}
+                  {/* Mode + scaler — Optimal Profit only */}
                   {isOptimal && (
-                    <div className="rounded border border-green-500/20 bg-green-500/5 px-3 py-2 space-y-1">
+                    <div className="rounded border border-green-500/20 bg-green-500/5 px-3 py-2 space-y-2">
+                      {/* Paper / Live toggle */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Mode</p>
+                        <div className="flex items-center rounded overflow-hidden border border-border text-[9px] font-mono">
+                          <button
+                            onClick={() => setOptimalPaper(true)}
+                            className={`px-2 py-0.5 transition-colors ${optimalPaper ? "bg-blue-500/20 text-blue-400" : "text-muted-foreground hover:text-foreground"}`}
+                          >Paper</button>
+                          <button
+                            onClick={() => setOptimalPaper(false)}
+                            className={`px-2 py-0.5 transition-colors ${!optimalPaper ? "bg-green-500/20 text-green-400" : "text-muted-foreground hover:text-foreground"}`}
+                          >Live</button>
+                        </div>
+                      </div>
+                      {optimalPaper && (
+                        <p className="text-[8px] font-mono text-blue-400/80">
+                          Simulated trades — no real money. Switch to Live when ready.
+                        </p>
+                      )}
+                      {!optimalPaper && (
+                        <p className="text-[8px] font-mono text-amber-400/80">
+                          ⚠ Real MT5 orders. Only use after proving profitable in paper mode.
+                        </p>
+                      )}
                       <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Adjust limits (2:1 ratio locked)</p>
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1">
@@ -314,7 +339,7 @@ export default function Presets() {
                     disabled={isApplying || isApplied}
                     onClick={() => applyBuiltinPreset(
                       preset,
-                      isOptimal ? { dailyLossLimitUsd: scaledLoss, dailyProfitTargetUsd: scaledProfit, lossBufferUsd: Math.round(scaledLoss * 0.25), winBufferUsd: Math.round(scaledProfit * 0.2) } : undefined
+                      isOptimal ? { paperMode: optimalPaper, dailyLossLimitUsd: scaledLoss, dailyProfitTargetUsd: scaledProfit, lossBufferUsd: Math.round(scaledLoss * 0.25), winBufferUsd: Math.round(scaledProfit * 0.2) } : undefined
                     )}
                   >
                     {isApplied ? (
