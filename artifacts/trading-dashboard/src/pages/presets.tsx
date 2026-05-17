@@ -119,6 +119,7 @@ export default function Presets() {
   const [importOpen, setImportOpen] = useState(false);
   const [applying, setApplying] = useState<string | null>(null);
   const [applied, setApplied] = useState<string | null>(null);
+  const [scaledLoss, setScaledLoss] = useState(30); // Optimal Profit loss cap, profit target = 2x
 
   const { data: presets = [], isLoading } = useQuery<Preset[]>({
     queryKey: ["presets"],
@@ -152,8 +153,9 @@ export default function Presets() {
     },
   });
 
-  const applyBuiltinPreset = async (preset: BuiltinPreset) => {
+  const applyBuiltinPreset = async (preset: BuiltinPreset, botConfigOverride?: Partial<BuiltinPreset["botConfig"]>) => {
     setApplying(preset.id);
+    const botConfig = { ...preset.botConfig, ...botConfigOverride };
     try {
       await Promise.all([
         fetch("/api/risk/settings", {
@@ -166,7 +168,7 @@ export default function Presets() {
           method: "PUT",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(preset.botConfig),
+          body: JSON.stringify(botConfig),
         }),
       ]);
       setApplied(preset.id);
@@ -246,6 +248,18 @@ export default function Presets() {
             const Icon = preset.icon;
             const isApplying = applying === preset.id;
             const isApplied = applied === preset.id;
+            const isOptimal = preset.id === "optimal";
+            const scaledProfit = scaledLoss * 2;
+
+            const bullets = isOptimal
+              ? [
+                  "Risk 1% per trade, max 3 open positions",
+                  `Daily loss cap $${scaledLoss}, profit target $${scaledProfit} (2:1 ratio)`,
+                  "8h session, AI-guided entries only",
+                  "Correlation cap 60% — avoids cluster losses",
+                ]
+              : preset.bullets;
+
             return (
               <Card key={preset.id} className="border-border bg-card">
                 <CardContent className="p-4 flex flex-col gap-3 h-full">
@@ -258,18 +272,50 @@ export default function Presets() {
                   </div>
                   <p className="text-[10px] font-mono text-muted-foreground leading-relaxed flex-1">{preset.description}</p>
                   <ul className="space-y-0.5">
-                    {preset.bullets.map((b, i) => (
+                    {bullets.map((b, i) => (
                       <li key={i} className="text-[9px] font-mono text-muted-foreground flex items-start gap-1">
                         <span className="text-primary mt-0.5 shrink-0">›</span>{b}
                       </li>
                     ))}
                   </ul>
+
+                  {/* Loss / Profit scaler — Optimal Profit only */}
+                  {isOptimal && (
+                    <div className="rounded border border-green-500/20 bg-green-500/5 px-3 py-2 space-y-1">
+                      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Adjust limits (2:1 ratio locked)</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setScaledLoss(l => Math.max(5, l - 5))}
+                            className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-green-400 transition-colors text-xs font-mono flex items-center justify-center"
+                          >−</button>
+                          <div className="text-center min-w-[56px]">
+                            <div className="text-[11px] font-mono font-bold text-red-400">−${scaledLoss}</div>
+                            <div className="text-[8px] font-mono text-muted-foreground">loss cap</div>
+                          </div>
+                          <button
+                            onClick={() => setScaledLoss(l => Math.min(500, l + 5))}
+                            className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-green-400 transition-colors text-xs font-mono flex items-center justify-center"
+                          >+</button>
+                        </div>
+                        <div className="text-[10px] font-mono text-muted-foreground">→</div>
+                        <div className="text-center min-w-[56px]">
+                          <div className="text-[11px] font-mono font-bold text-green-400">+${scaledProfit}</div>
+                          <div className="text-[8px] font-mono text-muted-foreground">profit target</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     size="sm"
                     variant={isApplied ? "default" : "outline"}
                     className={`h-7 text-[10px] font-mono w-full gap-1.5 mt-auto ${isApplied ? "bg-green-600 hover:bg-green-700 border-0" : ""}`}
                     disabled={isApplying || isApplied}
-                    onClick={() => applyBuiltinPreset(preset)}
+                    onClick={() => applyBuiltinPreset(
+                      preset,
+                      isOptimal ? { dailyLossLimitUsd: scaledLoss, dailyProfitTargetUsd: scaledProfit, lossBufferUsd: Math.round(scaledLoss * 0.25), winBufferUsd: Math.round(scaledProfit * 0.2) } : undefined
+                    )}
                   >
                     {isApplied ? (
                       <><CheckCircle size={10} /> Applied!</>
