@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod/v4";
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
@@ -9,9 +9,15 @@ import {
   createSession,
   SESSION_COOKIE,
   SESSION_TTL,
+  SESSION_REMEMBER_TTL,
   type SessionData,
 } from "../lib/auth";
 import { sendEmailTo } from "./notifications";
+
+const router: Router = Router();
+
+// In-memory store for password reset codes: email -> { code, expiresAt }
+const resetCodes = new Map<string, { code: string; expiresAt: number }>();
 
 const RegisterBody = z.object({
   username: z.string().min(3).max(30),
@@ -22,19 +28,26 @@ const RegisterBody = z.object({
 const LoginBody = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+  rememberMe: z.boolean().optional(),
 });
 
 const SendCodeBody = z.object({
   email: z.string().email(),
 });
 
-function setSessionCookie(res: Response, sid: string) {
+const ResetPasswordBody = z.object({
+  email: z.string().email(),
+  code: z.string().length(6),
+  newPassword: z.string().min(8),
+});
+
+function setSessionCookie(res: Response, sid: string, rememberMe = false) {
   res.cookie(SESSION_COOKIE, sid, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    ...(rememberMe ? { maxAge: SESSION_REMEMBER_TTL } : { maxAge: SESSION_TTL }),
+    maxAge: rememberMe ? SESSION_REMEMBER_TTL : SESSION_TTL,
   });
 }
 
@@ -82,20 +95,20 @@ router.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  const { username, password } = parsed.data;
+  const { username, password, rememberMe } = parsed.data;
   const [user] = await db
     .select()
     .from(usersTable)
     .where(or(eq(usersTable.username, username), eq(usersTable.email, username)));
 
   if (!user || !user.passwordHash) {
-    res.status(401).json({ error: "Invalid username or password" });
+    res.status(401).json({ error: "Invalid email or password" });
     return;
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
-    res.status(401).json({ error: "Invalid username or password" });
+    res.status(401).json({ error: "Invalid email or password" });
     return;
   }
 
@@ -104,20 +117,65 @@ router.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
     access_token: "",
   };
   const sid = await createSession(sessionData);
-  setSessionCookie(res, sid);
+  setSessionCookie(res, sid, rememberMe ?? false);
   res.json({ user: sessionData.user });
+});
+
+router.post("/auth/forgot-password", async (req: Request, res: Response): Promise<void> => {
+  const parsed = SendCodeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Valid email required" });
+    return;
+  }
+
+  const { email } = parsed.data;
+
+  // Always respond success to avoid leaking account existence
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (user) {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    resetCodes.set(email, { code, expiresAt: Date.now() + 15 * 60 * 1000 });
+
+    try {
+      await sendEmailTo(email, "Westrade — Password Reset Code", [
+        `Your password reset code is: <strong>${code}</strong>`,
+        "This code expires in 15 minutes.",
+        "If you did not request a password reset, ignore this email.",
+      ].join("<br><br>"));
+    } catch {
+      // log silently — don't expose SMTP errors to client
+    }
+  }
+
+  res.json({ success: true });
+});
+
+router.post("/auth/reset-password", async (req: Request, res: Response): Promise<void> => {
+  const parsed = ResetPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+
+  const { email, code, newPassword } = parsed.data;
+  const entry = resetCodes.get(email);
+
+  if (!entry || entry.code !== code || Date.now() > entry.expiresAt) {
+    res.status(400).json({ error: "Invalid or expired reset code" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.email, email));
+  resetCodes.delete(email);
+
+  res.json({ success: true });
 });
 
 router.post("/auth/logout", async (req: Request, res: Response): Promise<void> => {
   const sid = getSessionId(req);
   await clearSession(res, sid);
   res.json({ success: true });
-});
-
-router.get("/logout", async (req: Request, res: Response): Promise<void> => {
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
-  res.redirect("/login");
 });
 
 router.get("/logout", async (req: Request, res: Response): Promise<void> => {

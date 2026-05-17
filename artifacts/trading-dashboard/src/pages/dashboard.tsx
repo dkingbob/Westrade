@@ -13,7 +13,10 @@ import {
   getGetAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, DollarSign, BarChart2, ShieldAlert, AlertTriangle, Info, AlertCircle, Power, Loader2, Copy, Bot, UserCircle } from "lucide-react";
+import { Link } from "wouter";
+import { useAuth } from "@workspace/replit-auth-web";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -152,6 +155,7 @@ function AlertRow({ alert, darkMode }: { alert: any; darkMode: boolean }) {
 
 export default function Dashboard() {
   const { mode } = useTheme();
+  const { user } = useAuth();
   const { data: summary, isLoading: summaryLoading } = useGetPortfolioSummary({ query: { queryKey: getGetPortfolioSummaryQueryKey(), refetchInterval: 5000 } });
   const { data: positions, isLoading: posLoading } = useGetPositions({ query: { queryKey: getGetPositionsQueryKey(), refetchInterval: 5000 } });
   const { data: alerts } = useGetAlerts({ query: { queryKey: getGetAlertsQueryKey() } });
@@ -223,29 +227,39 @@ export default function Dashboard() {
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
           <h1 className="text-sm font-mono font-bold text-foreground uppercase tracking-widest">Dashboard</h1>
           <p className="text-[10px] font-mono text-muted-foreground mt-0.5">
             {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant={engineStatus?.running ? "destructive" : "default"}
-          onClick={toggleEngine}
-          disabled={startEngine.isPending || stopEngine.isPending}
-          data-testid="engine-toggle-btn"
-          className="font-mono text-xs h-7 px-3 shrink-0"
-        >
-          {startEngine.isPending || stopEngine.isPending ? (
-            <Loader2 size={12} className="animate-spin mr-1" />
-          ) : (
-            <Power size={12} className="mr-1" />
-          )}
-          <span className="hidden sm:inline">{engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}</span>
-          <span className="sm:hidden">{engineStatus?.running ? "STOP" : "START"}</span>
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            size="sm"
+            variant={engineStatus?.running ? "destructive" : "default"}
+            onClick={toggleEngine}
+            disabled={startEngine.isPending || stopEngine.isPending}
+            data-testid="engine-toggle-btn"
+            className="font-mono text-xs h-7 px-3"
+          >
+            {startEngine.isPending || stopEngine.isPending ? (
+              <Loader2 size={12} className="animate-spin mr-1" />
+            ) : (
+              <Power size={12} className="mr-1" />
+            )}
+            <span className="hidden sm:inline">{engineStatus?.running ? "STOP SERVER ENGINE" : "START SERVER ENGINE"}</span>
+            <span className="sm:hidden">{engineStatus?.running ? "STOP" : "START"}</span>
+          </Button>
+          <Link to="/settings">
+            <Avatar className="w-7 h-7 cursor-pointer ring-1 ring-border hover:ring-primary transition-all">
+              <AvatarImage src={user?.profileImageUrl ?? undefined} />
+              <AvatarFallback className="bg-primary/20 text-primary text-[10px] font-mono">
+                {user?.firstName ? user.firstName.slice(0, 2).toUpperCase() : <UserCircle size={14} />}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        </div>
       </div>
 
       {/* Python Bot banner */}

@@ -240,11 +240,11 @@ export default function Settings() {
                 </div>
               </div>
               <Separator />
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">SMTP Settings (Gmail recommended)</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">SMTP Settings (Brevo recommended)</p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-[9px] font-mono text-muted-foreground uppercase">Host</Label>
-                  <Input className="h-7 text-xs font-mono bg-background" placeholder="smtp.gmail.com" value={smtpHost} onChange={e => setSmtpHost(e.target.value)} />
+                  <Input className="h-7 text-xs font-mono bg-background" placeholder="smtp-relay.brevo.com" value={smtpHost} onChange={e => setSmtpHost(e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[9px] font-mono text-muted-foreground uppercase">Port</Label>
@@ -252,14 +252,14 @@ export default function Settings() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[9px] font-mono text-muted-foreground uppercase">Username</Label>
-                  <Input className="h-7 text-xs font-mono bg-background" placeholder="you@gmail.com" value={smtpUser} onChange={e => setSmtpUser(e.target.value)} />
+                  <Input className="h-7 text-xs font-mono bg-background" placeholder="ab28c7001@smtp-brevo.com" value={smtpUser} onChange={e => setSmtpUser(e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[9px] font-mono text-muted-foreground uppercase">App Password</Label>
-                  <Input className="h-7 text-xs font-mono bg-background" type="password" placeholder="Gmail app password" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} />
+                  <Label className="text-[9px] font-mono text-muted-foreground uppercase">API Key (Password)</Label>
+                  <Input className="h-7 text-xs font-mono bg-background" type="password" placeholder="Brevo API key" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} />
                 </div>
               </div>
-              <p className="text-[9px] font-mono text-muted-foreground">For Gmail: enable 2FA → Google Account → Security → App passwords</p>
+              <p className="text-[9px] font-mono text-muted-foreground">Brevo: Dashboard → Settings → SMTP &amp; API → API Keys → Generate new key</p>
             </CardContent>
           </Card>
 
