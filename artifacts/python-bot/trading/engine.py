@@ -3,9 +3,11 @@ Trading Engine — orchestrates strategy execution, risk checks, and MT5 orders.
 """
 
 import asyncio
+import collections
 import logging
 import json
 import os
+import time
 import aiohttp
 from datetime import datetime, timedelta
 from typing import Optional
@@ -78,6 +80,9 @@ class TradingEngine:
         self.ai_enabled: bool = True          # False = skip AI entirely, auto-approve all signals
         self._ai_cache: dict = {}             # (symbol, direction) -> (result, expires_at)
         self._ai_cache_ttl: int = 60          # seconds to reuse a cached AI answer
+        self._ai_call_times: collections.deque = collections.deque()  # rate limiter timestamps
+        self._ai_rpm_limit: int = 8           # calls/min ceiling; raised to 25 when Groq is active
+        self._ai_rate_lock = None             # asyncio.Lock — created lazily after event loop starts
         self._new_trades_this_tick: int = 0   # cap new positions per scan cycle
         self.max_new_trades_per_tick: int = 2  # never open more than 2 positions per 60s scan
         self._brain_gym_ran_this_weekend: bool = False  # run once per weekend downtime window
@@ -181,6 +186,59 @@ class TradingEngine:
             log.warning(f"[AI/DeepSeek] Error: {e}")
             return "ERROR"
 
+    async def _ai_rate_check(self):
+        """Block until we are within the per-minute rate limit for AI calls."""
+        if self._ai_rate_lock is None:
+            self._ai_rate_lock = asyncio.Lock()
+        async with self._ai_rate_lock:
+            now = time.monotonic()
+            while self._ai_call_times and now - self._ai_call_times[0] > 60:
+                self._ai_call_times.popleft()
+            if len(self._ai_call_times) >= self._ai_rpm_limit:
+                wait_for = 61.0 - (now - self._ai_call_times[0])
+                if wait_for > 0:
+                    log.info(f"[AI] Rate limiter: {len(self._ai_call_times)}/{self._ai_rpm_limit} calls/min — queued, waiting {wait_for:.1f}s")
+                    await asyncio.sleep(wait_for)
+                    now = time.monotonic()
+                    while self._ai_call_times and now - self._ai_call_times[0] > 60:
+                        self._ai_call_times.popleft()
+            self._ai_call_times.append(time.monotonic())
+
+    async def _call_groq(self, api_key: str, prompt: str) -> str:
+        """Call Groq (free tier: 30 RPM, Llama 3.1 8B). Returns 'YES', 'NO', or 'ERROR'."""
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        body = {
+            "model": "llama-3.1-8b-instant",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 120,
+            "temperature": 0.1,
+        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=body, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                    if resp.status == 429:
+                        log.warning("[AI/Groq] Rate limited — waiting 8s then retrying...")
+                        await asyncio.sleep(8)
+                        async with session.post(url, json=body, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as retry:
+                            if retry.status != 200:
+                                log.warning(f"[AI/Groq] Retry failed HTTP {retry.status}")
+                                return "ERROR"
+                            resp = retry
+                    if resp.status != 200:
+                        log.warning(f"[AI/Groq] HTTP {resp.status}")
+                        return "ERROR"
+                    data = await resp.json()
+                    text = data["choices"][0]["message"]["content"].strip().upper()
+                    if text.startswith("YES") or "YES" in text[:10]:
+                        return "YES"
+                    if text.startswith("NO") or "NO" in text[:10]:
+                        return "NO"
+                    return "YES"
+        except Exception as e:
+            log.warning(f"[AI/Groq] Error: {e}")
+            return "ERROR"
+
     async def _ai_validate_trade(self, trade: dict, signal: dict) -> bool:
         """Run Gemini and/or DeepSeek in parallel. Trade only if at least one says YES and none say NO."""
         if not self.ai_enabled:
@@ -192,25 +250,29 @@ class TradingEngine:
             })
             self.ai_validated += 1
             return True
-        import os
         gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
         deepseek_key = (os.environ.get("DEEPSEEK") or os.environ.get("DEEPSEEK_API_KEY") or "").strip()
+        groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+
+        # Groq free tier is 30 RPM — much more generous than Gemini's 10 RPM
+        self._ai_rpm_limit = 25 if groq_key else 8
 
         symbol = trade["symbol"]
         side = trade["side"]
         strategy = trade["strategy"]
         price = trade["entry_price"]
 
-        if not gemini_key and not deepseek_key:
-            log.warning(f"[AI] No AI keys found (GEMINI_API_KEY / DEEPSEEK). Trade blocked.")
+        if not gemini_key and not deepseek_key and not groq_key:
+            log.warning(f"[AI] No AI keys found (GROQ_API_KEY / GEMINI_API_KEY / DEEPSEEK). Trade blocked.")
             await self.ws.emit_trade({
                 "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
                 "decision": "NO", "price": price,
-                "reason": "No AI keys configured. Add GEMINI_API_KEY or DEEPSEEK to your .env file.",
+                "reason": "No AI keys configured. Add GROQ_API_KEY (free at console.groq.com) to your .env file.",
             })
             return False
 
         # Cache check — reuse AI answer for same symbol+direction within TTL (avoids rate limits)
+        # Rate gate — queue this call until we are within the per-minute ceiling
         cache_key = (symbol, side)
         now = datetime.utcnow()
         if cache_key in self._ai_cache:
@@ -278,9 +340,15 @@ class TradingEngine:
             f"Respond with only YES or NO followed by one brief reason."
         )
 
+        # Rate gate — queue if at the per-minute ceiling before hitting any API
+        await self._ai_rate_check()
+
         # Run available AIs in parallel
         tasks = []
         labels = []
+        if groq_key:
+            tasks.append(self._call_groq(groq_key, prompt))
+            labels.append("Groq")
         if gemini_key:
             tasks.append(self._call_gemini(gemini_key, prompt))
             labels.append("Gemini")

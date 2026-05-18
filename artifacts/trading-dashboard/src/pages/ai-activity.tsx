@@ -146,6 +146,7 @@ export default function AiActivity() {
       <div className="flex items-center gap-3 px-3 py-2 rounded border border-border/40 bg-card">
         <Cpu size={10} className="text-muted-foreground shrink-0" />
         <span className="text-[9px] font-mono text-muted-foreground">Active models:</span>
+        <span className="text-[9px] font-mono text-orange-300">⚡ Groq Llama 3.1</span>
         <span className="text-[9px] font-mono text-blue-300">✦ Gemini 2.5 Flash</span>
         <span className="text-[9px] font-mono text-purple-300">◈ DeepSeek Chat</span>
         <button
@@ -176,6 +177,7 @@ export default function AiActivity() {
       ) : (
         <div className="space-y-2">
           {items.map((d) => {
+            const groqVote = d.votes?.["Groq"] ?? d.votes?.["groq"];
             const geminiVote = d.votes?.["Gemini"] ?? d.votes?.["gemini"];
             const deepseekVote = d.votes?.["DeepSeek"] ?? d.votes?.["deepseek"];
             return (
@@ -206,8 +208,9 @@ export default function AiActivity() {
                   {/* AI votes row */}
                   <div className="flex items-center gap-2 flex-wrap pl-5">
                     <Zap size={8} className="text-muted-foreground/50 shrink-0" />
-                    <VoteChip name="Gemini" vote={geminiVote} />
-                    <VoteChip name="DeepSeek" vote={deepseekVote} />
+                    {groqVote !== undefined && <VoteChip name="Groq" vote={groqVote} />}
+                    {geminiVote !== undefined && <VoteChip name="Gemini" vote={geminiVote} />}
+                    {deepseekVote !== undefined && <VoteChip name="DeepSeek" vote={deepseekVote} />}
                   </div>
 
                   {/* Reason */}
