@@ -441,9 +441,14 @@ export default function Settings() {
 
       {/* Bot Setup tab */}
       {tab === "setup" && (() => {
-        const oneliner = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; python bot.py`;
-        const onelinerAi = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; $env:GEMINI_API_KEY="AIzaSyAZnOZfJ3cvmDzX3GCaVHy3CPHX2HBbW1s"; python bot.py`;
-        const install = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; pip install -r requirements.txt`;
+        const install   = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot && pip install -r requirements.txt`;
+        const startBot  = `cd C:\\Users\\Ilyes\\westrade && git pull && cd artifacts\\python-bot && python bot.py`;
+        const openEnv   = `notepad C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot\\.env`;
+        const cmds = [
+          { idx: 0, label: "First time only — install dependencies", cmd: install },
+          { idx: 1, label: "Start bot (pulls latest changes automatically)", cmd: startBot, highlight: true },
+          { idx: 2, label: "Edit API keys & settings (.env file)", cmd: openEnv },
+        ];
         return (
           <div className="space-y-3">
             <Card className="bg-card border-card-border">
@@ -453,37 +458,18 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
-                <p className="text-[10px] font-mono text-muted-foreground">Open PowerShell and paste the command below. MT5 must be open and logged in first.</p>
-
-                <div className="space-y-1">
-                  <p className="text-[10px] font-mono text-muted-foreground">First time only — install dependencies</p>
-                  <div className="flex items-start gap-2 bg-black/40 rounded border border-border px-3 py-2">
-                    <code className="text-[11px] font-mono text-green-400 flex-1 break-all">{install}</code>
-                    <button onClick={() => copyCmd(install, 0)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
-                      {copiedIdx === 0 ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
-                    </button>
+                <p className="text-[10px] font-mono text-muted-foreground">Open PowerShell from anywhere and paste. MT5 must be open and logged in first.</p>
+                {cmds.map(({ idx, label, cmd, highlight }) => (
+                  <div key={idx} className="space-y-1">
+                    <p className="text-[10px] font-mono text-muted-foreground">{label}</p>
+                    <div className={`flex items-start gap-2 rounded border px-3 py-2 ${highlight ? "bg-indigo-950/40 border-indigo-500/30" : "bg-black/40 border-border"}`}>
+                      <code className={`text-[11px] font-mono flex-1 break-all ${highlight ? "text-indigo-300" : "text-green-400"}`}>{cmd}</code>
+                      <button onClick={() => copyCmd(cmd, idx)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+                        {copiedIdx === idx ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-[10px] font-mono text-muted-foreground">Start bot — paste this every time</p>
-                  <div className="flex items-start gap-2 bg-black/40 rounded border border-border px-3 py-2">
-                    <code className="text-[11px] font-mono text-green-400 flex-1 break-all">{oneliner}</code>
-                    <button onClick={() => copyCmd(oneliner, 1)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
-                      {copiedIdx === 1 ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-[10px] font-mono text-muted-foreground">Start bot + AI Activity (replace the key)</p>
-                  <div className="flex items-start gap-2 bg-black/40 rounded border border-border px-3 py-2">
-                    <code className="text-[11px] font-mono text-green-400 flex-1 break-all">{onelinerAi}</code>
-                    <button onClick={() => copyCmd(onelinerAi, 2)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
-                      {copiedIdx === 2 ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
-                    </button>
-                  </div>
-                </div>
+                ))}
               </CardContent>
             </Card>
             <Card className="bg-card border-card-border">
@@ -491,10 +477,11 @@ export default function Settings() {
                 <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Notes</p>
                 <ul className="space-y-1.5">
                   {[
-                    "These commands reset when you close PowerShell — re-paste each session",
+                    "Start bot command pulls latest bot code automatically before starting",
+                    "All API keys (Groq, Gemini, DeepSeek, MT5) live in the .env file — use the notepad command to edit them",
                     "MT5 must be running and logged in on the same PC as the bot",
-                    "The dashboard at westrade.onrender.com works from any browser, any device",
-                    "AI Activity only shows data when GEMINI_API_KEY is set and the bot is running",
+                    "Dashboard at westrade.onrender.com works from any browser, any device",
+                    "Bot works with just GROQ_API_KEY — Gemini and DeepSeek are optional extras",
                   ].map((note, i) => (
                     <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-muted-foreground">
                       <span className="text-primary mt-0.5">—</span> {note}
