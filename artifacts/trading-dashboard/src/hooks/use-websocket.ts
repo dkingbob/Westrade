@@ -34,12 +34,9 @@ export function useWebSocket() {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           switch (data.type) {
             case "tick":
-              // We could manually update some small caches here if needed, 
-              // but standard queries with refetchInterval handle bulk data.
-              // For high-frequency stuff, we might want to update local state directly.
               break;
             case "positions":
             case "trade_opened":
@@ -47,6 +44,33 @@ export function useWebSocket() {
               queryClient.invalidateQueries({ queryKey: getGetPositionsQueryKey() });
               queryClient.invalidateQueries({ queryKey: getGetPortfolioSummaryQueryKey() });
               break;
+
+            // Real MT5 positions pushed by the Python bot every 2 s.
+            // Inject directly into the positions query cache so the dashboard
+            // shows live data without an extra API round-trip.
+            case "bot_positions": {
+              const raw: any[] = Array.isArray(data.data) ? data.data : [];
+              const mapped = raw.map((pos) => ({
+                id: pos.ticket ?? Math.random(),
+                symbol: pos.symbol,
+                side: pos.side as "long" | "short",
+                entryPrice: pos.entry_price,
+                currentPrice: pos.current_price,
+                quantity: pos.volume,
+                pnl: pos.pnl ?? 0,
+                pnlPct: pos.entry_price > 0
+                  ? (pos.pnl ?? 0) / (pos.entry_price * pos.volume)
+                  : 0,
+                strategy: pos.strategy ?? "bot",
+                stopLoss: pos.sl ?? null,
+                takeProfit: pos.tp ?? null,
+                openedAt: new Date().toISOString(),
+              }));
+              queryClient.setQueryData(getGetPositionsQueryKey(), mapped);
+              queryClient.invalidateQueries({ queryKey: getGetPortfolioSummaryQueryKey() });
+              break;
+            }
+
             case "equity_update":
               queryClient.invalidateQueries({ queryKey: getGetPortfolioSummaryQueryKey() });
               break;
