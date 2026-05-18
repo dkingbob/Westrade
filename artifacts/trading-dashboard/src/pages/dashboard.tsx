@@ -248,7 +248,7 @@ export default function Dashboard() {
   };
 
   const [copied, setCopied] = useState(false);
-  const BOT_CMD = 'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git reset --hard HEAD; git pull origin claude/fix-empty-message-error-3H3Wn; python bot.py';
+  const BOT_CMD = 'cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git pull origin main; python bot.py';
 
   const copyBotCmd = () => {
     navigator.clipboard.writeText(BOT_CMD);

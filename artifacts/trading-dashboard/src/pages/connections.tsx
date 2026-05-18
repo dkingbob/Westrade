@@ -177,10 +177,10 @@ export default function Connections() {
               <div className="p-3 rounded border border-border bg-muted/10 space-y-2">
                 <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Setup Instructions</p>
                 <div className="space-y-1 text-[10px] font-mono text-muted-foreground">
-                  <p>1. Navigate to <span className="text-primary">artifacts/python-bot/</span></p>
-                  <p>2. Run: <span className="text-primary">pip install -r requirements.txt</span></p>
-                  <p>3. Configure <span className="text-primary">.env</span> with MT5 credentials</p>
-                  <p>4. Run: <span className="text-primary">python bot.py</span></p>
+                  <p>1. Open <span className="text-primary">PowerShell</span> on your PC (MT5 must be running)</p>
+                  <p>2. First time only — <span className="text-primary">pip install -r requirements.txt</span></p>
+                  <p>3. Make sure <span className="text-primary">.env</span> has your MT5 + Groq credentials</p>
+                  <p>4. Run: <span className="text-primary">cd C:\Users\Ilyes\westrade\artifacts\python-bot; git pull origin main; python bot.py</span></p>
                   <p>5. Bot auto-connects to this dashboard via WebSocket</p>
                 </div>
               </div>
@@ -188,7 +188,7 @@ export default function Connections() {
             <div className="space-y-1">
               {[
                 { label: "Heartbeat", value: status?.pythonBot.heartbeatAge ? `${Math.floor(status.pythonBot.heartbeatAge / 1000)}s ago` : "—" },
-                { label: "AI Validation", value: status?.aiValidation ? "Gemini + DeepSeek" : "Not configured" },
+                { label: "AI Validation", value: status?.aiValidation ? "Groq + Gemini" : "Not configured" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-[10px] font-mono text-muted-foreground">{label}</span>

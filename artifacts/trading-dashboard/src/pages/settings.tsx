@@ -306,8 +306,8 @@ export default function Settings() {
       )}
       {/* Bot Setup tab */}
       {tab === "setup" && (() => {
-        const oneliner = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; python bot.py`;
-        const onelinerAi = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; $env:ALGODESK_WS_URL="wss://westrade.onrender.com/api/ws"; $env:ALGODESK_API_URL="https://westrade.onrender.com/api"; $env:GEMINI_API_KEY="AIzaSyAZnOZfJ3cvmDzX3GCaVHy3CPHX2HBbW1s"; python bot.py`;
+        const oneliner = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git pull origin main; python bot.py`;
+        const onelinerAi = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; git pull origin main; $env:GROQ_API_KEY="YOUR_GROQ_KEY_HERE"; python bot.py`;
         const install = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; pip install -r requirements.txt`;
         return (
           <div className="space-y-3">
@@ -341,7 +341,7 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-[10px] font-mono text-muted-foreground">Start bot + AI Activity (replace the key)</p>
+                  <p className="text-[10px] font-mono text-muted-foreground">Start bot + Groq AI (replace YOUR_GROQ_KEY_HERE with your key from console.groq.com)</p>
                   <div className="flex items-start gap-2 bg-black/40 rounded border border-border px-3 py-2">
                     <code className="text-[11px] font-mono text-green-400 flex-1 break-all">{onelinerAi}</code>
                     <button onClick={() => copyCmd(onelinerAi, 2)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
@@ -359,7 +359,7 @@ export default function Settings() {
                     "These commands reset when you close PowerShell — re-paste each session",
                     "MT5 must be running and logged in on the same PC as the bot",
                     "The dashboard at westrade.onrender.com works from any browser, any device",
-                    "AI Activity only shows data when GEMINI_API_KEY is set and the bot is running",
+                    "AI Activity shows data when GROQ_API_KEY is set — get a free key at console.groq.com",
                   ].map((note, i) => (
                     <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-muted-foreground">
                       <span className="text-primary mt-0.5">—</span> {note}
