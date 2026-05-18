@@ -93,6 +93,13 @@ class TradingEngine:
         """Emit a structured log entry to the dashboard Bot Feed page."""
         log_fn = log.warning if level == "warn" else log.debug if level == "debug" else log.info
         log_fn(f"[{category}] {message}")
+        try:
+            import os as _os
+            _log_path = _os.path.join(_os.path.dirname(__file__), "..", "bot_log.txt")
+            with open(_log_path, "a", encoding="utf-8") as _f:
+                _f.write(f"{datetime.utcnow().isoformat()} [{category.upper()}] {message}\n")
+        except Exception:
+            pass
         await self.ws.emit_trade({
             "action": "bot_log",
             "category": category,

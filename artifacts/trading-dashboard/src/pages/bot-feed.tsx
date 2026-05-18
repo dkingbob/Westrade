@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Activity, Trash2, PauseCircle, PlayCircle } from "lucide-react";
+import { Activity, Trash2, PauseCircle, PlayCircle, Download } from "lucide-react";
 
 export interface BotLogEntry {
   id: string;
@@ -11,6 +11,7 @@ export interface BotLogEntry {
   timestamp: string;
 }
 
+const MAX_ENTRIES = 100;
 const logStore: BotLogEntry[] = [];
 let logListeners = new Set<() => void>();
 
@@ -19,25 +20,35 @@ function notifyLog() { logListeners.forEach(fn => fn()); }
 export function ingestBotLog(data: Omit<BotLogEntry, "id">) {
   const id = `${data.timestamp}-${Math.random()}`;
   logStore.unshift({ ...data, id });
-  if (logStore.length > 500) logStore.length = 500;
+  if (logStore.length > MAX_ENTRIES) logStore.length = MAX_ENTRIES;
   notifyLog();
 }
 
 const CATEGORY_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  scan:   { label: "SCAN",   color: "text-slate-400",   bg: "bg-slate-500/10 border-slate-500/20" },
-  signal: { label: "SIGNAL", color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/20" },
-  ai:     { label: "AI",     color: "text-purple-400",  bg: "bg-purple-500/10 border-purple-500/20" },
-  trade:  { label: "TRADE",  color: "text-green-400",   bg: "bg-green-500/10 border-green-500/20" },
-  risk:   { label: "RISK",   color: "text-orange-400",  bg: "bg-orange-500/10 border-orange-500/20" },
-  tuner:  { label: "TUNER",  color: "text-yellow-400",  bg: "bg-yellow-500/10 border-yellow-500/20" },
-  warn:   { label: "WARN",   color: "text-red-400",     bg: "bg-red-500/10 border-red-500/20" },
+  scan:       { label: "SCAN",     color: "text-slate-400",   bg: "bg-slate-500/10 border-slate-500/20" },
+  signal:     { label: "SIGNAL",   color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/20" },
+  ai:         { label: "AI",       color: "text-purple-400",  bg: "bg-purple-500/10 border-purple-500/20" },
+  trade:      { label: "TRADE",    color: "text-green-400",   bg: "bg-green-500/10 border-green-500/20" },
+  risk:       { label: "RISK",     color: "text-orange-400",  bg: "bg-orange-500/10 border-orange-500/20" },
+  tuner:      { label: "TUNER",    color: "text-yellow-400",  bg: "bg-yellow-500/10 border-yellow-500/20" },
+  brain_gym:  { label: "GYM",      color: "text-cyan-400",    bg: "bg-cyan-500/10 border-cyan-500/20" },
+  warn:       { label: "WARN",     color: "text-red-400",     bg: "bg-red-500/10 border-red-500/20" },
 };
 
 const DEFAULT_STYLE = { label: "INFO", color: "text-muted-foreground", bg: "bg-muted/10 border-border/20" };
 
 const CATEGORY_ICONS: Record<string, string> = {
-  scan: "🔍", signal: "📡", ai: "🧠", trade: "✅", risk: "🛡", tuner: "🎯", warn: "⚠️",
+  scan: "🔍", signal: "📡", ai: "🧠", trade: "✅", risk: "🛡", tuner: "🎯", warn: "⚠️", brain_gym: "🏋️",
 };
+
+type TimeRange = "1h" | "24h" | "all";
+
+function filterByTime(entries: BotLogEntry[], range: TimeRange) {
+  if (range === "all") return entries;
+  const now = Date.now();
+  const ms = range === "1h" ? 3_600_000 : 86_400_000;
+  return entries.filter(e => now - new Date(e.timestamp).getTime() < ms);
+}
 
 function useLogEntries() {
   const [, tick] = useState(0);
@@ -49,17 +60,34 @@ function useLogEntries() {
   return logStore;
 }
 
+function exportLogs(entries: BotLogEntry[]) {
+  const lines = entries
+    .slice()
+    .reverse()
+    .map(e => `${new Date(e.timestamp).toISOString()} [${e.category.toUpperCase()}] ${e.message}`)
+    .join("\n");
+  const blob = new Blob([lines], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `bot-log-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function BotFeed() {
   const entries = useLogEntries();
   const [paused, setPaused] = useState(false);
-  const [filter, setFilter] = useState<string>("all");
+  const [category, setCategory] = useState<string>("all");
+  const [timeRange, setTimeRange] = useState<TimeRange>("all");
   const [, tick] = useState(0);
   const pausedRef = useRef(false);
   pausedRef.current = paused;
 
-  const filtered = filter === "all" ? entries : entries.filter(e => e.category === filter);
+  const byTime = filterByTime(entries, timeRange);
+  const filtered = category === "all" ? byTime : byTime.filter(e => e.category === category);
 
-  const categories = ["all", "signal", "ai", "trade", "risk", "tuner", "scan"];
+  const categories = ["all", "ai", "signal", "trade", "risk", "tuner", "scan"];
 
   return (
     <div className="p-4 space-y-3 h-full flex flex-col">
@@ -68,38 +96,54 @@ export default function BotFeed() {
         <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
           <Activity size={14} className="text-green-400" /> Bot Feed
           <span className="text-[10px] font-normal text-muted-foreground normal-case tracking-normal">
-            — real-time thinking log
+            — {filtered.length}/{MAX_ENTRIES} entries
           </span>
         </h1>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono text-muted-foreground">{filtered.length} entries</span>
+        <div className="flex items-center gap-1.5">
           <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] font-mono gap-1"
             onClick={() => setPaused(p => !p)}>
             {paused ? <><PlayCircle size={9} /> Resume</> : <><PauseCircle size={9} /> Pause</>}
           </Button>
           <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] font-mono gap-1"
+            onClick={() => exportLogs(entries)}>
+            <Download size={9} /> Save
+          </Button>
+          <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] font-mono gap-1 text-red-400 border-red-500/30 hover:bg-red-500/10"
             onClick={() => { logStore.length = 0; tick(n => n + 1); notifyLog(); }}>
             <Trash2 size={9} /> Clear
           </Button>
         </div>
       </div>
 
+      {/* Time range filter */}
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Period:</span>
+        {(["1h", "24h", "all"] as TimeRange[]).map(r => (
+          <button key={r} onClick={() => setTimeRange(r)}
+            className={cn(
+              "text-[9px] font-mono px-2 py-0.5 rounded border transition-colors uppercase tracking-wider",
+              timeRange === r
+                ? "text-primary border-primary bg-primary/10"
+                : "text-muted-foreground border-border hover:text-foreground"
+            )}>
+            {r === "all" ? "ALL" : r}
+          </button>
+        ))}
+      </div>
+
       {/* Category filter */}
       <div className="flex gap-1 flex-wrap shrink-0">
         {categories.map(cat => {
           const s = cat === "all" ? null : CATEGORY_STYLES[cat] ?? DEFAULT_STYLE;
-          const active = filter === cat;
+          const active = category === cat;
           return (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
+            <button key={cat} onClick={() => setCategory(cat)}
               className={cn(
                 "text-[9px] font-mono px-2 py-0.5 rounded border transition-colors uppercase tracking-wider",
                 active
                   ? (s ? `${s.color} border-current bg-current/10` : "text-primary border-primary bg-primary/10")
                   : "text-muted-foreground border-border hover:text-foreground"
-              )}
-            >
+              )}>
               {cat === "all" ? "ALL" : `${CATEGORY_ICONS[cat] ?? ""} ${cat}`}
             </button>
           );
@@ -112,12 +156,15 @@ export default function BotFeed() {
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <Activity size={28} className="text-muted-foreground/30" />
             <p className="text-[11px] font-mono text-muted-foreground">
-              Waiting for bot activity...
+              {entries.length === 0
+                ? "Waiting for bot activity..."
+                : "No entries match the current filter."}
             </p>
-            <p className="text-[10px] font-mono text-muted-foreground/70">
-              Start the bot on your Windows machine and trades will stream here in real-time.
-              You'll see every scan, signal, AI evaluation, and trade decision as it happens.
-            </p>
+            {entries.length === 0 && (
+              <p className="text-[10px] font-mono text-muted-foreground/70">
+                Start the bot on your Windows machine — every scan, signal, AI decision and trade will stream here live. Position analysis runs every 5 minutes.
+              </p>
+            )}
           </div>
         ) : (
           filtered.map(entry => {
@@ -125,25 +172,20 @@ export default function BotFeed() {
             const icon = CATEGORY_ICONS[entry.category] ?? "•";
             const isWarn = entry.level === "warn";
             return (
-              <div
-                key={entry.id}
+              <div key={entry.id}
                 className={cn(
                   "flex items-start gap-2 px-3 py-1.5 rounded border text-[10px]",
                   isWarn ? "bg-red-500/5 border-red-500/20" : s.bg
-                )}
-              >
-                {/* Time */}
+                )}>
                 <span className="text-muted-foreground/50 shrink-0 tabular-nums text-[9px] pt-0.5">
                   {new Date(entry.timestamp).toLocaleTimeString()}
                 </span>
-                {/* Category badge */}
                 <span className={cn(
-                  "shrink-0 text-[9px] font-bold uppercase tracking-wider w-12 text-right",
+                  "shrink-0 text-[9px] font-bold uppercase tracking-wider w-14 text-right",
                   isWarn ? "text-red-400" : s.color
                 )}>
                   {icon} {s.label}
                 </span>
-                {/* Message */}
                 <span className={cn(
                   "flex-1 break-all",
                   isWarn ? "text-red-300" : entry.category === "trade" ? "text-foreground font-bold" : "text-muted-foreground"
