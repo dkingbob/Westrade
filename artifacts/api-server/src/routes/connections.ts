@@ -78,15 +78,11 @@ router.post("/connections/bot/heartbeat", async (req, res): Promise<void> => {
         updatedAt: new Date(),
       });
   }
-  // Auto-start engine on first bot heartbeat if not already running
-  if (!tradingEngine.getStatus().running) {
-    await tradingEngine.start();
-    // Only broadcast killSwitchActive:false if it's actually false in the DB
-    // Never override a user-set kill switch on server restart
-    const currentRows = await db.select().from(botConfigTable).limit(1);
-    const killSwitchActive = currentRows[0]?.killSwitchActive ?? false;
-    wsServer.broadcast("config_update", { killSwitchActive });
-  }
+  // Broadcast current kill switch state — do NOT auto-start the JS simulation
+  // engine when the Python bot connects; the Python bot IS the trading engine.
+  const currentRows = await db.select().from(botConfigTable).limit(1);
+  const killSwitchActive = currentRows[0]?.killSwitchActive ?? false;
+  wsServer.broadcast("config_update", { killSwitchActive });
 
   res.json({ success: true, timestamp: new Date().toISOString() });
 });

@@ -334,4 +334,9 @@ router.post("/trades/sync-history", async (req, res): Promise<void> => {
   res.json({ inserted: toInsert.length, purged: badIds.length, total: incoming.length });
 });
 
+router.delete("/trades/clear-all", async (req, res): Promise<void> => {
+  const result = await db.delete(tradesTable);
+  res.json({ success: true, message: "All trades cleared" });
+});
+
 export default router;

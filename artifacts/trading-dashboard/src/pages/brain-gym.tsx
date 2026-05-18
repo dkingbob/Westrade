@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2, Microscope, BrainCircuit, Sparkles } from "lucide-react";
+import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2, Microscope, BrainCircuit, Sparkles, Trash2 } from "lucide-react";
 
 type Lookback = "1d" | "7d" | "30d" | "all_time";
 
@@ -193,6 +193,16 @@ export default function BrainGymPage() {
     },
   });
 
+  const clearTrades = useMutation({
+    mutationFn: () =>
+      fetch("/api/trades/clear-all", { method: "DELETE", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["brain-gym-latest"] });
+      qc.invalidateQueries({ queryKey: ["brain-gym-trades"] });
+      qc.invalidateQueries({ queryKey: ["brain-gym-progress"] });
+    },
+  });
+
   const report = latest?.report;
   const summary = report?.summary;
 
@@ -229,6 +239,20 @@ export default function BrainGymPage() {
           >
             <RefreshCw size={12} className={trigger.isPending ? "animate-spin" : ""} />
             {trigger.isPending ? "Running…" : "Run Now"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs gap-1.5 text-red-400 border-red-500/30 hover:bg-red-500/10"
+            disabled={clearTrades.isPending}
+            onClick={() => {
+              if (confirm("Delete ALL trades from the database? This cannot be undone.")) {
+                clearTrades.mutate();
+              }
+            }}
+          >
+            <Trash2 size={12} />
+            {clearTrades.isPending ? "Clearing…" : "Clear All Trades"}
           </Button>
         </div>
       </div>
