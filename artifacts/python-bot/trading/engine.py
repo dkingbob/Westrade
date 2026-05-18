@@ -316,12 +316,30 @@ class TradingEngine:
             reason = f"Rejected by {', '.join(no_votes)}"
             self.ai_rejected += 1
         elif no_votes and override_active:
-            # AI said NO but 20-minute drought override kicks in — allow it
-            decision = "YES"
-            reason = f"20-min override — AI said NO ({', '.join(no_votes)}) but no trade approved in 20m"
-            self.ai_validated += 1
-            self._last_approved_at = datetime.utcnow()
-            log.warning(f"[AI] 20-min override triggered for {symbol} — forcing entry")
+            # 20-minute drought — re-ask with a more permissive prompt (don't force bad trades)
+            permissive_prompt = (
+                f"Forex bot — 20-minute trade drought. Last resort check.\n"
+                f"Trade: {symbol} {side.upper()} @ {price}\n"
+                f"RSI={indicators.get('rsi_14', 'n/a')}, trend={indicators.get('trend', 'n/a')}, "
+                f"MACD={'bullish' if indicators.get('macd_histogram', 0) > 0 else 'bearish'}\n"
+                f"Say YES unless this is genuinely catastrophic — RSI above 85 for a long, "
+                f"below 15 for a short, or price strongly moving against direction right now.\n"
+                f"Everything else = YES. Reply YES or NO only."
+            )
+            permissive_result = "YES"
+            if groq_key:
+                permissive_result = await self._call_groq(groq_key, permissive_prompt)
+                log.info(f"[AI] 20-min override re-ask for {symbol}: {permissive_result}")
+            if permissive_result == "NO":
+                decision = "NO"
+                reason = f"20m override: still catastrophic setup — rejected"
+                self.ai_rejected += 1
+            else:
+                decision = "YES"
+                reason = f"20-min override — relaxed check passed (original: NO by {', '.join(no_votes)})"
+                self.ai_validated += 1
+                self._last_approved_at = datetime.utcnow()
+                log.warning(f"[AI] 20-min override approved {symbol} on relaxed check")
         elif yes_votes:
             decision = "YES"
             reason = f"Approved by {', '.join(yes_votes)}"
