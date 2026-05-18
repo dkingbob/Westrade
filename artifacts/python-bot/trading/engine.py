@@ -978,7 +978,12 @@ Be specific. Reference the Brain Gym data. No generic advice."""
             "strategy": signal["strategy"],
             "entry_price": signal["price"],
         }
-        await self._emit_log("ai", f"Evaluating {symbol} {signal['side'].upper()} with Gemini + DeepSeek...")
+        _providers = " + ".join(filter(None, [
+            "Groq" if os.environ.get("GROQ_API_KEY") else None,
+            "Gemini" if os.environ.get("GEMINI_API_KEY") else None,
+            "DeepSeek" if (os.environ.get("DEEPSEEK") or os.environ.get("DEEPSEEK_API_KEY")) else None,
+        ])) or "no AI keys"
+        await self._emit_log("ai", f"Evaluating {symbol} {signal['side'].upper()} with {_providers}...")
         if not await self._ai_validate_trade(_pre_trade, signal):
             await self._emit_log("ai", f"{symbol} REJECTED by AI — trade blocked", "warn")
             return
