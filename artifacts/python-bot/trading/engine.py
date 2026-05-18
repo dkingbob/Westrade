@@ -27,3 +27,7 @@ def _detect_session(hour: int) -> str:
     if 13 <= hour < 22:
         return "ny"
     return "asian"
+
+
+class TradingEngine:
+    ...(full content truncated for this attempt)
