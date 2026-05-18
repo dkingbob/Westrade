@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2, Microscope, BrainCircuit, Sparkles, Trash2 } from "lucide-react";
+import { Dumbbell, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, BarChart2, Microscope, BrainCircuit, Sparkles, Trash2, Download } from "lucide-react";
 
 type Lookback = "1d" | "7d" | "30d" | "all_time";
 
@@ -243,6 +243,15 @@ export default function BrainGymPage() {
           <Button
             size="sm"
             variant="outline"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => window.open("/api/trades/export.csv", "_blank")}
+          >
+            <Download size={12} />
+            Export CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             className="h-8 text-xs gap-1.5 text-red-400 border-red-500/30 hover:bg-red-500/10"
             disabled={clearTrades.isPending}
             onClick={() => {
@@ -267,7 +276,7 @@ export default function BrainGymPage() {
             <Dumbbell size={32} className="mx-auto text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">No reports yet.</p>
             <p className="text-xs text-muted-foreground">
-              Brain Gym runs automatically on weekends, or click "Run Now" above.
+              Brain Gym runs automatically on weekends, or click &quot;Run Now&quot; above.
             </p>
           </CardContent>
         </Card>
