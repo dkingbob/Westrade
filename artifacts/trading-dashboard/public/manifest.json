@@ -1,0 +1,19 @@
+{
+  "name": "Westrade — Algorithmic Trading",
+  "short_name": "Westrade",
+  "description": "AI-powered algorithmic trading dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0b0f",
+  "theme_color": "#FF3C00",
+  "orientation": "landscape-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"]
+}
