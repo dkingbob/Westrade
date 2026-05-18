@@ -208,11 +208,13 @@ function SidebarContent({ collapsed, location, onNavigate, mode, setMode }: {
 }) {
   return (
     <>
-      {/* Logo */}
-      <div className={cn("flex items-center gap-2 px-3 py-3 border-b border-sidebar-border", collapsed && "justify-center")}>
-        <Activity size={16} className="text-primary shrink-0" />
-        {!collapsed && <span className="text-xs font-mono font-bold text-foreground tracking-widest uppercase">Westrade</span>}
-      </div>
+      {/* Logo — click to go home */}
+      <Link href="/">
+        <div className={cn("flex items-center gap-2 px-3 py-3 border-b border-sidebar-border cursor-pointer hover:bg-sidebar-accent transition-colors", collapsed && "justify-center")}>
+          <Activity size={16} className="text-primary shrink-0" />
+          {!collapsed && <span className="text-xs font-mono font-bold text-foreground tracking-widest uppercase">Westrade</span>}
+        </div>
+      </Link>
 
       {/* Engine start/stop — clickable from any page */}
       <div className="border-b border-sidebar-border">
