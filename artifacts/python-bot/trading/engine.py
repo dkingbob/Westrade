@@ -60,6 +60,8 @@ class TradingEngine:
         # AI validation counters
         self.ai_validated = 0
         self.ai_rejected = 0
+        self._last_approved_at: Optional[datetime] = None  # timestamp of last AI-approved trade
+        self._position_check_tick: int = 0  # tracks when to run open-position AI analysis
 
         # Interval trading: trade for N hours, pause for M hours, repeat
         # Both None means continuous trading (no interval)
@@ -270,15 +272,22 @@ class TradingEngine:
             except Exception:
                 pass
 
+        # Check if 20-minute override applies — if no trade has been approved in 20 min, bypass AI
+        override_active = (
+            self._last_approved_at is None or
+            (datetime.utcnow() - self._last_approved_at).total_seconds() > 1200
+        )
+
         prompt = (
-            f"You are a professional forex trading risk analyst. A trading bot wants to place this order:\n"
-            f"- Symbol: {symbol}\n- Direction: {side} (long=buy, short=sell)\n"
-            f"- Strategy: {strategy}\n- Entry price: {price}\n\n"
-            f"Technical indicators (H1 timeframe):\n{ind_text}"
+            f"You are a forex trade filter for an automated trading bot. The bot has SL and TP already set.\n"
+            f"Trade: {symbol} {side.upper()} @ {price} | Strategy: {strategy}\n\n"
+            f"Indicators (H1):\n{ind_text}"
             f"{dom_text}\n"
-            f"Does this trade have a reasonable probability of success?\n"
-            f"Consider: trend alignment, momentum, risk/reward, overbought/oversold conditions, and order flow if available.\n"
-            f"Respond with only YES or NO followed by one brief reason."
+            f"YOUR JOB: Say YES unless there is a CLEAR reason not to trade — e.g. price strongly against trend, "
+            f"RSI above 78 for a long or below 22 for a short, or MACD strongly contradicting direction.\n"
+            f"Mixed or neutral signals = YES. A small edge is enough. The bot manages risk with SL/TP.\n"
+            f"Do NOT say NO just because conditions are imperfect. Say NO only if this is obviously a bad entry.\n"
+            f"Reply with YES or NO and one short reason (max 8 words)."
         )
 
         # Run available AIs in parallel — Groq primary, Gemini secondary, DeepSeek optional
@@ -302,16 +311,24 @@ class TradingEngine:
         no_votes = [l for l, r in valid if r == "NO"]
         yes_votes = [l for l, r in valid if r == "YES"]
 
-        if no_votes:
+        if no_votes and not override_active:
             decision = "NO"
             reason = f"Rejected by {', '.join(no_votes)}"
             self.ai_rejected += 1
+        elif no_votes and override_active:
+            # AI said NO but 20-minute drought override kicks in — allow it
+            decision = "YES"
+            reason = f"20-min override — AI said NO ({', '.join(no_votes)}) but no trade approved in 20m"
+            self.ai_validated += 1
+            self._last_approved_at = datetime.utcnow()
+            log.warning(f"[AI] 20-min override triggered for {symbol} — forcing entry")
         elif yes_votes:
             decision = "YES"
             reason = f"Approved by {', '.join(yes_votes)}"
             self.ai_validated += 1
+            self._last_approved_at = datetime.utcnow()
         else:
-            # All AI providers failed — block by default (safer than allowing blind trades)
+            # All AI providers failed
             if self.block_on_ai_error:
                 decision = "NO"
                 reason = "AI unavailable — trade blocked (all providers failed)"
@@ -320,6 +337,7 @@ class TradingEngine:
                 decision = "YES"
                 reason = "AI services unavailable — trade allowed by default"
                 self.ai_validated += 1
+                self._last_approved_at = datetime.utcnow()
 
         await self.ws.emit_trade({
             "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
@@ -853,6 +871,104 @@ Be specific. Reference the Brain Gym data. No generic advice."""
             log.error(f"Market briefing error: {e}")
             await self._emit_log("brain_gym", f"Could not generate briefing: {e}", "warn")
 
+    async def _analyze_open_positions(self):
+        """Ask Groq to review each open position — suggest hold, trail stop, or exit early."""
+        import os
+        groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+        gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        if not groq_key and not gemini_key:
+            return
+
+        positions = []
+        if self.mode == "live" and self._mt5 is not None:
+            mt5 = self._mt5
+            raw = mt5.positions_get() or []
+            for pos in raw:
+                tick = mt5.symbol_info_tick(pos.symbol)
+                current = (tick.ask + tick.bid) / 2 if tick else pos.price_open
+                positions.append({
+                    "symbol": pos.symbol,
+                    "side": "long" if pos.type == 0 else "short",
+                    "entry": pos.price_open,
+                    "current": current,
+                    "pnl": pos.profit,
+                    "sl": pos.sl,
+                    "tp": pos.tp,
+                    "strategy": pos.comment.replace("AlgoDesk/", "") if pos.comment else "bot",
+                })
+        else:
+            for sym, pos in self.open_positions.items():
+                positions.append({
+                    "symbol": sym,
+                    "side": pos.get("side"),
+                    "entry": pos.get("entry_price"),
+                    "current": pos.get("entry_price"),
+                    "pnl": 0,
+                    "sl": None,
+                    "tp": None,
+                    "strategy": pos.get("strategy", "bot"),
+                })
+
+        if not positions:
+            return
+
+        pos_text = "\n".join(
+            f"  {p['symbol']} {p['side'].upper()} entry={p['entry']} now={p['current']:.5f} "
+            f"P&L=${p['pnl']:.2f} SL={p['sl']} TP={p['tp']} [{p['strategy']}]"
+            for p in positions
+        )
+        prompt = (
+            f"You are monitoring {len(positions)} open forex position(s) for an automated bot.\n\n"
+            f"{pos_text}\n\n"
+            f"For each position, briefly state: HOLD, TRAIL (move SL to protect profit), or EXIT (close now).\n"
+            f"Only suggest EXIT if there is a strong reversal signal. Default is HOLD.\n"
+            f"Keep response under 60 words total."
+        )
+
+        advice = None
+        try:
+            if groq_key:
+                advice = await self._call_groq_raw(groq_key, prompt)
+            if not advice and gemini_key:
+                advice = await self._call_gemini_raw(gemini_key, prompt)
+        except Exception as e:
+            log.debug(f"Position analysis error: {e}")
+            return
+
+        if advice:
+            await self._emit_log("ai", f"Position monitor: {advice}")
+
+    async def _call_groq_raw(self, api_key: str, prompt: str) -> str:
+        """Call Groq and return raw text response."""
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        body = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 200,
+            "temperature": 0.2,
+        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=body, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data["choices"][0]["message"]["content"].strip()
+        return ""
+
+    async def _call_gemini_raw(self, api_key: str, prompt: str) -> str:
+        """Call Gemini and return raw text response."""
+        for model in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest"]:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            body = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 200, "temperature": 0.2}}
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    if resp.status == 404:
+                        continue
+        return ""
+
     async def _execute_trade(self, signal: dict):
         """Execute a trade signal (paper or live MT5)."""
         symbol = signal["symbol"]
@@ -1220,6 +1336,21 @@ Be specific. Reference the Brain Gym data. No generic advice."""
             self._brain_gym_ran_this_weekend = False
             self._brain_gym_done_this_weekend = False
 
+            # Sync positions first so we always have fresh data before deciding to trade
+            if self.tick_count % 5 == 0:
+                if self.mode == "live" and self._mt5 is not None:
+                    await self._sync_mt5_positions()
+                else:
+                    positions = list(self.open_positions.values())
+                    await self.ws.emit_position_update(positions)
+
+            # AI position monitor — runs every 5 minutes when positions are open
+            self._position_check_tick += 1
+            has_positions = len(self._last_mt5_positions) > 0 or len(self.open_positions) > 0
+            if has_positions and self._position_check_tick >= 150:  # 150 × 2s = 5 min
+                self._position_check_tick = 0
+                asyncio.create_task(self._analyze_open_positions())
+
             can_trade = not self.kill_switch_active and await self._check_interval()
             self._new_trades_this_tick = 0
             if can_trade:
@@ -1231,14 +1362,6 @@ Be specific. Reference the Brain Gym data. No generic advice."""
                     except Exception as e:
                         log.error(f"Strategy error ({strategy.name}): {e}")
                         await self._emit_log("scan", f"Strategy error ({strategy.name}): {e}", "warn")
-
-            # Sync real MT5 positions every 5 ticks
-            if self.tick_count % 5 == 0:
-                if self.mode == "live" and self._mt5 is not None:
-                    await self._sync_mt5_positions()
-                else:
-                    positions = list(self.open_positions.values())
-                    await self.ws.emit_position_update(positions)
 
             # Refresh H1 bars from MT5 every hour so indicators stay current
             if self.tick_count % h1_refresh_interval == 0 and self._mt5 is not None:
