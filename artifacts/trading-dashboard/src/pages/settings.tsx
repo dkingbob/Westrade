@@ -442,8 +442,8 @@ export default function Settings() {
 
       {/* Bot Setup tab */}
       {tab === "setup" && (() => {
-        const install   = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot && pip install -r requirements.txt`;
-        const startBot  = `cd C:\\Users\\Ilyes\\westrade && git pull && cd artifacts\\python-bot && python bot.py`;
+        const install   = `cd C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot; pip install -r requirements.txt`;
+        const startBot  = `cd C:\\Users\\Ilyes\\westrade; git pull; cd artifacts\\python-bot; python bot.py`;
         const openEnv   = `notepad C:\\Users\\Ilyes\\westrade\\artifacts\\python-bot\\.env`;
         const cmds = [
           { idx: 0, label: "First time only — install dependencies", cmd: install },
