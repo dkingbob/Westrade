@@ -143,6 +143,36 @@ class TradingEngine:
         log.warning("[AI/Gemini] All model names exhausted — no response")
         return "ERROR"
 
+    async def _call_groq(self, api_key: str, prompt: str) -> str:
+        """Call Groq Chat API (primary AI). Returns 'YES', 'NO', or 'ERROR'."""
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        body = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 120,
+            "temperature": 0.1,
+        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=body, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 429:
+                        log.warning("[AI/Groq] Rate limit hit — falling back to Gemini")
+                        return "ERROR"
+                    if resp.status != 200:
+                        log.warning(f"[AI/Groq] HTTP {resp.status}")
+                        return "ERROR"
+                    data = await resp.json()
+                    text = data["choices"][0]["message"]["content"].strip().upper()
+                    if text.startswith("YES") or "YES" in text[:10]:
+                        return "YES"
+                    if text.startswith("NO") or "NO" in text[:10]:
+                        return "NO"
+                    return "YES"
+        except Exception as e:
+            log.warning(f"[AI/Groq] Error: {e}")
+            return "ERROR"
+
     async def _call_deepseek(self, api_key: str, prompt: str) -> str:
         """Call DeepSeek Chat API. Returns 'YES', 'NO', or 'ERROR'."""
         url = "https://api.deepseek.com/v1/chat/completions"
@@ -174,7 +204,7 @@ class TradingEngine:
             return "ERROR"
 
     async def _ai_validate_trade(self, trade: dict, signal: dict) -> bool:
-        """Run Gemini and/or DeepSeek in parallel. Trade only if at least one says YES and none say NO."""
+        """Run Groq (primary) + Gemini (secondary) in parallel. Trade only if at least one says YES and none say NO."""
         if not self.ai_enabled:
             await self.ws.emit_trade({
                 "action": "ai_decision", "symbol": trade["symbol"], "side": trade["side"],
@@ -185,6 +215,7 @@ class TradingEngine:
             self.ai_validated += 1
             return True
         import os
+        groq_key = os.environ.get("GROQ_API_KEY", "").strip()
         gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
         deepseek_key = (os.environ.get("DEEPSEEK") or os.environ.get("DEEPSEEK_API_KEY") or "").strip()
 
@@ -193,12 +224,12 @@ class TradingEngine:
         strategy = trade["strategy"]
         price = trade["entry_price"]
 
-        if not gemini_key and not deepseek_key:
-            log.warning(f"[AI] No AI keys found (GEMINI_API_KEY / DEEPSEEK). Trade blocked.")
+        if not groq_key and not gemini_key and not deepseek_key:
+            log.warning(f"[AI] No AI keys found (GROQ_API_KEY / GEMINI_API_KEY / DEEPSEEK). Trade blocked.")
             await self.ws.emit_trade({
                 "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
                 "decision": "NO", "price": price,
-                "reason": "No AI keys configured. Add GEMINI_API_KEY or DEEPSEEK to your .env file.",
+                "reason": "No AI keys configured. Add GROQ_API_KEY to your .env file.",
             })
             return False
 
@@ -250,9 +281,12 @@ class TradingEngine:
             f"Respond with only YES or NO followed by one brief reason."
         )
 
-        # Run available AIs in parallel
+        # Run available AIs in parallel — Groq primary, Gemini secondary, DeepSeek optional
         tasks = []
         labels = []
+        if groq_key:
+            tasks.append(self._call_groq(groq_key, prompt))
+            labels.append("Groq")
         if gemini_key:
             tasks.append(self._call_gemini(gemini_key, prompt))
             labels.append("Gemini")
@@ -871,7 +905,7 @@ Be specific. Reference the Brain Gym data. No generic advice."""
             "strategy": signal["strategy"],
             "entry_price": signal["price"],
         }
-        await self._emit_log("ai", f"Evaluating {symbol} {signal['side'].upper()} with Gemini + DeepSeek...")
+        await self._emit_log("ai", f"Evaluating {symbol} {signal['side'].upper()} with Groq + Gemini...")
         if not await self._ai_validate_trade(_pre_trade, signal):
             await self._emit_log("ai", f"{symbol} REJECTED by AI — trade blocked", "warn")
             return
