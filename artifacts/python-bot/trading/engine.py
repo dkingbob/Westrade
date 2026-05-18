@@ -5,6 +5,7 @@ Trading Engine — orchestrates strategy execution, risk checks, and MT5 orders.
 import asyncio
 import logging
 import json
+import os
 import aiohttp
 from datetime import datetime, timedelta
 from typing import Optional
@@ -817,7 +818,7 @@ CONFIDENCE RATING: X/10 — one sentence why
 
 Be specific. Reference the Brain Gym data. No generic advice."""
 
-            # Call Gemini
+            # Call Gemini (with 429 retry)
             for model in ["gemini-2.5-flash", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash", "gemini-1.5-flash-latest"]:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
@@ -827,21 +828,30 @@ Be specific. Reference the Brain Gym data. No generic advice."""
                     }
                     async with aiohttp.ClientSession() as sess:
                         async with sess.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=45)) as resp:
-                            if resp.status == 200:
-                                data = await resp.json()
-                                briefing_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                                # Post to API so dashboard can show it
-                                async with aiohttp.ClientSession() as s2:
-                                    await s2.post(
-                                        f"{self.ws.api_url}/analytics/market-briefing",
-                                        json={"briefing": briefing_text, "equity": self.equity, "symbols": all_symbols},
-                                        timeout=aiohttp.ClientTimeout(total=10)
-                                    )
-                                await self._emit_log("brain_gym",
-                                    f"Pre-market briefing ready — check Brain Gym page\n\n{briefing_text[:400]}...")
-                                return
                             if resp.status == 404:
                                 continue
+                            if resp.status == 429:
+                                log.warning("[AI/Gemini] Briefing rate-limited — waiting 10s then retrying...")
+                                await asyncio.sleep(10)
+                                async with sess.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=45)) as retry:
+                                    if retry.status != 200:
+                                        log.warning(f"[AI/Gemini] Briefing retry failed HTTP {retry.status}")
+                                        continue
+                                    resp = retry
+                            if resp.status != 200:
+                                log.warning(f"[AI/Gemini] Briefing HTTP {resp.status}")
+                                continue
+                            data = await resp.json()
+                            briefing_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                            async with aiohttp.ClientSession() as s2:
+                                await s2.post(
+                                    f"{self.ws.api_url}/analytics/market-briefing",
+                                    json={"briefing": briefing_text, "equity": self.equity, "symbols": all_symbols},
+                                    timeout=aiohttp.ClientTimeout(total=10)
+                                )
+                            await self._emit_log("brain_gym",
+                                f"Pre-market briefing ready — check Brain Gym page\n\n{briefing_text[:400]}...")
+                            return
                 except Exception as e:
                     log.warning(f"Briefing Gemini {model} error: {e}")
         except Exception as e:

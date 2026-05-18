@@ -118,9 +118,9 @@ export default function Presets() {
   const [importJson, setImportJson] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [applying, setApplying] = useState<string | null>(null);
-  const [applied, setApplied] = useState<string | null>(null);
-  const [scaledLoss, setScaledLoss] = useState(30); // Optimal Profit loss cap, profit target = 2x
-  const [optimalPaper, setOptimalPaper] = useState(true); // start in paper mode — safer default
+  const [applied, setApplied] = useState<string | null>(() => localStorage.getItem("wt_preset") ?? null);
+  const [scaledLoss, setScaledLoss] = useState(() => parseInt(localStorage.getItem("wt_loss") ?? "30", 10));
+  const [optimalPaper, setOptimalPaper] = useState(() => localStorage.getItem("wt_paper") !== "false");
 
   const { data: presets = [], isLoading } = useQuery<Preset[]>({
     queryKey: ["presets"],
@@ -173,8 +173,8 @@ export default function Presets() {
         }),
       ]);
       setApplied(preset.id);
+      localStorage.setItem("wt_preset", preset.id);
       toast({ title: `Applied: ${preset.name}`, description: "Risk settings and bot config updated." });
-      setTimeout(() => setApplied(null), 3000);
     } catch {
       toast({ title: "Apply failed", variant: "destructive" });
     } finally {
@@ -250,6 +250,7 @@ export default function Presets() {
             const isApplying = applying === preset.id;
             const isApplied = applied === preset.id;
             const isOptimal = preset.id === "optimal";
+            const isActive = applied === preset.id;
             const scaledProfit = scaledLoss * 2;
 
             const bullets = isOptimal
@@ -262,12 +263,15 @@ export default function Presets() {
               : preset.bullets;
 
             return (
-              <Card key={preset.id} className="border-border bg-card">
+              <Card key={preset.id} className={`bg-card transition-all ${isActive ? "border-2 border-green-500/60 shadow-[0_0_12px_rgba(34,197,94,0.15)]" : "border-border"}`}>
                 <CardContent className="p-4 flex flex-col gap-3 h-full">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Icon size={15} className={preset.iconColor} />
                       <span className="text-[11px] font-mono font-bold text-foreground">{preset.name}</span>
+                      {isActive && (
+                        <span className="text-[9px] font-mono font-bold text-green-400 bg-green-500/10 border border-green-500/30 px-1.5 py-0.5 rounded">● ACTIVE</span>
+                      )}
                     </div>
                     <Badge variant="outline" className={`text-[9px] font-mono shrink-0 ${preset.tagColor}`}>{preset.tag}</Badge>
                   </div>
@@ -288,11 +292,11 @@ export default function Presets() {
                         <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Mode</p>
                         <div className="flex items-center rounded overflow-hidden border border-border text-[9px] font-mono">
                           <button
-                            onClick={() => setOptimalPaper(true)}
+                            onClick={() => { setOptimalPaper(true); localStorage.setItem("wt_paper", "true"); }}
                             className={`px-2 py-0.5 transition-colors ${optimalPaper ? "bg-blue-500/20 text-blue-400" : "text-muted-foreground hover:text-foreground"}`}
                           >Paper</button>
                           <button
-                            onClick={() => setOptimalPaper(false)}
+                            onClick={() => { setOptimalPaper(false); localStorage.setItem("wt_paper", "false"); }}
                             className={`px-2 py-0.5 transition-colors ${!optimalPaper ? "bg-green-500/20 text-green-400" : "text-muted-foreground hover:text-foreground"}`}
                           >Live</button>
                         </div>
@@ -311,7 +315,7 @@ export default function Presets() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => setScaledLoss(l => Math.max(5, l - 5))}
+                            onClick={() => { const v = Math.max(5, scaledLoss - 5); setScaledLoss(v); localStorage.setItem("wt_loss", String(v)); }}
                             className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-green-400 transition-colors text-xs font-mono flex items-center justify-center"
                           >−</button>
                           <div className="text-center min-w-[56px]">
@@ -319,7 +323,7 @@ export default function Presets() {
                             <div className="text-[8px] font-mono text-muted-foreground">loss cap</div>
                           </div>
                           <button
-                            onClick={() => setScaledLoss(l => Math.min(500, l + 5))}
+                            onClick={() => { const v = Math.min(500, scaledLoss + 5); setScaledLoss(v); localStorage.setItem("wt_loss", String(v)); }}
                             className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-green-400 transition-colors text-xs font-mono flex items-center justify-center"
                           >+</button>
                         </div>
