@@ -335,8 +335,40 @@ router.post("/trades/sync-history", async (req, res): Promise<void> => {
 });
 
 router.delete("/trades/clear-all", async (req, res): Promise<void> => {
-  const result = await db.delete(tradesTable);
+  await db.delete(tradesTable);
   res.json({ success: true, message: "All trades cleared" });
+});
+
+router.get("/trades/export.csv", async (req, res): Promise<void> => {
+  const trades = await db
+    .select()
+    .from(tradesTable)
+    .orderBy(desc(tradesTable.openedAt))
+    .limit(10000);
+
+  const headers = ["id","symbol","side","status","strategy","entryPrice","exitPrice","quantity","pnl","pnlPct","session","openedAt","closedAt","mt5TicketId"];
+  const rows = trades.map(t => [
+    t.id,
+    t.symbol,
+    t.side,
+    t.status,
+    t.strategy,
+    t.entryPrice ?? "",
+    t.exitPrice ?? "",
+    t.quantity ?? "",
+    t.pnl ?? "",
+    t.pnlPct ?? "",
+    t.session ?? "",
+    t.openedAt?.toISOString() ?? "",
+    t.closedAt?.toISOString() ?? "",
+    t.mt5TicketId ?? "",
+  ]);
+
+  const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+  const filename = `westrade-trades-${new Date().toISOString().slice(0, 10)}.csv`;
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(csv);
 });
 
 export default router;
