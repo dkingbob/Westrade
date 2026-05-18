@@ -75,6 +75,8 @@ class TradingEngine:
         self.reentry_cooldown_minutes: float = 30.0
         self.block_on_ai_error: bool = True   # True = reject trade when all AI providers fail
         self.ai_enabled: bool = True          # False = skip AI entirely, auto-approve all signals
+        self._ai_cache: dict = {}             # (symbol, direction) -> (result, expires_at)
+        self._ai_cache_ttl: int = 60          # seconds to reuse a cached AI answer
         self._new_trades_this_tick: int = 0   # cap new positions per scan cycle
         self.max_new_trades_per_tick: int = 2  # never open more than 2 positions per 60s scan
         self._brain_gym_ran_this_weekend: bool = False  # run once per weekend downtime window
@@ -119,19 +121,24 @@ class TradingEngine:
             for model in models:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
                 try:
-                    async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                         if resp.status == 404:
                             log.debug(f"[AI/Gemini] {model} not found, trying next...")
                             continue
                         if resp.status == 429:
-                            log.warning("[AI/Gemini] Rate limit (free tier: 20 req/day). Upgrade at aistudio.google.com")
-                            return "ERROR"
+                            log.warning("[AI/Gemini] Rate limited — waiting 8s then retrying once...")
+                            await asyncio.sleep(8)
+                            async with session.post(url, json=body, timeout=aiohttp.ClientTimeout(total=15)) as retry:
+                                if retry.status != 200:
+                                    log.warning(f"[AI/Gemini] Retry failed HTTP {retry.status} — free tier: 10 req/min. Upgrade at aistudio.google.com")
+                                    return "ERROR"
+                                resp = retry
                         if resp.status != 200:
                             log.warning(f"[AI/Gemini] {model} HTTP {resp.status}")
                             return "ERROR"
                         data = await resp.json()
                         text = data["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
-                        log.info(f"[AI/Gemini] Using model: {model}")
+                        log.info(f"[AI/Gemini] {model} responded OK")
                         if text.startswith("YES") or "YES" in text[:10]:
                             return "YES"
                         if text.startswith("NO") or "NO" in text[:10]:
@@ -201,6 +208,26 @@ class TradingEngine:
                 "reason": "No AI keys configured. Add GEMINI_API_KEY or DEEPSEEK to your .env file.",
             })
             return False
+
+        # Cache check — reuse AI answer for same symbol+direction within TTL (avoids rate limits)
+        cache_key = (symbol, side)
+        now = datetime.utcnow()
+        if cache_key in self._ai_cache:
+            cached_result, expires_at = self._ai_cache[cache_key]
+            if now < expires_at:
+                log.info(f"[AI] {symbol} {side} — using cached answer ({cached_result}) — {(expires_at - now).seconds}s remaining")
+                await self.ws.emit_trade({
+                    "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
+                    "decision": cached_result, "price": price,
+                    "reason": f"Cached AI answer ({cached_result}) — reusing to avoid rate limits",
+                    "votes": {"Gemini": cached_result, "DeepSeek": "—"},
+                })
+                if cached_result == "YES":
+                    self.ai_validated += 1
+                    return True
+                else:
+                    self.ai_rejected += 1
+                    return False
 
         indicators = signal.get("indicators", {})
         if indicators:
@@ -286,6 +313,11 @@ class TradingEngine:
                 decision = "YES"
                 reason = "AI services unavailable — trade allowed by default"
                 self.ai_validated += 1
+
+        # Store real YES/NO answers in cache — skip caching ERROR outcomes
+        if decision in ("YES", "NO") and (yes_votes or no_votes):
+            self._ai_cache[cache_key] = (decision, now + timedelta(seconds=self._ai_cache_ttl))
+            log.debug(f"[AI] Cached {symbol} {side} → {decision} for {self._ai_cache_ttl}s")
 
         await self.ws.emit_trade({
             "action": "ai_decision", "symbol": symbol, "side": side, "strategy": strategy,
