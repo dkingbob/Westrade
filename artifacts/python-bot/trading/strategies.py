@@ -267,6 +267,7 @@ class TrendPullbackStrategy:
     def __init__(self, symbols: List[str], risk_pct: float = 0.05):
         self.symbols = symbols
         self.risk_pct = risk_pct
+        self.active = True
 
     async def generate_signals(self) -> List[Dict]:
         signals = []
@@ -340,6 +341,7 @@ class BollingerMeanReversionStrategy:
     def __init__(self, symbols: List[str], risk_pct: float = 0.05):
         self.symbols = symbols
         self.risk_pct = risk_pct
+        self.active = True
 
     async def generate_signals(self) -> List[Dict]:
         signals = []

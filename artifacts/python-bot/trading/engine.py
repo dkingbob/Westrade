@@ -482,6 +482,27 @@ class TradingEngine:
         except Exception as e:
             log.warning(f"Could not load risk settings: {e}")
 
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.ws.api_url}/strategies",
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as resp:
+                    if resp.status == 200:
+                        api_strats = await resp.json()
+                        for api_s in api_strats:
+                            api_name = api_s.get("type") or api_s.get("name") or ""
+                            api_active = api_s.get("active", True)
+                            for local_s in self.strategies:
+                                if local_s.name.lower().replace(" ", "") == api_name.lower().replace(" ", ""):
+                                    local_s.active = api_active
+                        active_names = [s.name for s in self.strategies if s.active]
+                        paused_names = [s.name for s in self.strategies if not s.active]
+                        if paused_names:
+                            log.info(f"Strategies active: {active_names} | paused: {paused_names}")
+        except Exception as e:
+            log.warning(f"Could not load strategy states: {e}")
+
     async def _poll_config(self):
         """Periodically re-fetch config as a fallback if WS message was missed."""
         while self.running:
@@ -1302,6 +1323,8 @@ Be specific. Reference the Brain Gym data. No generic advice."""
             self._new_trades_this_tick = 0
             if can_trade:
                 for strategy in self.strategies:
+                    if not getattr(strategy, "active", True):
+                        continue
                     try:
                         signals = await strategy.generate_signals()
                         for signal in signals:
