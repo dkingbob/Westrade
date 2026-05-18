@@ -449,7 +449,6 @@ class TradingEngine:
                 ) as resp:
                     if resp.status == 200:
                         risk = await resp.json()
-                        # Apply risk_per_trade to strategies
                         rpt = risk.get("riskPerTradePct", 0.01)
                         for s in self.strategies:
                             s.risk_pct = rpt
@@ -457,6 +456,23 @@ class TradingEngine:
                         log.info(f"Loaded risk settings: riskPerTrade={rpt}, maxOpenPositions={self.max_open_positions}")
         except Exception as e:
             log.warning(f"Could not load risk settings: {e}")
+
+        # Load per-strategy riskPct from the strategies API (overrides global risk setting)
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.ws.api_url}/strategies",
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as resp:
+                    if resp.status == 200:
+                        strats = await resp.json()
+                        for row in strats:
+                            for s in self.strategies:
+                                if s.name == row.get("type"):
+                                    s.risk_pct = float(row.get("riskPct", s.risk_pct))
+                                    log.info(f"[config] {s.name} risk_pct loaded → {s.risk_pct:.1%}")
+        except Exception as e:
+            log.warning(f"Could not load strategy risk settings: {e}")
 
     async def _poll_config(self):
         """Periodically re-fetch config as a fallback if WS message was missed."""
@@ -499,6 +515,12 @@ class TradingEngine:
             rpt = config["riskSettings"].get("riskPerTradePct", 0.01)
             for s in self.strategies:
                 s.risk_pct = rpt
+        if "strategyRiskPct" in config:
+            mapping = config["strategyRiskPct"]  # {"trend_pullback": 0.10, "bb_reversion": 0.05}
+            for s in self.strategies:
+                if s.name in mapping:
+                    s.risk_pct = float(mapping[s.name])
+                    log.info(f"[config] {s.name} risk_pct → {s.risk_pct:.1%}")
         if "aiEnabled" in config:
             self.ai_enabled = bool(config["aiEnabled"])
             log.info(f"AI validation {'enabled' if self.ai_enabled else 'DISABLED — all signals auto-approved'}")

@@ -8,6 +8,14 @@ import {
   UpdateStrategyBody,
   ToggleStrategyParams,
 } from "@workspace/api-zod";
+import { wsServer } from "../ws/server";
+
+async function broadcastStrategyRiskPcts() {
+  const all = await db.select().from(strategiesTable);
+  const map: Record<string, number> = {};
+  for (const s of all) map[s.type] = parseFloat(s.riskPct as string);
+  wsServer.broadcast("config_update", { strategyRiskPct: map });
+}
 
 const router: IRouter = Router();
 
@@ -82,6 +90,7 @@ router.patch("/strategies/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await broadcastStrategyRiskPcts();
   res.json(serializeStrategy(strategy));
 });
 
