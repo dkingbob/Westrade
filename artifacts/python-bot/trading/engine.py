@@ -473,12 +473,13 @@ class TradingEngine:
                 ) as resp:
                     if resp.status == 200:
                         risk = await resp.json()
-                        # Apply risk_per_trade to strategies
-                        rpt = risk.get("riskPerTradePct", 0.01)
+                        # Global risk floor — capped at 5% to prevent accidental overexposure.
+                        # Per-strategy riskPct (loaded below) takes priority over this.
+                        rpt = min(float(risk.get("riskPerTradePct", 0.01)), 0.05)
                         for s in self.strategies:
                             s.risk_pct = rpt
                         self.max_open_positions = int(risk.get("maxOpenPositions", 5))
-                        log.info(f"Loaded risk settings: riskPerTrade={rpt}, maxOpenPositions={self.max_open_positions}")
+                        log.info(f"Loaded risk settings: riskPerTrade={rpt:.1%} (global floor), maxOpenPositions={self.max_open_positions}")
         except Exception as e:
             log.warning(f"Could not load risk settings: {e}")
 
@@ -493,13 +494,19 @@ class TradingEngine:
                         for api_s in api_strats:
                             api_name = api_s.get("type") or api_s.get("name") or ""
                             api_active = api_s.get("active", True)
+                            api_risk = api_s.get("riskPct") or api_s.get("risk_pct")
                             for local_s in self.strategies:
                                 if local_s.name.lower().replace(" ", "") == api_name.lower().replace(" ", ""):
                                     local_s.active = api_active
+                                    # Per-strategy risk overrides the global risk setting
+                                    if api_risk is not None:
+                                        local_s.risk_pct = float(api_risk)
                         active_names = [s.name for s in self.strategies if s.active]
                         paused_names = [s.name for s in self.strategies if not s.active]
                         if paused_names:
                             log.info(f"Strategies active: {active_names} | paused: {paused_names}")
+                        for s in self.strategies:
+                            log.info(f"  {s.name}: active={s.active}, risk_pct={s.risk_pct:.1%}")
         except Exception as e:
             log.warning(f"Could not load strategy states: {e}")
 
