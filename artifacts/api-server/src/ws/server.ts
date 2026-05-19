@@ -160,7 +160,7 @@ class WsServer {
   private async handleBotPositions(positions: unknown) {
     if (!Array.isArray(positions)) return;
 
-    // Update P&L for each open MT5 position in DB
+    // Upsert each MT5 position into DB — update if exists, insert if not
     for (const pos of positions) {
       if (!pos.symbol) continue;
       const openTrades = await db
@@ -168,24 +168,53 @@ class WsServer {
         .from(tradesTable)
         .where(and(eq(tradesTable.symbol, pos.symbol), eq(tradesTable.status, "open")));
 
-      for (const trade of openTrades) {
-        await db.update(tradesTable).set({
-          pnl: pos.pnl != null ? String(pos.pnl) : trade.pnl,
-          ...(pos.sl != null ? { stopLoss: String(pos.sl) } : {}),
-          ...(pos.tp != null ? { takeProfit: String(pos.tp) } : {}),
-        }).where(eq(tradesTable.id, trade.id));
+      if (openTrades.length > 0) {
+        // Update existing open DB record with live P&L, SL, TP
+        for (const trade of openTrades) {
+          await db.update(tradesTable).set({
+            pnl: pos.pnl != null ? String(pos.pnl) : trade.pnl,
+            ...(pos.sl != null ? { stopLoss: String(pos.sl) } : {}),
+            ...(pos.tp != null ? { takeProfit: String(pos.tp) } : {}),
+          }).where(eq(tradesTable.id, trade.id));
+        }
+      } else {
+        // Insert MT5 position that has no DB record (manual trade or pre-bot position)
+        await db.insert(tradesTable).values({
+          symbol: String(pos.symbol),
+          side: pos.side === "short" ? "short" : "long",
+          status: "open",
+          strategy: String(pos.strategy ?? "mt5"),
+          orderType: "market",
+          entryPrice: String(pos.entry_price ?? "0"),
+          quantity: String(pos.volume ?? "0"),
+          pnl: pos.pnl != null ? String(pos.pnl) : "0",
+          fees: "0",
+          slippage: "0",
+          mae: "0",
+          mfe: "0",
+          tags: ["mt5"],
+          mt5TicketId: pos.ticket ? String(pos.ticket) : null,
+          stopLoss: pos.sl != null ? String(pos.sl) : null,
+          takeProfit: pos.tp != null ? String(pos.tp) : null,
+        }).onConflictDoNothing();
+        logger.info({ symbol: pos.symbol, ticket: pos.ticket }, "Inserted missing MT5 position into DB");
       }
     }
 
-    // Close any DB trades whose symbol is no longer in MT5 positions
+    // Close any DB trades whose symbol+ticket is no longer in MT5 positions
     const openDbTrades = await db
       .select()
       .from(tradesTable)
       .where(eq(tradesTable.status, "open"));
 
+    const activeTickets = new Set((positions as any[]).map((p) => p.ticket ? String(p.ticket) : null).filter(Boolean));
     const activeSymbols = new Set((positions as any[]).map((p) => p.symbol));
+
     for (const trade of openDbTrades) {
-      if (!activeSymbols.has(trade.symbol)) {
+      // If we have a ticket ID, match by ticket; otherwise match by symbol
+      const matchedByTicket = trade.mt5TicketId && activeTickets.has(trade.mt5TicketId);
+      const matchedBySymbol = !trade.mt5TicketId && activeSymbols.has(trade.symbol);
+      if (!matchedByTicket && !matchedBySymbol) {
         await db.update(tradesTable).set({
           status: "closed",
           closedAt: new Date(),

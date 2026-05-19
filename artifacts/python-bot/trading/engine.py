@@ -1045,7 +1045,8 @@ Be specific. Reference the Brain Gym data. No generic advice."""
 
         # Enforce maxOpenPositions limit
         if self.max_open_positions is not None:
-            if self.mode == "live" and self._mt5 is not None:
+            if self._mt5 is not None:
+                # Always use real MT5 count when connected — paper dict can diverge when TP/SL fires
                 open_count = len(self._mt5.positions_get() or [])
             else:
                 open_count = len(self.open_positions)
