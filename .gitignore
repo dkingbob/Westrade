@@ -47,3 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Fiverr bot — secrets and live order state
+fiverr-bot/.env
+fiverr-bot/orders/*.json
