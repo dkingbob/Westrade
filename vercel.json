@@ -1,16 +1,10 @@
 {
-  "framework": null,
-  "buildCommand": "pnpm --filter @workspace/trading-dashboard build",
-  "outputDirectory": "artifacts/trading-dashboard/dist/public",
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "version": 2,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": ".",
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://westrade.onrender.com/api/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/", "destination": "/portfolio.html" },
+    { "source": "/(.*)", "destination": "/portfolio.html" }
   ]
 }
