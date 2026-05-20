@@ -773,8 +773,7 @@ section:not(#hero){
   </div>
 </div>
 
-<!-- THREE.JS -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<!-- ALL UI CODE runs immediately, before Three.js loads -->
 <script>
 // ── PRELOADER ──
 (function(){
@@ -794,9 +793,8 @@ section:not(#hero){
   },75);
 })();
 
-// ── THREE.JS SCENE ──
-(function(){
-  if(typeof THREE==='undefined')return;
+// ── DEFERRED THREE.JS INIT ── (called once Three.js CDN loads)
+function initThree(){
   const wrap=document.getElementById('canvas-wrap');
   const scene=new THREE.Scene();
   scene.background=new THREE.Color(0x000005);
@@ -910,8 +908,13 @@ section:not(#hero){
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth,innerHeight);
   });
-})();
+}
+</script>
 
+<!-- THREE.JS CDN — loads async, calls initThree() when ready -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" onload="initThree()"></script>
+
+<script>
 // ── CURSOR ──
 const cur=document.getElementById('cursor');
 let cx=-200,cy=-200,rx=-200,ry=-200;
