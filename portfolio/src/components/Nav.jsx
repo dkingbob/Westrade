@@ -1,48 +1,33 @@
 import { useState, useEffect } from 'react'
 
-const NAV_LINKS = ['About', 'Skills', 'Services', 'Projects', 'Contact']
+const LINKS = ['About', 'Work', 'Skills', 'Contact']
 
-export default function Nav({ onTermOpen }) {
+export default function Nav() {
   const [scrolled, setScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
-    window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
+    const fn = () => setScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', fn)
+    return () => window.removeEventListener('scroll', fn)
   }, [])
 
-  const scrollTo = (id) => {
-    const el = document.getElementById(id.toLowerCase())
-    if (el) el.scrollIntoView({ behavior: 'smooth' })
-    setMenuOpen(false)
+  const go = (id) => {
+    document.getElementById(id.toLowerCase())?.scrollIntoView({ behavior: 'smooth' })
+    setOpen(false)
   }
 
   return (
     <nav className={`nav${scrolled ? ' nav--scrolled' : ''}`}>
       <div className="nav-inner">
-        <a href="#hero" className="nav-logo" onClick={(e) => { e.preventDefault(); scrollTo('hero') }}>
-          <span className="nav-logo-bracket">[</span>
-          Wes<span className="nav-logo-accent">.dk</span>
-          <span className="nav-logo-bracket">]</span>
-        </a>
-
-        <div className={`nav-links${menuOpen ? ' nav-links--open' : ''}`}>
-          {NAV_LINKS.map((l) => (
-            <button key={l} className="nav-link" onClick={() => scrollTo(l)}>
-              {l}
-            </button>
+        <button className="nav-logo" onClick={() => go('hero')}>WDK</button>
+        <div className={`nav-links${open ? ' open' : ''}`}>
+          {LINKS.map(l => (
+            <button key={l} className="nav-link" onClick={() => go(l)}>{l}</button>
           ))}
-          <button className="nav-terminal-btn" onClick={() => { onTermOpen(); setMenuOpen(false) }}>
-            [/ Terminal]
-          </button>
+          <a className="nav-cta" href="mailto:wes@dekoning.dev">Hire Me</a>
         </div>
-
-        <button
-          className={`nav-hamburger${menuOpen ? ' nav-hamburger--open' : ''}`}
-          onClick={() => setMenuOpen((o) => !o)}
-          aria-label="Toggle menu"
-        >
+        <button className={`nav-burger${open ? ' open' : ''}`} onClick={() => setOpen(o => !o)} aria-label="Menu">
           <span /><span /><span />
         </button>
       </div>
