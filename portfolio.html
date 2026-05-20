@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wes de Koning — Developer & Builder</title>
+  <meta name="description" content="Full-stack developer crafting web apps, AI tools, and trading systems." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* =========================================
+       TOKENS
+    ========================================= */
+    :root {
+      --white:   #ffffff;
+      --light:   #f8faff;
+      --text:    #0f172a;
+      --muted:   #64748b;
+      --border:  rgba(15,23,42,.09);
+      --card-bg: rgba(255,255,255,.75);
+
+      --violet:  #6d28d9;
+      --rose:    #f43f5e;
+      --teal:    #0d9488;
+      --amber:   #d97706;
+
+      --g-hero: linear-gradient(135deg,#6d28d9 0%,#a855f7 35%,#ec4899 65%,#f43f5e 100%);
+      --g-v:    linear-gradient(135deg,#6d28d9,#a855f7);
+      --g-r:    linear-gradient(135deg,#f43f5e,#fb923c);
+      --g-t:    linear-gradient(135deg,#0d9488,#06b6d4);
+      --g-a:    linear-gradient(135deg,#fbbf24,#f97316);
+    }
+
+    /* =========================================
+       RESET / BASE
+    ========================================= */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth;font-size:16px}
+    body{
+      font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+      background:var(--white);
+      color:var(--text);
+      overflow-x:hidden;
+      -webkit-font-smoothing:antialiased;
+    }
+    a{text-decoration:none;color:inherit}
+    ::selection{background:#a855f7;color:#fff}
+
+    /* =========================================
+       ANIMATED BACKGROUND
+    ========================================= */
+    .bg{
+      position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+      background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(109,40,217,.06),transparent);
+    }
+    .blob{
+      position:absolute;border-radius:50%;filter:blur(90px);
+      animation:blobMove 22s ease-in-out infinite;
+    }
+    .blob:nth-child(1){width:700px;height:700px;background:radial-gradient(#a78bfa,#6d28d9);top:-200px;left:-120px;opacity:.18;animation-delay:0s}
+    .blob:nth-child(2){width:550px;height:550px;background:radial-gradient(#fb7185,#f43f5e);top:35%;right:-160px;opacity:.15;animation-delay:-8s}
+    .blob:nth-child(3){width:480px;height:480px;background:radial-gradient(#34d399,#0d9488);bottom:5%;left:25%;opacity:.12;animation-delay:-16s}
+    .blob:nth-child(4){width:320px;height:320px;background:radial-gradient(#fbbf24,#f97316);top:60%;left:-60px;opacity:.1;animation-delay:-4s}
+    @keyframes blobMove{
+      0%,100%{transform:translate(0,0) scale(1)}
+      25%{transform:translate(70px,-80px) scale(1.08)}
+      50%{transform:translate(-50px,70px) scale(.94)}
+      75%{transform:translate(90px,40px) scale(1.04)}
+    }
+
+    /* =========================================
+       SCROLL PROGRESS BAR
+    ========================================= */
+    .progress{
+      position:fixed;top:0;left:0;height:3px;
+      background:var(--g-hero);
+      z-index:1000;width:0%;transition:width .08s linear;
+      border-radius:0 2px 2px 0;
+    }
+
+    /* =========================================
+       CUSTOM CURSOR (desktop only)
+    ========================================= */
+    .cur,.cur-ring{
+      position:fixed;pointer-events:none;border-radius:50%;
+      transform:translate(-50%,-50%);z-index:9999;
+    }
+    .cur{width:10px;height:10px;background:var(--violet);transition:width .2s,height .2s,background .2s;mix-blend-mode:multiply}
+    .cur-ring{width:34px;height:34px;border:1.5px solid rgba(109,40,217,.45);transition:width .25s,height .25s,border-color .25s}
+    .cur.hov{width:18px;height:18px;background:var(--rose)}
+    .cur-ring.hov{width:58px;height:58px;border-color:rgba(244,63,94,.4)}
+    @media(hover:none){.cur,.cur-ring{display:none}}
+
+    /* =========================================
+       SCROLL REVEAL
+    ========================================= */
+    .rev{opacity:0;transform:translateY(36px);transition:opacity .75s ease,transform .75s ease}
+    .rev-l{opacity:0;transform:translateX(-48px);transition:opacity .75s ease,transform .75s ease}
+    .rev-r{opacity:0;transform:translateX(48px);transition:opacity .75s ease,transform .75s ease}
+    .rev.in,.rev-l.in,.rev-r.in{opacity:1;transform:translate(0,0)}
+
+    /* =========================================
+       NAV
+    ========================================= */
+    nav{
+      position:fixed;top:0;left:0;right:0;z-index:200;
+      padding:18px 0;transition:all .3s;
+    }
+    nav.scroll{
+      background:rgba(255,255,255,.88);
+      backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      padding:12px 0;
+    }
+    .nav-wrap{max-width:1160px;margin:0 auto;padding:0 32px;display:flex;align-items:center;gap:30px}
+    .logo{
+      font-size:21px;font-weight:900;letter-spacing:-.03em;
+      background:var(--g-hero);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      flex-shrink:0;
+    }
+    .nav-links{display:flex;gap:26px;list-style:none;margin-left:8px}
+    .nav-links a{color:var(--muted);font-size:14px;font-weight:500;transition:color .2s;position:relative}
+    .nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-3px;height:2px;background:var(--g-hero);transition:right .3s;border-radius:2px}
+    .nav-links a:hover{color:var(--text)}
+    .nav-links a:hover::after{right:0}
+    .nav-end{margin-left:auto;display:flex;gap:12px;align-items:center}
+
+    /* Buttons */
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 20px;border-radius:12px;font-size:14px;font-weight:700;
+      border:none;cursor:pointer;transition:transform .2s,box-shadow .2s,background .2s;
+    }
+    .btn-p{background:var(--g-hero);color:#fff;box-shadow:0 8px 24px -4px rgba(109,40,217,.38)}
+    .btn-p:hover{transform:translateY(-2px);box-shadow:0 18px 36px -4px rgba(109,40,217,.5)}
+    .btn-o{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+    .btn-o:hover{border-color:var(--violet);color:var(--violet);transform:translateY(-1px)}
+
+    /* Hamburger */
+    .ham{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px}
+    .ham span{width:22px;height:2px;background:var(--text);border-radius:2px;transition:all .3s;display:block}
+    .mob-nav{
+      display:none;position:fixed;top:60px;left:0;right:0;z-index:199;
+      background:rgba(255,255,255,.96);backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      padding:20px 32px;flex-direction:column;gap:0;
+    }
+    .mob-nav.open{display:flex}
+    .mob-nav a{color:var(--text);font-size:16px;font-weight:600;padding:14px 0;border-bottom:1px solid var(--border)}
+    @media(max-width:720px){
+      .nav-links,.nav-end .btn-o{display:none}
+      .ham{display:flex}
+    }
+
+    /* =========================================
+       LAYOUT HELPERS
+    ========================================= */
+    section{position:relative;z-index:1}
+    .wrap{max-width:1160px;margin:0 auto;padding:0 32px}
+    .section-tag{
+      display:inline-flex;align-items:center;gap:8px;
+      color:var(--violet);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
+      margin-bottom:14px;
+    }
+    .section-tag::before{content:"";width:20px;height:2px;background:var(--g-v);border-radius:2px}
+    h2{font-size:clamp(30px,4vw,50px);font-weight:900;line-height:1.08;letter-spacing:-.025em;margin-bottom:16px}
+    .sub{font-size:17px;color:var(--muted);line-height:1.7;max-width:520px}
+    .grad{background:var(--g-hero);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+    /* =========================================
+       HERO
+    ========================================= */
+    #hero{
+      min-height:100vh;display:flex;align-items:center;
+      padding:130px 0 90px;
+    }
+    .hero-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;
+    }
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(109,40,217,.1);border:1px solid rgba(109,40,217,.2);
+      color:var(--violet);padding:6px 14px;border-radius:100px;
+      font-size:13px;font-weight:700;margin-bottom:22px;
+    }
+    .hero-badge .dot{
+      width:8px;height:8px;background:var(--violet);border-radius:50%;
+      animation:ping 2s ease-in-out infinite;
+    }
+    @keyframes ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+    h1{font-size:clamp(42px,5.5vw,72px);font-weight:900;line-height:1.02;letter-spacing:-.035em;margin-bottom:14px}
+    .type-wrap{font-size:clamp(18px,2.2vw,26px);font-weight:700;color:var(--muted);margin-bottom:26px;min-height:1.5em}
+    .type-cursor{
+      color:var(--violet);
+      border-right:2.5px solid var(--violet);
+      animation:blink .7s step-end infinite;
+      padding-right:2px;
+    }
+    @keyframes blink{0%,100%{border-color:var(--violet)}50%{border-color:transparent}}
+    .hero-desc{font-size:17px;color:var(--muted);line-height:1.75;max-width:470px;margin-bottom:34px}
+    .hero-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:44px}
+    .hero-nums{display:flex;gap:36px;flex-wrap:wrap}
+    .h-num-val{
+      font-size:34px;font-weight:900;line-height:1;
+      background:var(--g-hero);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .h-num-lbl{font-size:12px;color:var(--muted);font-weight:600;margin-top:4px}
+
+    /* Hero visual — floating cards */
+    .hero-vis{position:relative;height:480px;display:flex;align-items:center;justify-content:center}
+    .card-stack{position:relative;width:360px;height:420px}
+    .hc{
+      position:absolute;background:var(--card-bg);
+      backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,.9);
+      border-radius:24px;padding:22px;
+      box-shadow:0 20px 56px rgba(0,0,0,.1),0 4px 16px rgba(0,0,0,.05);
+      animation:cfloat 7s ease-in-out infinite;
+    }
+    .hc1{width:320px;top:30px;left:20px;z-index:3;animation-delay:0s}
+    .hc2{width:270px;top:150px;right:-16px;z-index:2;animation-delay:-2.5s}
+    .hc3{width:210px;bottom:20px;left:-10px;z-index:1;animation-delay:-5s}
+    @keyframes cfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+    .ctag{
+      display:inline-flex;align-items:center;gap:5px;
+      font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+      padding:3px 9px;border-radius:6px;margin-bottom:10px;
+    }
+    .ctag-ai{background:rgba(109,40,217,.1);color:#6d28d9}
+    .ctag-web{background:rgba(13,148,136,.1);color:#0d9488}
+    .ctag-bot{background:rgba(244,63,94,.12);color:#e11d48}
+    .ct{font-size:14px;font-weight:700;margin-bottom:7px}
+    .cd{font-size:12px;color:var(--muted);line-height:1.5}
+    .cm{display:flex;align-items:baseline;gap:5px;margin-top:10px}
+    .cm-big{font-size:26px;font-weight:900}
+    .cm-lbl{font-size:11px;color:var(--muted)}
+    .tv{color:#6d28d9}.tr{color:#e11d48}.tt{color:#0d9488}
+
+    /* Sparkle orbs in hero visual */
+    .orb{
+      position:absolute;border-radius:50%;pointer-events:none;
+      animation:orbFloat 12s ease-in-out infinite;
+    }
+    .orb1{width:80px;height:80px;background:radial-gradient(var(--violet),transparent);opacity:.25;top:0;right:40px;animation-delay:0s}
+    .orb2{width:50px;height:50px;background:radial-gradient(var(--rose),transparent);opacity:.3;bottom:60px;right:0;animation-delay:-4s}
+    .orb3{width:40px;height:40px;background:radial-gradient(var(--teal),transparent);opacity:.25;top:60px;left:-10px;animation-delay:-8s}
+    @keyframes orbFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(10px,-18px)}}
+
+    @media(max-width:860px){
+      .hero-grid{grid-template-columns:1fr;text-align:center;gap:0}
+      .hero-vis{height:280px;margin-top:-20px}
+      .card-stack{transform:scale(.72);transform-origin:top center}
+      .hero-btns,.hero-nums{justify-content:center}
+      .hero-desc{margin:0 auto 34px}
+    }
+    @media(max-width:520px){
+      .hero-vis{display:none}
+      .wrap{padding:0 20px}
+    }
+
+    /* =========================================
+       MARQUEE
+    ========================================= */
+    .marquee-row{
+      padding:28px 0;overflow:hidden;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      background:rgba(248,250,255,.6);
+    }
+    .marquee-track{
+      display:flex;gap:36px;
+      animation:scroll 28s linear infinite;
+      width:max-content;
+    }
+    .marquee-track:hover{animation-play-state:paused}
+    .mi{
+      display:flex;align-items:center;gap:10px;
+      font-size:13px;font-weight:800;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;
+    }
+    .mi .dot{width:6px;height:6px;background:var(--g-hero);border-radius:50%;flex-shrink:0}
+    @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+    /* =========================================
+       ABOUT
+    ========================================= */
+    #about{padding:110px 0}
+    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;margin-top:56px}
+    .about-text p{font-size:16px;color:var(--muted);line-height:1.85;margin-bottom:18px}
+    .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
+    .chip{
+      background:rgba(109,40,217,.08);color:var(--violet);
+      border:1px solid rgba(109,40,217,.15);
+      padding:5px 13px;border-radius:8px;font-size:13px;font-weight:600;
+      transition:all .2s;cursor:default;
+    }
+    .chip:hover{background:var(--g-v);color:#fff;border-color:transparent;transform:translateY(-2px)}
+
+    .stats4{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .scard{
+      background:white;border:1px solid var(--border);border-radius:22px;
+      padding:26px 22px;
+      box-shadow:0 4px 20px rgba(0,0,0,.04);
+      transition:transform .3s,box-shadow .3s;
+    }
+    .scard:hover{transform:translateY(-6px);box-shadow:0 20px 44px rgba(0,0,0,.09)}
+    .scard-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:14px}
+    .scard-val{font-size:34px;font-weight:900;line-height:1;margin-bottom:5px}
+    .scard-lbl{font-size:13px;color:var(--muted);font-weight:500}
+
+    @media(max-width:860px){.about-grid{grid-template-columns:1fr;gap:40px}}
+    @media(max-width:520px){.stats4{grid-template-columns:1fr}}
+
+    /* =========================================
+       SKILLS
+    ========================================= */
+    #skills{
+      padding:110px 0;
+      background:linear-gradient(180deg,transparent,rgba(109,40,217,.025) 50%,transparent);
+    }
+    .skills-head{text-align:center;max-width:580px;margin:0 auto 56px}
+    .skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:22px}
+    .sk{
+      background:white;border:1px solid var(--border);border-radius:26px;
+      padding:30px;position:relative;overflow:hidden;
+      transition:transform .3s,box-shadow .35s;
+    }
+    .sk::before{
+      content:"";position:absolute;inset:0;opacity:0;
+      background:linear-gradient(135deg,rgba(109,40,217,.04),rgba(168,85,247,.04));
+      transition:opacity .3s;
+    }
+    .sk:hover{transform:translateY(-8px);box-shadow:0 28px 52px rgba(0,0,0,.09)}
+    .sk:hover::before{opacity:1}
+    .sk:hover .sk-ico{transform:scale(1.12) rotate(-6deg)}
+    .sk-ico{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:18px;transition:transform .3s}
+    .sk-name{font-size:18px;font-weight:800;margin-bottom:9px}
+    .sk-desc{font-size:14px;color:var(--muted);line-height:1.62;margin-bottom:18px}
+    .sk-pct{font-size:12px;font-weight:700;color:var(--muted);text-align:right;margin-bottom:7px}
+    .bar-bg{background:rgba(0,0,0,.07);border-radius:100px;height:5px;overflow:hidden}
+    .bar{height:100%;border-radius:100px;width:0;transition:width 1.4s cubic-bezier(.4,0,.2,1)}
+    .sk-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+    .stag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;background:rgba(0,0,0,.05);color:var(--muted)}
+
+    .sv .sk-ico{background:rgba(109,40,217,.1)}
+    .sv .bar{background:var(--g-v)}
+    .sr .sk-ico{background:rgba(244,63,94,.1)}
+    .sr .bar{background:var(--g-r)}
+    .st .sk-ico{background:rgba(13,148,136,.1)}
+    .st .bar{background:var(--g-t)}
+    .sa .sk-ico{background:rgba(217,119,6,.1)}
+    .sa .bar{background:var(--g-a)}
+
+    /* =========================================
+       PROJECTS
+    ========================================= */
+    #projects{padding:110px 0}
+    .proj-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:52px;gap:20px;flex-wrap:wrap}
+    .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:26px}
+
+    .pc{
+      background:white;border:1px solid var(--border);border-radius:28px;
+      overflow:hidden;transition:transform .35s cubic-bezier(.175,.885,.32,1.1),box-shadow .35s;
+      cursor:pointer;
+    }
+    .pc:hover{transform:translateY(-12px);box-shadow:0 36px 64px rgba(0,0,0,.11)}
+    .pc-thumb{
+      height:196px;display:flex;align-items:center;justify-content:center;
+      font-size:56px;position:relative;overflow:hidden;
+    }
+    .pc-thumb .shine{
+      position:absolute;inset:0;
+      background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.15) 50%,transparent 70%);
+      transform:translateX(-100%);transition:transform .6s;
+    }
+    .pc:hover .pc-thumb .shine{transform:translateX(100%)}
+    .pc-body{padding:22px}
+    .pc-tags{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+    .ptag{font-size:10px;font-weight:800;padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.05em}
+    .pc-title{font-size:17px;font-weight:800;margin-bottom:9px}
+    .pc-desc{font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:18px}
+    .pc-foot{display:flex;justify-content:space-between;align-items:center}
+    .plink{font-size:13px;font-weight:700;color:var(--violet);display:flex;align-items:center;gap:5px;transition:gap .2s}
+    .plink:hover{gap:10px}
+    .pstack{display:flex}
+    .pdot{
+      width:26px;height:26px;border-radius:50%;background:var(--light);
+      border:2px solid white;display:flex;align-items:center;justify-content:center;
+      font-size:11px;margin-left:-6px;
+    }
+
+    @media(max-width:520px){.proj-grid{grid-template-columns:1fr}}
+
+    /* =========================================
+       CONTACT
+    ========================================= */
+    #contact{padding:110px 0}
+    .contact-card{
+      background:white;border:1px solid var(--border);border-radius:44px;
+      padding:80px 60px;text-align:center;
+      position:relative;overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.05);
+    }
+    .contact-card::before{
+      content:"";position:absolute;top:-180px;right:-180px;
+      width:450px;height:450px;
+      background:radial-gradient(circle,rgba(109,40,217,.1),transparent 65%);
+    }
+    .contact-card::after{
+      content:"";position:absolute;bottom:-180px;left:-180px;
+      width:450px;height:450px;
+      background:radial-gradient(circle,rgba(244,63,94,.09),transparent 65%);
+    }
+    .contact-card h2{font-size:clamp(30px,4vw,50px);margin-bottom:14px}
+    .contact-card .sub{margin:0 auto 38px;font-size:17px}
+    .contact-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    .socials{display:flex;gap:12px;justify-content:center;margin-top:36px}
+    .soc{
+      width:44px;height:44px;border-radius:12px;
+      background:rgba(0,0,0,.04);border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;
+      font-size:17px;transition:transform .2s,box-shadow .2s,background .2s;
+    }
+    .soc:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.1);background:white}
+
+    @media(max-width:600px){.contact-card{padding:52px 24px;border-radius:28px}}
+
+    /* =========================================
+       FOOTER
+    ========================================= */
+    footer{padding:38px 0;border-top:1px solid var(--border);text-align:center}
+    footer p{font-size:14px;color:var(--muted)}
+
+    /* =========================================
+       SCROLL-TO-TOP FAB
+    ========================================= */
+    .fab{
+      position:fixed;bottom:28px;right:28px;z-index:150;
+      width:50px;height:50px;border-radius:15px;
+      background:var(--g-hero);
+      box-shadow:0 10px 28px -4px rgba(109,40,217,.5);
+      display:flex;align-items:center;justify-content:center;
+      color:white;font-size:18px;
+      transition:transform .2s,box-shadow .2s,opacity .3s;
+      opacity:0;pointer-events:none;
+    }
+    .fab.show{opacity:1;pointer-events:all}
+    .fab:hover{transform:translateY(-4px);box-shadow:0 20px 40px -4px rgba(109,40,217,.6)}
+  </style>
+</head>
+<body>
+
+<!-- Scroll progress -->
+<div class="progress" id="prog"></div>
+
+<!-- Custom cursor -->
+<div class="cur" id="cur"></div>
+<div class="cur-ring" id="curR"></div>
+
+<!-- Animated bg blobs -->
+<div class="bg">
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
+</div>
+
+<!-- ==================== NAV ==================== -->
+<nav id="nav">
+  <div class="nav-wrap">
+    <div class="logo">wes.</div>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#skills">Skills</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="nav-end">
+      <a href="#contact" class="btn btn-o" style="display:none;" id="navO">Portfolio</a>
+      <a href="#contact" class="btn btn-p">Let's talk ↗</a>
+    </div>
+    <div class="ham" id="ham">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<div class="mob-nav" id="mobNav">
+  <a href="#about" onclick="closeMob()">About</a>
+  <a href="#skills" onclick="closeMob()">Skills</a>
+  <a href="#projects" onclick="closeMob()">Projects</a>
+  <a href="#contact" onclick="closeMob()">Contact</a>
+</div>
+
+<!-- ==================== HERO ==================== -->
+<section id="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+
+      <!-- Left: copy -->
+      <div class="hero-copy">
+        <div class="hero-badge"><span class="dot"></span>Available for new projects</div>
+        <h1>
+          Building<br>
+          <span class="grad">Digital</span><br>
+          Experiences
+        </h1>
+        <div class="type-wrap">
+          I'm a <span id="tw" class="type-cursor"></span>
+        </div>
+        <p class="hero-desc">
+          Full-stack developer crafting high-performance web apps, AI-powered tools, and intelligent trading systems — from concept to deployment.
+        </p>
+        <div class="hero-btns">
+          <a href="#projects" class="btn btn-p">View Projects ↓</a>
+          <a href="#contact" class="btn btn-o">Get In Touch</a>
+        </div>
+        <div class="hero-nums">
+          <div>
+            <div class="h-num-val" data-target="40" data-suffix="+">0</div>
+            <div class="h-num-lbl">Projects Built</div>
+          </div>
+          <div>
+            <div class="h-num-val" data-target="5" data-suffix="+">0</div>
+            <div class="h-num-lbl">Years Exp.</div>
+          </div>
+          <div>
+            <div class="h-num-val" data-target="98" data-suffix="%">0</div>
+            <div class="h-num-lbl">Client Satisfaction</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: floating cards -->
+      <div class="hero-vis">
+        <div class="orb orb1"></div>
+        <div class="orb orb2"></div>
+        <div class="orb orb3"></div>
+        <div class="card-stack">
+          <div class="hc hc1">
+            <div class="ctag ctag-ai">🤖 AI System</div>
+            <div class="ct">Westrade — Trading Platform</div>
+            <div class="cd">Algo trading with MT5, sentiment analysis &amp; live dashboards</div>
+            <div class="cm">
+              <span class="cm-big tv">+147%</span>
+              <span class="cm-lbl">annual return</span>
+            </div>
+          </div>
+          <div class="hc hc2">
+            <div class="ctag ctag-web">⚡ Full-Stack</div>
+            <div class="ct">Real-time Dashboard</div>
+            <div class="cd">Live charts &amp; WebSocket sync</div>
+            <div class="cm">
+              <span class="cm-big tt">99.9%</span>
+              <span class="cm-lbl">uptime</span>
+            </div>
+          </div>
+          <div class="hc hc3">
+            <div class="ctag ctag-bot">🔥 AI Agent</div>
+            <div class="ct">Workflow Automation</div>
+            <div class="cd">10× faster delivery</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MARQUEE ==================== -->
+<div class="marquee-row">
+  <div class="marquee-track" id="mt">
+    <span class="mi"><span class="dot"></span>React &amp; Next.js</span>
+    <span class="mi"><span class="dot"></span>Node.js &amp; Express</span>
+    <span class="mi"><span class="dot"></span>Python &amp; FastAPI</span>
+    <span class="mi"><span class="dot"></span>AI / LLM Integration</span>
+    <span class="mi"><span class="dot"></span>Trading Systems</span>
+    <span class="mi"><span class="dot"></span>WebSockets &amp; REST APIs</span>
+    <span class="mi"><span class="dot"></span>UI / UX Design</span>
+    <span class="mi"><span class="dot"></span>Database Architecture</span>
+    <span class="mi"><span class="dot"></span>MetaTrader 5</span>
+    <span class="mi"><span class="dot"></span>React &amp; Next.js</span>
+    <span class="mi"><span class="dot"></span>Node.js &amp; Express</span>
+    <span class="mi"><span class="dot"></span>Python &amp; FastAPI</span>
+    <span class="mi"><span class="dot"></span>AI / LLM Integration</span>
+    <span class="mi"><span class="dot"></span>Trading Systems</span>
+    <span class="mi"><span class="dot"></span>WebSockets &amp; REST APIs</span>
+    <span class="mi"><span class="dot"></span>UI / UX Design</span>
+    <span class="mi"><span class="dot"></span>Database Architecture</span>
+    <span class="mi"><span class="dot"></span>MetaTrader 5</span>
+  </div>
+</div>
+
+<!-- ==================== ABOUT ==================== -->
+<section id="about">
+  <div class="wrap">
+    <div class="rev">
+      <div class="section-tag">About Me</div>
+      <h2>Turning ideas into<br><span class="grad">powerful digital products</span></h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-text rev-l">
+        <p>
+          I'm <strong>Wes de Koning</strong>, a full-stack developer with a passion for building things that matter. From sleek, animated frontends to complex backend architectures — I deliver end-to-end digital experiences.
+        </p>
+        <p>
+          My work spans web development, AI integration, and financial technology. I specialise in systems that operate at the intersection of performance, intelligence, and beautiful design.
+        </p>
+        <p>
+          Whether you need a stunning marketing site, a scalable SaaS platform, or an AI-powered automation engine — I bring the full stack to the table.
+        </p>
+        <div class="chips">
+          <span class="chip">React</span>
+          <span class="chip">Next.js</span>
+          <span class="chip">Node.js</span>
+          <span class="chip">Python</span>
+          <span class="chip">TypeScript</span>
+          <span class="chip">AI / LLM</span>
+          <span class="chip">PostgreSQL</span>
+          <span class="chip">MetaTrader 5</span>
+          <span class="chip">WebSockets</span>
+          <span class="chip">Tailwind CSS</span>
+        </div>
+      </div>
+      <div class="stats4 rev-r">
+        <div class="scard">
+          <div class="scard-icon" style="background:rgba(109,40,217,.1)">🚀</div>
+          <div class="scard-val grad" data-target="40" data-suffix="+">0</div>
+          <div class="scard-lbl">Projects Delivered</div>
+        </div>
+        <div class="scard">
+          <div class="scard-icon" style="background:rgba(244,63,94,.1)">⚡</div>
+          <div class="scard-val" style="background:var(--g-r);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text" data-target="5" data-suffix="+">0</div>
+          <div class="scard-lbl">Years of Experience</div>
+        </div>
+        <div class="scard">
+          <div class="scard-icon" style="background:rgba(13,148,136,.1)">🤖</div>
+          <div class="scard-val" style="background:var(--g-t);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text" data-target="12" data-suffix="+">0</div>
+          <div class="scard-lbl">AI Tools Built</div>
+        </div>
+        <div class="scard">
+          <div class="scard-icon" style="background:rgba(217,119,6,.1)">📈</div>
+          <div class="scard-val" style="background:var(--g-a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text" data-target="98" data-suffix="%">0</div>
+          <div class="scard-lbl">Satisfaction Rate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SKILLS ==================== -->
+<section id="skills">
+  <div class="wrap">
+    <div class="skills-head rev">
+      <div class="section-tag">Expertise</div>
+      <h2>My Core <span class="grad">Skills</span></h2>
+      <p class="sub" style="margin:0 auto">A versatile toolkit built across years of hands-on projects — spanning the full spectrum of modern software development.</p>
+    </div>
+    <div class="skills-grid">
+
+      <div class="sk sv rev">
+        <div class="sk-ico">⚛️</div>
+        <div class="sk-name">Frontend Development</div>
+        <div class="sk-desc">Crafting beautiful, performant UIs with React, Next.js, and modern CSS. Pixel-perfect, fully responsive, and blazing fast.</div>
+        <div class="sk-pct">92%</div>
+        <div class="bar-bg"><div class="bar" data-pct="92"></div></div>
+        <div class="sk-tags">
+          <span class="stag">React</span><span class="stag">Next.js</span>
+          <span class="stag">Tailwind</span><span class="stag">TypeScript</span>
+        </div>
+      </div>
+
+      <div class="sk st rev" style="transition-delay:.1s">
+        <div class="sk-ico">🛠️</div>
+        <div class="sk-name">Backend / Full-Stack</div>
+        <div class="sk-desc">Scalable server architectures with Node.js, Express, and Python. Real-time WebSocket systems, REST APIs, and databases.</div>
+        <div class="sk-pct">88%</div>
+        <div class="bar-bg"><div class="bar" data-pct="88"></div></div>
+        <div class="sk-tags">
+          <span class="stag">Node.js</span><span class="stag">Python</span>
+          <span class="stag">PostgreSQL</span><span class="stag">REST</span>
+        </div>
+      </div>
+
+      <div class="sk sa rev" style="transition-delay:.2s">
+        <div class="sk-ico">🤖</div>
+        <div class="sk-name">AI / Automation</div>
+        <div class="sk-desc">Integrating LLMs, building intelligent agents, and designing automation pipelines that save hours every single day.</div>
+        <div class="sk-pct">85%</div>
+        <div class="bar-bg"><div class="bar" data-pct="85"></div></div>
+        <div class="sk-tags">
+          <span class="stag">LLM Integration</span><span class="stag">AI Agents</span>
+          <span class="stag">Automation</span>
+        </div>
+      </div>
+
+      <div class="sk sr rev" style="transition-delay:.3s">
+        <div class="sk-ico">📊</div>
+        <div class="sk-name">Trading / Fintech</div>
+        <div class="sk-desc">Algorithmic trading systems, live market data, sentiment analysis, and MetaTrader 5 connectivity — end to end.</div>
+        <div class="sk-pct">80%</div>
+        <div class="bar-bg"><div class="bar" data-pct="80"></div></div>
+        <div class="sk-tags">
+          <span class="stag">Algo Trading</span><span class="stag">MT5</span>
+          <span class="stag">Market Data</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PROJECTS ==================== -->
+<section id="projects">
+  <div class="wrap">
+    <div class="proj-head">
+      <div class="rev">
+        <div class="section-tag">Work</div>
+        <h2>Featured <span class="grad">Projects</span></h2>
+      </div>
+      <a href="#contact" class="btn btn-o rev">See all work ↗</a>
+    </div>
+    <div class="proj-grid">
+
+      <div class="pc rev">
+        <div class="pc-thumb" style="background:linear-gradient(135deg,#150033,#2d0a6e)">
+          📊<div class="shine"></div>
+        </div>
+        <div class="pc-body">
+          <div class="pc-tags">
+            <span class="ptag" style="background:rgba(109,40,217,.1);color:#6d28d9">AI</span>
+            <span class="ptag" style="background:rgba(13,148,136,.1);color:#0d9488">Fintech</span>
+          </div>
+          <div class="pc-title">Westrade — AI Trading Platform</div>
+          <div class="pc-desc">Full-stack algo trading dashboard with real-time MT5 integration, multi-source sentiment analysis, and AI-driven trade execution engine.</div>
+          <div class="pc-foot">
+            <a href="#" class="plink">View Case Study →</a>
+            <div class="pstack">
+              <span class="pdot">⚛️</span><span class="pdot">🐍</span><span class="pdot">📊</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc rev" style="transition-delay:.1s">
+        <div class="pc-thumb" style="background:linear-gradient(135deg,#052d18,#0a5c33)">
+          🤖<div class="shine"></div>
+        </div>
+        <div class="pc-body">
+          <div class="pc-tags">
+            <span class="ptag" style="background:rgba(244,63,94,.1);color:#e11d48">AI</span>
+            <span class="ptag" style="background:rgba(109,40,217,.1);color:#6d28d9">Automation</span>
+          </div>
+          <div class="pc-title">AI Workflow Automation Engine</div>
+          <div class="pc-desc">Intelligent pipeline builder that automates complex multi-step business workflows using LLM reasoning and structured tool calls.</div>
+          <div class="pc-foot">
+            <a href="#" class="plink">View Case Study →</a>
+            <div class="pstack">
+              <span class="pdot">🤖</span><span class="pdot">🟢</span><span class="pdot">🔗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc rev" style="transition-delay:.2s">
+        <div class="pc-thumb" style="background:linear-gradient(135deg,#1a2a3f,#0a4a8f)">
+          🌐<div class="shine"></div>
+        </div>
+        <div class="pc-body">
+          <div class="pc-tags">
+            <span class="ptag" style="background:rgba(13,148,136,.1);color:#0d9488">Full-Stack</span>
+            <span class="ptag" style="background:rgba(217,119,6,.1);color:#d97706">SaaS</span>
+          </div>
+          <div class="pc-title">SaaS Analytics Platform</div>
+          <div class="pc-desc">Real-time analytics SaaS with multi-tenant architecture, live dashboards, custom reporting, and seamless third-party integrations.</div>
+          <div class="pc-foot">
+            <a href="#" class="plink">View Case Study →</a>
+            <div class="pstack">
+              <span class="pdot">⚛️</span><span class="pdot">🟩</span><span class="pdot">🗄️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CONTACT ==================== -->
+<section id="contact">
+  <div class="wrap">
+    <div class="contact-card rev">
+      <div class="section-tag" style="justify-content:center;margin-bottom:10px">Let's Build Together</div>
+      <h2>Ready to bring your<br><span class="grad">vision to life?</span></h2>
+      <p class="sub">Whether you have a clear project in mind or just want to explore possibilities — I'd love to hear from you. Let's build something extraordinary.</p>
+      <div class="contact-btns">
+        <a href="mailto:wes@example.com" class="btn btn-p">Send a Message ✉️</a>
+        <a href="#" class="btn btn-o">Book a Call 📞</a>
+      </div>
+      <div class="socials">
+        <a href="#" class="soc" title="GitHub">⌨️</a>
+        <a href="#" class="soc" title="LinkedIn">💼</a>
+        <a href="#" class="soc" title="X / Twitter">🐦</a>
+        <a href="#" class="soc" title="Email">📧</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer>
+  <div class="wrap">
+    <p>© 2025 Wes de Koning — Crafted with ❤️ and ☕</p>
+  </div>
+</footer>
+
+<!-- Scroll-to-top FAB -->
+<a href="#hero" class="fab" id="fab">↑</a>
+
+<!-- ==================== JS ==================== -->
+<script>
+  /* ---- Custom Cursor (desktop) ---- */
+  const cur = document.getElementById('cur');
+  const curR = document.getElementById('curR');
+  let cx = 0, cy = 0, rx = 0, ry = 0;
+
+  if (window.matchMedia('(hover:hover)').matches) {
+    document.addEventListener('mousemove', e => {
+      cx = e.clientX; cy = e.clientY;
+      cur.style.left = cx + 'px';
+      cur.style.top  = cy + 'px';
+    });
+    (function lerpRing() {
+      rx += (cx - rx) * 0.14;
+      ry += (cy - ry) * 0.14;
+      curR.style.left = rx + 'px';
+      curR.style.top  = ry + 'px';
+      requestAnimationFrame(lerpRing);
+    })();
+    document.querySelectorAll('a,button,.pc,.sk,.scard').forEach(el => {
+      el.addEventListener('mouseenter', () => { cur.classList.add('hov'); curR.classList.add('hov'); });
+      el.addEventListener('mouseleave', () => { cur.classList.remove('hov'); curR.classList.remove('hov'); });
+    });
+  }
+
+  /* ---- Scroll events ---- */
+  const nav  = document.getElementById('nav');
+  const prog = document.getElementById('prog');
+  const fab  = document.getElementById('fab');
+
+  window.addEventListener('scroll', () => {
+    const s = window.scrollY;
+    const t = document.body.scrollHeight - window.innerHeight;
+    prog.style.width = (s / t * 100) + '%';
+    nav.classList.toggle('scroll', s > 60);
+    fab.classList.toggle('show', s > 500);
+  }, { passive: true });
+
+  /* ---- Parallax blobs ---- */
+  const blobs = document.querySelectorAll('.blob');
+  const speeds = [0.18, 0.12, 0.08, 0.22];
+  window.addEventListener('scroll', () => {
+    blobs.forEach((b, i) => { b.style.transform = `translateY(${window.scrollY * speeds[i]}px)`; });
+  }, { passive: true });
+
+  /* ---- Mobile nav ---- */
+  document.getElementById('ham').addEventListener('click', () => {
+    document.getElementById('mobNav').classList.toggle('open');
+  });
+  function closeMob() { document.getElementById('mobNav').classList.remove('open'); }
+
+  /* ---- Typewriter ---- */
+  const phrases = ['Full-Stack Developer','AI Integration Expert','Trading Systems Builder','Backend Architect','UI/UX Craftsman'];
+  let pi = 0, ci = 0, del = false;
+  const tw = document.getElementById('tw');
+  function type() {
+    const p = phrases[pi];
+    tw.textContent = del ? p.slice(0, --ci) : p.slice(0, ++ci);
+    if (!del && ci === p.length)   { del = true;  setTimeout(type, 1900); return; }
+    if (del  && ci === 0)          { del = false; pi = (pi + 1) % phrases.length; }
+    setTimeout(type, del ? 55 : 85);
+  }
+  type();
+
+  /* ---- Counter ---- */
+  function counter(el) {
+    const target = +el.dataset.target;
+    const suffix = el.dataset.suffix || '';
+    const t0 = performance.now();
+    const dur = 1600;
+    (function tick(now) {
+      const p = Math.min((now - t0) / dur, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(e * target) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = target + suffix;
+    })(t0);
+  }
+
+  /* ---- Intersection Observer ---- */
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      en.target.classList.add('in');
+      en.target.querySelectorAll('.bar[data-pct]').forEach(b => { b.style.width = b.dataset.pct + '%'; });
+      en.target.querySelectorAll('[data-target]').forEach(counter);
+      io.unobserve(en.target);
+    });
+  }, { threshold: 0.18 });
+
+  document.querySelectorAll('.rev,.rev-l,.rev-r').forEach(el => io.observe(el));
+
+  /* Hero counters fire on load */
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.hero-nums [data-target]').forEach(counter);
+  });
+
+  /* ---- 3D tilt on project cards (desktop only) ---- */
+  if (window.matchMedia('(hover:hover)').matches) {
+    document.querySelectorAll('.pc').forEach(c => {
+      c.addEventListener('mousemove', e => {
+        const r = c.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width  - 0.5;
+        const y = (e.clientY - r.top)  / r.height - 0.5;
+        c.style.transform = `perspective(900px) rotateY(${x * 9}deg) rotateX(${-y * 9}deg) translateY(-12px)`;
+      });
+      c.addEventListener('mouseleave', () => { c.style.transform = ''; });
+    });
+  }
+</script>
+</body>
+</html>
