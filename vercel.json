@@ -1,4 +1,8 @@
 {
+  "version": 2,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": ".",
   "rewrites": [
     { "source": "/", "destination": "/portfolio.html" },
     { "source": "/(.*)", "destination": "/portfolio.html" }
