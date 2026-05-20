@@ -1,4 +1,8 @@
 import { useEffect, useRef } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const PROJECTS = [
   {
@@ -32,25 +36,30 @@ export default function Projects() {
   const ref = useRef(null)
 
   useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('vis') }),
-      { threshold: 0.05 }
-    )
-    ref.current?.querySelectorAll('.reveal').forEach((el) => obs.observe(el))
-    return () => obs.disconnect()
+    const ctx = gsap.context(() => {
+      gsap.from('.proj-anim-hd', {
+        y: 40, opacity: 0, duration: 0.9, ease: 'power3.out',
+        scrollTrigger: { trigger: ref.current, start: 'top 75%' },
+      })
+      gsap.from('.proj-anim-row', {
+        y: 30, opacity: 0, duration: 0.7, stagger: 0.1, ease: 'power2.out',
+        scrollTrigger: { trigger: '.proj-list', start: 'top 80%' },
+      })
+    }, ref)
+    return () => ctx.revert()
   }, [])
 
   return (
     <section id="work" className="section" ref={ref}>
       <div className="section-inner">
-        <div className="reveal">
+        <div className="proj-anim-hd">
           <div className="sec-label">02 — Work</div>
           <h2 className="sec-heading">Selected<br />Projects</h2>
         </div>
 
         <div className="proj-list">
           {PROJECTS.map((p, i) => (
-            <div className="proj-row reveal" key={i} style={{ transitionDelay: `${i * 0.07}s` }}>
+            <div className="proj-row proj-anim-row" key={i}>
               <div className="proj-num">{p.num}</div>
               <div className="proj-info">
                 <div className="proj-name">{p.title}</div>

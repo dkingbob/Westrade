@@ -1,4 +1,8 @@
 import { useEffect, useRef } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const ROW1 = ['React', 'Next.js', 'TypeScript', 'Node.js', 'Python', 'PostgreSQL', 'Redis', 'Docker']
 const ROW2 = ['FastAPI', 'WebSockets', 'Three.js', 'LLM APIs', 'MetaTrader5', 'D3.js', 'Stripe', 'Vercel']
@@ -14,12 +18,17 @@ export default function Skills() {
   const ref = useRef(null)
 
   useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('vis') }),
-      { threshold: 0.1 }
-    )
-    ref.current?.querySelectorAll('.reveal').forEach((el) => obs.observe(el))
-    return () => obs.disconnect()
+    const ctx = gsap.context(() => {
+      gsap.from('.skills-anim', {
+        y: 40, opacity: 0, duration: 0.9, stagger: 0.1, ease: 'power3.out',
+        scrollTrigger: { trigger: ref.current, start: 'top 75%' },
+      })
+      gsap.from('.cat-anim', {
+        y: 30, opacity: 0, duration: 0.7, stagger: 0.08, ease: 'power2.out',
+        scrollTrigger: { trigger: '.skills-cats', start: 'top 80%' },
+      })
+    }, ref)
+    return () => ctx.revert()
   }, [])
 
   const r1 = [...ROW1, ...ROW1]
@@ -28,8 +37,8 @@ export default function Skills() {
   return (
     <div id="skills" className="skills-wrap" ref={ref}>
       <div className="skills-header">
-        <div className="sec-label reveal">03 — Skills</div>
-        <h2 className="sec-heading reveal">Tech Stack</h2>
+        <div className="sec-label skills-anim">03 — Skills</div>
+        <h2 className="sec-heading skills-anim">Tech Stack</h2>
       </div>
 
       <div className="marquee-outer">
@@ -49,7 +58,7 @@ export default function Skills() {
 
       <div className="skills-cats">
         {CATS.map((cat) => (
-          <div className="skill-cat reveal" key={cat.title}>
+          <div className="skill-cat cat-anim" key={cat.title}>
             <div className="cat-title">{cat.title}</div>
             <ul className="cat-list">
               {cat.items.map((item) => <li key={item}>{item}</li>)}

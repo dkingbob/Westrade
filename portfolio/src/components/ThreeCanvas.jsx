@@ -1,22 +1,23 @@
 import { useEffect, useRef } from 'react'
-import { createScene } from '../three/scene.js'
+import { initScene } from '../three/scene.js'
 
 export default function ThreeCanvas() {
-  const containerRef = useRef(null)
+  const canvasRef = useRef(null)
 
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    const cleanup = createScene(container)
+    const cleanup = initScene(canvasRef.current)
     return cleanup
   }, [])
 
   return (
-    <div
-      ref={containerRef}
+    <canvas
+      ref={canvasRef}
       style={{
         position: 'fixed',
-        inset: 0,
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
         zIndex: 0,
         pointerEvents: 'none',
       }}

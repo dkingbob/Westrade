@@ -1,18 +1,33 @@
+import { useEffect } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
+
 export default function Hero() {
+  useEffect(() => {
+    // Parallax the hero content on scroll
+    gsap.to('.hero-content', {
+      y: -80,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true,
+      },
+    })
+  }, [])
+
   const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
   return (
     <section id="hero" className="hero">
-      <div className="hero-bg">
-        <div className="hero-blob hero-blob-1" />
-        <div className="hero-blob hero-blob-2" />
-      </div>
-
       <div className="hero-content">
         <div className="hero-eyebrow">
           <span className="hero-pulse" />
           Available for new projects
-          <span style={{ margin: '0 0.2rem', opacity: 0.3 }}>·</span>
+          <span style={{ margin: '0 0.3rem', opacity: 0.25 }}>·</span>
           Netherlands
         </div>
 

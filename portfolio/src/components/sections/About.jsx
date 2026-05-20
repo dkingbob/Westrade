@@ -1,4 +1,8 @@
 import { useEffect, useRef } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const STATS = [
   { n: '5+', l: 'Years Experience' },
@@ -16,41 +20,46 @@ const DETAILS = [
   { k: 'Response', v: '< 24 hours' },
 ]
 
-function useReveal(ref) {
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('vis') }),
-      { threshold: 0.12 }
-    )
-    ref.current?.querySelectorAll('.reveal').forEach((el) => obs.observe(el))
-    return () => obs.disconnect()
-  }, [])
-}
-
 export default function About() {
   const ref = useRef(null)
-  useReveal(ref)
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from('.about-anim', {
+        y: 50,
+        opacity: 0,
+        duration: 1,
+        stagger: 0.12,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: ref.current,
+          start: 'top 75%',
+        },
+      })
+    }, ref)
+    return () => ctx.revert()
+  }, [])
 
   return (
     <section id="about" className="section" ref={ref}>
       <div className="section-inner">
-        <div className="reveal">
+        <div className="about-anim">
           <div className="sec-label">01 — About</div>
           <h2 className="sec-heading">Building<br />Things That<br />Matter</h2>
         </div>
 
         <div className="about-grid">
           <div className="about-body">
-            <p className="reveal">
+            <p className="about-anim">
               I'm <strong>Wes de Koning</strong> — a full-stack developer based in the{' '}
               <strong>Netherlands</strong>, building high-performance web apps, AI-powered systems,
               and algorithmic trading platforms.
             </p>
-            <p className="reveal">
+            <p className="about-anim">
               My focus is shipping <strong>production-grade software</strong> that works at scale.
               Clean code, fast delivery, and full ownership from idea to deployment.
             </p>
-            <div className="about-stats reveal">
+            <div className="about-stats about-anim">
               {STATS.map((s) => (
                 <div className="stat-box" key={s.l}>
                   <div className="stat-n">{s.n}</div>
@@ -60,9 +69,9 @@ export default function About() {
             </div>
           </div>
 
-          <div className="about-details reveal">
-            {DETAILS.map((d) => (
-              <div className="detail-row" key={d.k}>
+          <div className="about-details">
+            {DETAILS.map((d, i) => (
+              <div className="detail-row about-anim" key={d.k} style={{ transitionDelay: `${i * 0.05}s` }}>
                 <span className="d-key">{d.k}</span>
                 <span className="d-val">{d.v}</span>
               </div>
