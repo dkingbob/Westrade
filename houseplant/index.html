@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>PlantIQ™ Pod — HOUSEPLANT HUSTLE</title>
+<meta name="description" content="Your houseplant has been trying to tell you something. For $1,299, it finally can.">
+<meta name="theme-color" content="#060e07">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400..800&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/locomotive-scroll@4.1.4/dist/locomotive-scroll.min.css">
+<style>
+:root{
+  --bg:#060e07;
+  --surface:#0d1f0f;
+  --white:#e8e4dd;
+  --orange:#e07830;
+  --green:#4dbb5f;
+  --cyan:#00e5cc;
+  --muted:rgba(232,228,221,.42);
+  --px:3.125vw;
+  --df:'Syne',sans-serif;
+  --tf:'DM Sans',sans-serif;
+  --mf:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color:var(--white);font-family:var(--df);overflow:hidden;scroll-behavior:auto}
+body{overflow:hidden}
+::selection{background:var(--orange);color:var(--bg)}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,h4{font-family:var(--df);font-weight:500;margin:0;padding:0}
+h2,h3,h4{text-transform:uppercase}
+p{font-family:var(--tf);font-weight:300;line-height:1.65}
+button{font-family:var(--df);cursor:pointer;border:none;background:none}
+img{display:block;max-width:100%}
+
+/* ── GRAIN ──────────────────────────────── */
+#grain{position:fixed;inset:0;z-index:1000;pointer-events:none;will-change:transform}
+
+/* ── GLITCH CANVAS ───────────────────────── */
+#glitch-cv{position:fixed;inset:0;z-index:999;pointer-events:none}
+
+/* ── PARTICLE CANVAS ─────────────────────── */
+#particle-cv{position:fixed;inset:0;z-index:1;pointer-events:none}
+
+/* ── CURSOR ──────────────────────────────── */
+#c-dot{position:fixed;width:7px;height:7px;background:var(--white);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .15s,height .15s,background .15s,border-radius .15s;mix-blend-mode:difference}
+#c-ring{position:fixed;width:44px;height:44px;border:1px solid rgba(232,228,221,.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .4s cubic-bezier(.16,1,.3,1),height .4s cubic-bezier(.16,1,.3,1),border-color .3s,border-radius .3s}
+body.hov #c-dot{width:9px;height:9px;background:var(--orange)}
+body.hov #c-ring{width:70px;height:70px;border-color:var(--orange)}
+body.drag-mode #c-dot{width:12px;height:12px;border-radius:2px;background:var(--cyan)}
+body.drag-mode #c-ring{width:50px;height:50px;border-color:var(--cyan);border-radius:4px}
+
+/* ── AUDIO BTN ───────────────────────────── */
+#audio-btn{
+  position:fixed;bottom:2rem;left:2rem;z-index:600;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(13,31,15,.8);border:1px solid rgba(232,228,221,.1);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mf);font-size:.6rem;color:var(--cyan);
+  letter-spacing:.08em;transition:border-color .2s,background .2s;
+  backdrop-filter:blur(8px);
+}
+#audio-btn:hover{border-color:var(--cyan);background:rgba(0,229,204,.08)}
+#audio-btn.muted{color:rgba(232,228,221,.3);border-color:rgba(232,228,221,.05)}
+
+/* ── LEGAL BTN ───────────────────────────── */
+#legal-btn{
+  position:fixed;bottom:2rem;left:6rem;z-index:600;
+  font-family:var(--mf);font-size:.55rem;letter-spacing:.1em;
+  color:rgba(232,228,221,.2);text-transform:uppercase;
+  background:none;border:none;cursor:pointer;
+  transition:color .2s;
+}
+#legal-btn:hover{color:var(--orange)}
+
+/* ── PRELOADER ────────────────────────────── */
+#pl{
+  position:fixed;inset:0;z-index:800;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;
+  overflow:hidden;
+}
+#pl-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,204,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,204,.04) 1px,transparent 1px);background-size:60px 60px}
+#pl-svg{width:180px;height:180px;position:relative;z-index:2}
+#pl-word{font-size:clamp(.9rem,2vw,1.5rem);font-weight:600;text-transform:uppercase;letter-spacing:.18em;position:relative;z-index:2;color:var(--white)}
+#pl-pct{font-family:var(--mf);font-size:.7rem;color:var(--cyan);letter-spacing:.25em;text-transform:uppercase;position:relative;z-index:2}
+#pl-bar{width:200px;height:1px;background:rgba(232,228,221,.08);position:relative;z-index:2}
+#pl-bar-fill{height:100%;width:0%;background:var(--cyan);transition:width .08s linear}
+
+/* ── NAV ──────────────────────────────────── */
+#nav{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  padding:1.5rem var(--px);
+  display:flex;align-items:center;justify-content:space-between;
+  will-change:transform;opacity:0;
+}
+#nav::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:repeating-linear-gradient(90deg,rgba(232,228,221,.1) 0 2px,transparent 0 4px)}
+.nav-logo{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+.nav-logo em{font-style:normal;color:var(--orange)}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{font-family:var(--mf);font-size:.62rem;font-weight:400;text-transform:uppercase;letter-spacing:.15em;opacity:.35;transition:opacity .2s}
+.nav-links a:hover{opacity:1}
+.nav-cta{font-family:var(--mf);font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;padding:.55em 1.6em;border:1px solid rgba(232,228,221,.15);color:var(--white);background:transparent;transition:border-color .2s,background .2s;cursor:pointer}
+.nav-cta:hover{border-color:var(--orange);background:rgba(224,120,48,.08);color:var(--orange)}
+
+/* ── MAIN THREE.JS CANVAS ─────────────────── */
+#hero-cv{
+  position:fixed;inset:0;width:100%;height:100%;
+  z-index:2;pointer-events:none;
+  opacity:0;transition:opacity .8s;
+}
+
+/* ── SCROLL WRAP ──────────────────────────── */
+#scroll-wrap{position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden}
+
+/* ── SECTION BASES ────────────────────────── */
+.sec{position:relative;z-index:3;padding:14vh var(--px)}
+.inn{max-width:1520px;margin:0 auto}
+.dash{height:1px;background:repeating-linear-gradient(90deg,rgba(232,228,221,.12) 0 2px,transparent 0 4px)}
+.eyb{font-family:var(--mf);font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan);margin-bottom:1.5rem;display:flex;align-items:center;gap:.8rem}
+.eyb::before{content:'//';opacity:.4;color:var(--white)}
+.lw{display:block;overflow:hidden}
+.lw span{display:block;transform:translateY(105%)}
+
+/* ── HERO ──────────────────────────────────── */
+#hero{
+  height:100vh;display:flex;flex-direction:column;
+  justify-content:flex-end;padding:0 var(--px) 6vh;
+  position:relative;z-index:3;
+  pointer-events:none;
+}
+.hero-inner{pointer-events:all}
+.hero-tag{
+  font-family:var(--mf);font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:2.5rem;display:flex;align-items:center;gap:1rem;
+  opacity:0;transform:translateY(20px);
+}
+.hero-tag::before{content:'';width:28px;height:1px;background:var(--cyan)}
+h1.hero-h1{
+  font-size:clamp(4rem,10vw,10vw);line-height:.82;
+  font-weight:700;text-transform:uppercase;letter-spacing:-.03em;
+  overflow:hidden;margin-bottom:4vh;
+}
+.hero-bottom{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:2rem;
+  border-top:1px solid rgba(232,228,221,.08);padding-top:2rem;
+}
+.hero-desc{font-family:var(--tf);font-size:clamp(.82rem,1.1vw,1.1vw);opacity:0;transform:translateY(20px);max-width:36ch;line-height:1.7;color:var(--muted)}
+.hero-scroll{font-family:var(--mf);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;opacity:0;display:flex;flex-direction:column;align-items:center;gap:.6rem;color:rgba(232,228,221,.3);text-align:center}
+.hero-scroll-line{width:1px;height:52px;background:linear-gradient(var(--cyan),transparent);animation:sl 2.4s ease-in-out infinite}
+@keyframes sl{0%,100%{opacity:.3;transform:scaleY(1)}50%{opacity:.9;transform:scaleY(.5)}}
+.hero-cta{display:flex;flex-direction:column;align-items:flex-end;gap:1.2rem;opacity:0;transform:translateY(20px)}
+.hero-price{text-align:right}
+.hero-price-n{font-size:clamp(2rem,4vw,4vw);font-weight:700;color:var(--orange);display:block;line-height:1}
+.hero-price-l{font-family:var(--mf);font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;opacity:.3;margin-top:.3rem}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:.5em;
+  font-family:var(--mf);font-size:.68rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.14em;
+  padding:.8em 2.2em;background:var(--white);color:var(--bg);
+  border:none;cursor:pointer;transition:background .18s,color .18s;
+  position:relative;overflow:hidden;
+}
+.btn-primary::before{content:'';position:absolute;inset:0;background:var(--orange);transform:translateX(-101%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.btn-primary:hover::before{transform:translateX(0)}
+.btn-primary:hover{color:var(--bg)}
+.btn-primary span{position:relative;z-index:1}
+.btn-outline{
+  display:inline-flex;align-items:center;gap:.5em;
+  font-family:var(--mf);font-size:.68rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.14em;
+  padding:.8em 2.2em;background:transparent;color:var(--white);
+  border:1px solid rgba(232,228,221,.15);cursor:pointer;transition:border-color .18s,color .18s;
+}
+.btn-outline:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── PROBLEM ──────────────────────────────── */
+#problem{
+  min-height:80vh;display:flex;align-items:center;
+  background:linear-gradient(to bottom,transparent,rgba(6,14,7,.85) 25%,rgba(6,14,7,.92) 75%,transparent);
+}
+.prob-num{font-size:clamp(6rem,16vw,16vw);font-weight:700;line-height:.85;color:transparent;-webkit-text-stroke:1px rgba(232,228,221,.07);display:block;margin-bottom:1rem}
+.prob-h{font-size:clamp(2.5rem,5vw,5vw);line-height:.88;font-weight:600;text-transform:uppercase;letter-spacing:-.02em;overflow:hidden}
+.prob-sub{font-family:var(--tf);font-size:clamp(.85rem,1.1vw,1.1vw);opacity:.45;max-width:48ch;margin-top:2rem;line-height:1.75}
+.prob-grid{display:grid;grid-template-columns:1fr 1fr;gap:8rem;align-items:center;max-width:1200px}
+
+/* ── REVEAL ───────────────────────────────── */
+#reveal{
+  min-height:100vh;display:flex;align-items:center;
+  background:linear-gradient(to bottom,transparent,rgba(6,14,7,.88) 20%,rgba(6,14,7,.95) 80%,transparent);
+  text-align:center;padding:14vh var(--px);
+}
+.reveal-inner{max-width:900px;margin:0 auto}
+.reveal-pre{font-family:var(--mf);font-size:.65rem;letter-spacing:.3em;text-transform:uppercase;color:var(--cyan);margin-bottom:3rem;opacity:0}
+.reveal-h{font-size:clamp(4rem,9vw,9vw);line-height:.82;font-weight:700;text-transform:uppercase;letter-spacing:-.03em;overflow:hidden;margin-bottom:2rem}
+.reveal-sub{font-family:var(--tf);font-size:clamp(.9rem,1.2vw,1.2vw);opacity:.4;max-width:52ch;margin:0 auto 4rem;line-height:1.7}
+.reveal-specs{display:flex;gap:0;border-top:1px solid rgba(232,228,221,.07);border-bottom:1px solid rgba(232,228,221,.07)}
+.rv-spec{flex:1;padding:1.8rem 1.2rem;border-right:1px solid rgba(232,228,221,.07);opacity:0;transform:translateY(20px)}
+.rv-spec:last-child{border-right:none}
+.rv-spec-n{font-size:clamp(1.8rem,3.5vw,3.5vw);font-weight:700;color:var(--orange);display:block;line-height:1;margin-bottom:.4rem}
+.rv-spec-l{font-family:var(--mf);font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;opacity:.3}
+
+/* ── INSPECT ──────────────────────────────── */
+#inspect{min-height:100vh;background:rgba(6,14,7,.9);display:flex;align-items:center}
+.inspect-grid{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center;width:100%}
+.inspect-left .eyb{margin-bottom:2rem}
+.inspect-h{font-size:clamp(2rem,4.5vw,4.5vw);line-height:.86;overflow:hidden;margin-bottom:2rem}
+.inspect-p{font-family:var(--tf);font-size:clamp(.82rem,1.05vw,1.05vw);opacity:.45;max-width:44ch;line-height:1.75;margin-bottom:3rem}
+.spec-list{border-top:1px solid rgba(232,228,221,.07)}
+.spec-row{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;padding:1rem 0;border-bottom:1px solid rgba(232,228,221,.06);opacity:0;transform:translateY(16px)}
+.spec-row-name{font-family:var(--mf);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;opacity:.5}
+.spec-row-val{font-family:var(--mf);font-size:.7rem;color:var(--cyan);letter-spacing:.04em}
+.inspect-right{position:relative;height:60vh;min-height:400px;background:rgba(0,229,204,.015);border:1px solid rgba(0,229,204,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.inspect-badge{position:absolute;top:1.2rem;left:1.2rem;font-family:var(--mf);font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);opacity:.4}
+.inspect-badge::before{content:'◉ ';animation:bk 2s ease-in-out infinite}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.1}}
+.mode-display-hint{font-family:var(--mf);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(232,228,221,.15);position:absolute;bottom:1.2rem;left:50%;transform:translateX(-50%);white-space:nowrap}
+
+/* ── STACK ────────────────────────────────── */
+#stack{min-height:80vh;display:flex;align-items:center;background:rgba(6,14,7,.92)}
+.stack-intro{max-width:600px;margin-bottom:5rem}
+.stack-intro h2{font-size:clamp(2rem,4vw,4vw);line-height:.88;overflow:hidden}
+.stack-scene{position:relative;height:380px;display:flex;align-items:center;justify-content:center}
+.stack-card{
+  position:absolute;width:240px;height:320px;
+  border:1px solid rgba(232,228,221,.08);
+  background:linear-gradient(135deg,rgba(13,31,15,.9),rgba(6,14,7,.95));
+  display:flex;flex-direction:column;justify-content:space-between;padding:1.5rem;
+  will-change:transform;
+  transform-origin:bottom center;
+}
+.stack-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(0,229,204,.04),transparent 60%)}
+.sc-label{font-family:var(--mf);font-size:.55rem;letter-spacing:.15em;text-transform:uppercase;color:var(--cyan);opacity:.5}
+.sc-icon{font-size:3.5rem;opacity:.12;text-align:center;flex:1;display:flex;align-items:center;justify-content:center}
+.sc-spec{font-family:var(--mf);font-size:.58rem;color:var(--orange);letter-spacing:.06em}
+.sc-name{font-size:.9rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:.3rem}
+
+/* ── BLUEPRINT ─────────────────────────────── */
+#blueprint{min-height:100vh;display:flex;align-items:center;background:rgba(6,14,7,.9);position:relative;overflow:hidden}
+#blueprint-cv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0;transition:opacity 1.2s}
+#blueprint-cv.on{opacity:1}
+.blueprint-content{position:relative;z-index:2}
+.blueprint-h{font-size:clamp(2rem,4.5vw,4.5vw);line-height:.88;overflow:hidden;margin-bottom:1.5rem}
+.blueprint-sub{font-family:var(--tf);font-size:clamp(.82rem,1.05vw,1.05vw);opacity:.4;max-width:42ch;line-height:1.7;margin-bottom:3rem}
+.blueprint-meta{font-family:var(--mf);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);opacity:.35}
+.blueprint-meta span{display:block;margin-bottom:.4rem}
+
+/* ── MODES ────────────────────────────────── */
+#modes{min-height:80vh;display:flex;align-items:center;background:rgba(6,14,7,.95);text-align:center}
+.modes-inner{max-width:900px;margin:0 auto;width:100%}
+.modes-h{font-size:clamp(2.5rem,5.5vw,5.5vw);line-height:.86;overflow:hidden;margin-bottom:1.5rem}
+.modes-sub{font-family:var(--tf);font-size:clamp(.85rem,1.1vw,1.1vw);opacity:.4;max-width:50ch;margin:0 auto 4rem;line-height:1.7}
+.mode-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem}
+.mode-btn{
+  font-family:var(--mf);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;
+  padding:.75em 2em;border:1px solid rgba(232,228,221,.12);color:rgba(232,228,221,.4);
+  background:transparent;cursor:pointer;transition:all .25s;
+  position:relative;overflow:hidden;
+}
+.mode-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,204,.06)}
+.mode-btn:hover:not(.active){border-color:rgba(232,228,221,.3);color:var(--white)}
+.mode-desc{font-family:var(--mf);font-size:.65rem;letter-spacing:.08em;color:var(--muted);margin-top:1rem;min-height:1.5em;transition:opacity .3s}
+.mode-label-current{font-family:var(--mf);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);opacity:.4;display:block;margin-bottom:.8rem}
+
+/* ── PRESS ────────────────────────────────── */
+#press{background:rgba(6,14,7,.92);padding:10vh var(--px)}
+.press-label{font-family:var(--mf);font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(232,228,221,.2);margin-bottom:3rem;text-align:center}
+.press-logos{display:flex;align-items:center;justify-content:center;gap:4rem;flex-wrap:wrap}
+.press-logo{
+  font-family:var(--df);font-size:clamp(.9rem,2vw,1.8rem);font-weight:700;
+  text-transform:uppercase;letter-spacing:-.02em;opacity:.15;
+  transition:opacity .3s;cursor:default;
+}
+.press-logo:hover{opacity:.45}
+.press-logo em{font-style:normal;font-size:.65em}
+.press-logo sub{font-size:.5em;font-weight:400;letter-spacing:.1em;vertical-align:middle;margin-left:.2em}
+
+/* ── TESTIMONIALS ─────────────────────────── */
+#testimonials{background:rgba(6,14,7,.94);padding:14vh var(--px)}
+.tes-header{margin-bottom:5rem}
+.tes-h{font-size:clamp(2rem,4.5vw,4.5vw);line-height:.88;overflow:hidden}
+.tes-carousel{position:relative;overflow:hidden}
+.tes-track{display:flex;gap:2rem;transition:transform .7s cubic-bezier(.16,1,.3,1)}
+.tes-slide{flex:0 0 calc(33.333% - 1.35rem);border:1px solid rgba(232,228,221,.06);padding:2.5rem;display:flex;flex-direction:column;gap:1.8rem;opacity:0;transform:translateY(30px)}
+.tes-q{font-family:var(--tf);font-size:clamp(.85rem,1.1vw,1.1vw);line-height:1.75;opacity:.6;font-style:italic}
+.tes-q::before{content:'"';font-size:2rem;line-height:1;opacity:.2;display:block;margin-bottom:.5rem;font-style:normal}
+.tes-who{display:flex;align-items:center;gap:1rem}
+.tes-av{width:40px;height:40px;border-radius:50%;background:rgba(232,228,221,.04);border:1px solid rgba(232,228,221,.06);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.tes-nm{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.tes-role{font-family:var(--mf);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;opacity:.28;margin-top:.15rem}
+.tes-nav{display:flex;gap:1rem;margin-top:3rem;justify-content:flex-end}
+.tes-nav button{width:40px;height:40px;border:1px solid rgba(232,228,221,.1);background:transparent;color:var(--white);font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .2s,background .2s}
+.tes-nav button:hover{border-color:var(--orange);background:rgba(224,120,48,.06);color:var(--orange)}
+
+/* ── PREORDER ─────────────────────────────── */
+#preorder{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  text-align:center;background:rgba(6,14,7,.96);position:relative;overflow:hidden;
+  padding:14vh var(--px);
+}
+#preorder::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 60%,rgba(224,120,48,.06) 0%,transparent 60%);
+  pointer-events:none;
+}
+.preorder-inner{position:relative;z-index:1;max-width:700px;width:100%}
+.preorder-badge{
+  display:inline-block;font-family:var(--mf);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--orange);border:1px solid rgba(224,120,48,.3);padding:.3em .8em;margin-bottom:3rem;
+}
+.preorder-h{font-size:clamp(4rem,10vw,10vw);line-height:.82;font-weight:700;text-transform:uppercase;letter-spacing:-.03em;margin-bottom:1.5rem;overflow:hidden}
+.preorder-price{font-family:var(--mf);font-size:1.2rem;color:var(--orange);margin-bottom:.6rem;display:block}
+.preorder-note{font-family:var(--tf);font-size:clamp(.82rem,1vw,1vw);opacity:.35;max-width:42ch;margin:0 auto 3rem;line-height:1.7}
+.btn-soldout{
+  display:inline-flex;align-items:center;gap:.8em;
+  font-family:var(--mf);font-size:.75rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.14em;
+  padding:.9em 2.8em;background:rgba(232,228,221,.04);
+  color:rgba(232,228,221,.25);
+  border:1px solid rgba(232,228,221,.08);cursor:not-allowed;
+  margin-bottom:1.2rem;
+}
+.btn-soldout::before{content:'⊗';opacity:.5}
+.waitlist-count{font-family:var(--mf);font-size:.62rem;letter-spacing:.1em;color:rgba(232,228,221,.2)}
+.waitlist-count strong{color:var(--orange)}
+.waitlist-form{display:flex;max-width:380px;margin:1.5rem auto 0;border:1px solid rgba(232,228,221,.1)}
+.waitlist-input{flex:1;background:transparent;border:none;outline:none;padding:.8em 1.2em;color:var(--white);font-family:var(--mf);font-size:.68rem;letter-spacing:.04em}
+.waitlist-input::placeholder{opacity:.2}
+.waitlist-submit{background:var(--orange);color:var(--bg);border:none;padding:.8em 1.5em;font-family:var(--mf);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:background .18s;white-space:nowrap;font-weight:600}
+.waitlist-submit:hover{background:var(--white)}
+
+/* ── VIEWER ───────────────────────────────── */
+#viewer{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(6,14,7,.97);padding:14vh var(--px);
+  position:relative;overflow:hidden;
+}
+#viewer::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(0,229,204,.03) 0%,transparent 55%);pointer-events:none}
+.viewer-label{font-family:var(--mf);font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan);margin-bottom:2rem;opacity:0;transform:translateY(20px)}
+.viewer-h{font-size:clamp(2rem,4vw,4vw);line-height:.88;text-transform:uppercase;letter-spacing:-.02em;margin-bottom:.8rem;overflow:hidden}
+.viewer-sub{font-family:var(--mf);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;opacity:.2;margin-bottom:2rem}
+#viewer-cv{
+  width:min(600px,90vw);height:min(600px,90vw);
+  display:block;cursor:grab;border:1px solid rgba(0,229,204,.06);
+  background:radial-gradient(ellipse at 50% 50%,rgba(13,31,15,.8),rgba(6,14,7,.98));
+  opacity:0;transform:translateY(40px);
+}
+#viewer-cv:active{cursor:grabbing}
+.viewer-hint{font-family:var(--mf);font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;opacity:.18;margin-top:1.5rem;display:flex;align-items:center;gap:.5rem}
+
+/* ── FOOTER ───────────────────────────────── */
+footer{padding:3rem var(--px);border-top:1px solid rgba(232,228,221,.06);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem;background:#040a05;position:relative;z-index:3}
+.f-brand{font-weight:700;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase}
+.f-brand em{font-style:normal;color:var(--orange)}
+.f-links{display:flex;gap:2rem;list-style:none}
+.f-links a{font-family:var(--mf);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;opacity:.2;transition:opacity .2s}
+.f-links a:hover{opacity:.8}
+.f-copy{font-family:var(--mf);font-size:.55rem;opacity:.12;letter-spacing:.06em}
+
+/* ── LEGAL MODAL ──────────────────────────── */
+#legal-modal{
+  position:fixed;inset:0;z-index:700;background:rgba(4,10,5,.92);
+  backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:2rem;
+}
+#legal-modal.on{display:flex}
+.legal-box{max-width:560px;width:100%;background:#0d1f0f;border:1px solid rgba(232,228,221,.08);padding:3rem;position:relative;max-height:80vh;overflow-y:auto}
+.legal-box::-webkit-scrollbar{width:2px}
+.legal-box::-webkit-scrollbar-thumb{background:rgba(0,229,204,.2)}
+.legal-close{position:absolute;top:1.2rem;right:1.2rem;font-family:var(--mf);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(232,228,221,.3);cursor:pointer;background:none;border:none;transition:color .2s}
+.legal-close:hover{color:var(--orange)}
+.legal-h{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+.legal-sub{font-family:var(--mf);font-size:.58rem;color:var(--cyan);letter-spacing:.1em;margin-bottom:2rem;opacity:.5}
+.legal-body{font-family:var(--tf);font-size:.75rem;line-height:1.8;opacity:.4}
+.legal-body h4{font-family:var(--mf);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);margin:1.5rem 0 .5rem;opacity:.7}
+.legal-body p{margin-bottom:.8rem}
+
+/* ── KONAMI OVERLAY ───────────────────────── */
+#konami-overlay{
+  position:fixed;inset:0;z-index:1200;background:rgba(4,10,5,.95);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:2rem;
+  text-align:center;padding:2rem;
+}
+#konami-overlay.on{display:flex;animation:kfade 4s forwards}
+@keyframes kfade{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}
+.konami-seal{font-size:5rem;animation:ks 1s ease-in-out infinite alternate}
+@keyframes ks{from{transform:scale(1) rotate(-5deg)}to{transform:scale(1.1) rotate(5deg)}}
+.konami-h{font-size:clamp(2rem,5vw,5vw);font-weight:700;text-transform:uppercase;color:var(--orange)}
+.konami-p{font-family:var(--mf);font-size:.7rem;letter-spacing:.1em;color:var(--cyan);max-width:40ch;line-height:1.7;opacity:.7}
+
+/* ── UTILS ────────────────────────────────── */
+.rv{opacity:0;transform:translateY(40px)}
+.rf{opacity:0}
+@keyframes glitch-h{
+  0%,90%,100%{transform:translate(0)}
+  91%{transform:translate(-4px,1px)}
+  92%{transform:translate(4px,-2px)}
+  93%{transform:translate(-2px,3px)}
+  94%{transform:translate(3px,-1px)}
+  95%{transform:translate(0)}
+}
+.glitch-txt{animation:glitch-h 8s ease-in-out infinite}
+
+/* ── RESPONSIVE ───────────────────────────── */
+@media(max-width:900px){
+  .inspect-grid{grid-template-columns:1fr;gap:3rem}
+  .prob-grid{grid-template-columns:1fr;gap:2rem}
+  .hero-bottom{grid-template-columns:1fr;gap:1.5rem}
+  .tes-slide{flex:0 0 80vw}
+  .press-logos{gap:2rem}
+  .press-logo{font-size:1rem}
+  .nav-links{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- GRAIN -->
+<canvas id="grain"></canvas>
+<!-- GLITCH -->
+<canvas id="glitch-cv"></canvas>
+<!-- PARTICLES -->
+<canvas id="particle-cv"></canvas>
+
+<!-- CURSOR -->
+<div id="c-dot"></div>
+<div id="c-ring"></div>
+
+<!-- AUDIO -->
+<button id="audio-btn" title="Toggle ambient sound">◎</button>
+
+<!-- LEGAL TRIGGER -->
+<button id="legal-btn" onclick="document.getElementById('legal-modal').classList.add('on')">Terms of AI Service</button>
+
+<!-- PRELOADER -->
+<div id="pl">
+  <div id="pl-grid"></div>
+  <svg id="pl-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <line x1="100" y1="180" x2="100" y2="20" stroke="rgba(0,229,204,.08)" stroke-width="1" stroke-dasharray="3,5"/>
+    <line x1="20" y1="100" x2="180" y2="100" stroke="rgba(0,229,204,.08)" stroke-width="1" stroke-dasharray="3,5"/>
+    <path id="pl-lf1" d="M100 165 C58 145 28 112 38 68 C48 36 80 18 100 28 C120 18 152 36 162 68 C172 112 142 145 100 165Z" stroke="#00e5cc" stroke-width="1.2" fill="none" stroke-dasharray="320" stroke-dashoffset="320"/>
+    <path id="pl-lf2" d="M100 165 C94 130 91 95 100 28" stroke="#00e5cc" stroke-width=".8" fill="none" stroke-dasharray="145" stroke-dashoffset="145"/>
+    <path id="pl-lf3" d="M100 125 C83 118 62 110 46 94" stroke="#00e5cc" stroke-width=".7" fill="none" stroke-dasharray="62" stroke-dashoffset="62"/>
+    <path id="pl-lf4" d="M100 105 C117 98 138 90 154 74" stroke="#00e5cc" stroke-width=".7" fill="none" stroke-dasharray="62" stroke-dashoffset="62"/>
+    <path id="pl-lf5" d="M100 145 C82 140 65 136 50 124" stroke="#00e5cc" stroke-width=".7" fill="none" stroke-dasharray="58" stroke-dashoffset="58"/>
+    <circle cx="100" cy="165" r="3.5" fill="none" stroke="#00e5cc" stroke-width="1" id="pl-cp1" opacity="0"/>
+    <circle cx="100" cy="28" r="3.5" fill="none" stroke="#00e5cc" stroke-width="1" id="pl-cp2" opacity="0"/>
+  </svg>
+  <div id="pl-word">PlantIQ™ Pod</div>
+  <div id="pl-pct">INITIALIZING BOTANICAL INTELLIGENCE — 0%</div>
+  <div id="pl-bar"><div id="pl-bar-fill"></div></div>
+</div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo">HOUSEPLANT<em>HUSTLE</em></div>
+  <ul class="nav-links">
+    <li><a href="#reveal">The Pod</a></li>
+    <li><a href="#inspect">Specs</a></li>
+    <li><a href="#modes">Modes</a></li>
+    <li><a href="#viewer">Inspect</a></li>
+  </ul>
+  <button class="nav-cta" onclick="document.getElementById('preorder').scrollIntoView({behavior:'smooth'})">Pre-Order</button>
+</nav>
+
+<!-- MAIN THREE.JS CANVAS -->
+<canvas id="hero-cv"></canvas>
+
+<!-- BLUEPRINT CANVAS OVERLAY -->
+<canvas id="blueprint-cv"></canvas>
+
+<!-- SCROLL CONTAINER -->
+<div id="scroll-wrap">
+<div data-scroll-container id="loco-container">
+
+<!-- ══ HERO ══ -->
+<section id="hero" data-scroll-section>
+  <div class="hero-inner inn">
+    <div class="hero-tag">PlantIQ™ Pod &nbsp;·&nbsp; Gen 1 &nbsp;·&nbsp; Neural Chlorophyll Engine</div>
+    <h1 class="hero-h1 glitch-txt">
+      <span class="lw"><span>YOUR PLANT</span></span>
+      <span class="lw"><span>HAS BEEN</span></span>
+      <span class="lw"><span style="color:var(--orange)">SUFFERING.</span></span>
+    </h1>
+    <div class="hero-bottom">
+      <p class="hero-desc">For 47 million years, plants have communicated through chemical signals, root networks, and electromagnetic pulses. Until now, you couldn't hear any of it.</p>
+      <div class="hero-scroll">
+        <div class="hero-scroll-line"></div>
+        <span>Scroll to listen</span>
+      </div>
+      <div class="hero-cta">
+        <div class="hero-price">
+          <span class="hero-price-n">$1,299</span>
+          <span class="hero-price-l">Per plant, per year, per feeling</span>
+        </div>
+        <button class="btn-primary" onclick="document.getElementById('preorder').scrollIntoView({behavior:'smooth'})"><span>Pre-Order Now</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PROBLEM ══ -->
+<section id="problem" class="sec" data-scroll-section>
+  <div class="inn">
+    <div class="prob-grid">
+      <div>
+        <div class="dash" style="margin-bottom:5vh"></div>
+        <div class="eyb rf">The Crisis</div>
+        <h2 class="prob-h">
+          <span class="lw"><span>47M Plants</span></span>
+          <span class="lw"><span>Die Each Year</span></span>
+          <span class="lw"><span style="color:var(--orange)">Unheard.</span></span>
+        </h2>
+        <p class="prob-sub rv">Not from neglect. From miscommunication. Your ficus has been screaming in the electromagnetic spectrum. You own three Bluetooth speakers. Not one of them was pointed at the plant.</p>
+        <div style="margin-top:3rem;display:flex;gap:1rem" class="rv">
+          <button class="btn-outline" onclick="document.getElementById('reveal').scrollIntoView({behavior:'smooth'})">The Solution →</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2rem;padding-left:2rem">
+        <div class="rv" style="border-left:1px solid rgba(0,229,204,.2);padding-left:1.5rem">
+          <div style="font-family:var(--mf);font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--cyan);margin-bottom:.5rem;opacity:.5">STUDY REF. HH-2024-001</div>
+          <div style="font-size:clamp(2.5rem,5vw,5vw);font-weight:700;color:var(--white);line-height:1">94.7%</div>
+          <div style="font-family:var(--mf);font-size:.62rem;letter-spacing:.06em;opacity:.35;margin-top:.4rem">of plants report feeling "unheard"</div>
+        </div>
+        <div class="rv" style="border-left:1px solid rgba(224,120,48,.2);padding-left:1.5rem">
+          <div style="font-family:var(--mf);font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--orange);margin-bottom:.5rem;opacity:.5">IMUPS GENEVA, 2025</div>
+          <div style="font-size:clamp(2.5rem,5vw,5vw);font-weight:700;color:var(--white);line-height:1">$2.4T</div>
+          <div style="font-family:var(--mf);font-size:.62rem;letter-spacing:.06em;opacity:.35;margin-top:.4rem">annual GDP lost to plant-human miscommunication</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ REVEAL ══ -->
+<section id="reveal" class="sec" data-scroll-section>
+  <div class="reveal-inner">
+    <div class="reveal-pre">Houseplant Hustle — Product Launch 2026</div>
+    <h2 class="reveal-h">
+      <span class="lw"><span>PlantIQ™</span></span>
+      <span class="lw"><span style="color:var(--orange)">Pod.</span></span>
+    </h2>
+    <p class="reveal-sub rv">The world's first AI-native botanical intelligence device. Plug it in. Let the plant talk. Maybe don't listen to everything it says — Gerald can be passive-aggressive.</p>
+    <div class="reveal-specs">
+      <div class="rv-spec"><span class="rv-spec-n">14K</span><span class="rv-spec-l">Sensors / Leaf</span></div>
+      <div class="rv-spec"><span class="rv-spec-n">0.3ms</span><span class="rv-spec-l">Response latency</span></div>
+      <div class="rv-spec"><span class="rv-spec-n">847%</span><span class="rv-spec-l">Avg. ROI increase</span></div>
+      <div class="rv-spec"><span class="rv-spec-n">∞</span><span class="rv-spec-l">Plant feelings decoded</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ INSPECT ══ -->
+<section id="inspect" class="sec" data-scroll-section>
+  <div class="inn">
+    <div class="dash" style="margin-bottom:7vh"></div>
+    <div class="inspect-grid">
+      <div class="inspect-left">
+        <div class="eyb rf">Technical Overview</div>
+        <h2 class="inspect-h">
+          <span class="lw"><span>We Process</span></span>
+          <span class="lw"><span>Every</span></span>
+          <span class="lw"><span style="color:var(--cyan)">Frond.</span></span>
+        </h2>
+        <p class="inspect-p rv">Our ChloroML™ v4.2 model ingests electromagnetic biosignals, chlorophyll oscillation patterns, and root-network radio frequency data simultaneously. The insights are business-relevant. The patents are pending. Gerald approves.</p>
+        <div class="spec-list">
+          <div class="spec-row"><span class="spec-row-name">ChloroML™ Engine</span><span class="spec-row-val">v4.2 — 14B params</span></div>
+          <div class="spec-row"><span class="spec-row-name">Root Oscillator</span><span class="spec-row-val">Quantum-adjacent™</span></div>
+          <div class="spec-row"><span class="spec-row-name">BioSentiment Layer</span><span class="spec-row-val">17-axis emotion graph</span></div>
+          <div class="spec-row"><span class="spec-row-name">Battery Life</span><span class="spec-row-val">Photosynthesis-powered</span></div>
+          <div class="spec-row"><span class="spec-row-name">Supported Plants</span><span class="spec-row-val">All. Even Gerald.</span></div>
+          <div class="spec-row"><span class="spec-row-name">Connectivity</span><span class="spec-row-val">Wi-Fi 6 · Chloro-BT™</span></div>
+          <div class="spec-row"><span class="spec-row-name">Certifications</span><span class="spec-row-val">IMUPS Geneva · ISO-🌿</span></div>
+        </div>
+      </div>
+      <div class="inspect-right">
+        <div class="inspect-badge">LIVE SENSOR FEED</div>
+        <div style="font-family:var(--mf);font-size:.65rem;color:var(--cyan);opacity:.3;text-align:center;padding:2rem">
+          <div style="font-size:2rem;margin-bottom:1rem;opacity:.5">🪴</div>
+          [3D object visible behind this overlay]<br><br>
+          Use mode buttons below<br>to switch visualization.
+        </div>
+        <div class="mode-display-hint">← scroll to rotate object →</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ STACK ══ -->
+<section id="stack" class="sec" data-scroll-section>
+  <div class="inn">
+    <div class="stack-intro">
+      <div class="eyb rf">Multiple Perspectives</div>
+      <h2 class="stack-intro h2" style="font-size:clamp(2rem,4vw,4vw);line-height:.88;overflow:hidden">
+        <span class="lw"><span>See It From</span></span>
+        <span class="lw"><span>Every Angle.</span></span>
+      </h2>
+    </div>
+    <div class="stack-scene">
+      <div class="stack-card" id="sc0">
+        <div class="sc-label">View 01 — Standard</div>
+        <div class="sc-icon">🪴</div>
+        <div><div class="sc-spec" style="color:var(--cyan)">CHLORO-INDEX: 94.7</div><div class="sc-name">PlantIQ™ Pod</div></div>
+      </div>
+      <div class="stack-card" id="sc1">
+        <div class="sc-label">View 02 — Thermal</div>
+        <div class="sc-icon">🌡️</div>
+        <div><div class="sc-spec" style="color:#ff4500">HEAT CORE: 38.2°C</div><div class="sc-name">Neural Core Active</div></div>
+      </div>
+      <div class="stack-card" id="sc2">
+        <div class="sc-label">View 03 — X-Ray</div>
+        <div class="sc-icon">⚡</div>
+        <div><div class="sc-spec" style="color:var(--cyan)">ROOT NET: MAPPED</div><div class="sc-name">Quantum Interior</div></div>
+      </div>
+      <div class="stack-card" id="sc3">
+        <div class="sc-label">View 04 — Schematic</div>
+        <div class="sc-icon">📐</div>
+        <div><div class="sc-spec">PATENT: PENDING</div><div class="sc-name">Blueprint Mode</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ BLUEPRINT ══ -->
+<section id="blueprint" class="sec" data-scroll-section>
+  <div class="inn">
+    <div class="blueprint-content">
+      <div class="eyb rf">Classified Schematic</div>
+      <h2 class="blueprint-h">
+        <span class="lw"><span>Internal</span></span>
+        <span class="lw"><span style="color:var(--cyan)">Architecture.</span></span>
+      </h2>
+      <p class="blueprint-sub rv">14,000 micro-sensors arranged in a proprietary Neural Chlorophyll Array™. Each sensor costs more than your last three business dinners combined.</p>
+      <div class="blueprint-meta rv">
+        <span>DOC-REF: HH-PIQ-001-A</span>
+        <span>CLASSIFICATION: BOTANICAL SECRET</span>
+        <span>REVISION: 14.7.2026</span>
+        <span>APPROVED BY: Gerald (orchid, Head of Engineering)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ MODES ══ -->
+<section id="modes" class="sec" data-scroll-section>
+  <div class="modes-inner inn">
+    <div class="eyb rf" style="justify-content:center">Visualization Engine</div>
+    <h2 class="modes-h">
+      <span class="lw"><span>See Beyond</span></span>
+      <span class="lw"><span style="color:var(--orange)">The Leaf.</span></span>
+    </h2>
+    <p class="modes-sub rv">Four diagnostic modes. Each one reveals something you probably weren't prepared to know about your plant.</p>
+    <div class="mode-label-current" id="mode-current-label">CURRENT MODE: NORMAL</div>
+    <div class="mode-btns">
+      <button class="mode-btn active" data-mode="normal" onclick="switchMode('normal',this)">◉ Normal</button>
+      <button class="mode-btn" data-mode="thermal" onclick="switchMode('thermal',this)">◈ Thermal</button>
+      <button class="mode-btn" data-mode="xray" onclick="switchMode('xray',this)">◇ X-Ray</button>
+      <button class="mode-btn" data-mode="wireframe" onclick="switchMode('wireframe',this)">◻ Wireframe</button>
+    </div>
+    <div class="mode-desc" id="mode-desc">Standard optical render. Your plant looks healthy. It is not.</div>
+  </div>
+</section>
+
+<!-- ══ PRESS ══ -->
+<section id="press" data-scroll-section>
+  <div class="inn">
+    <div class="press-label rf">As seen in fake publications we made up</div>
+    <div class="press-logos">
+      <div class="press-logo rv">Leaf<em>Crunch</em></div>
+      <div class="press-logo rv" style="font-style:italic">Rooted</div>
+      <div class="press-logo rv">FORBES<sub>Foliage</sub></div>
+      <div class="press-logo rv" style="letter-spacing:.08em">THE FERN<em>TIMES</em></div>
+      <div class="press-logo rv">WIRED<sub>Root</sub></div>
+      <div class="press-logo rv" style="font-style:italic">Fast<em>Compost</em></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TESTIMONIALS ══ -->
+<section id="testimonials" class="sec" data-scroll-section>
+  <div class="inn">
+    <div class="dash" style="margin-bottom:4rem"></div>
+    <div class="tes-header">
+      <div class="eyb rf">Social Proof</div>
+      <h2 class="tes-h">
+        <span class="lw"><span>The Plants</span></span>
+        <span class="lw"><span>Have Spoken.</span></span>
+      </h2>
+    </div>
+    <div class="tes-carousel">
+      <div class="tes-track" id="tes-track">
+        <div class="tes-slide">
+          <p class="tes-q">After deploying PlantIQ™ Pod across our office monstera, EBITDA grew 340%. Our Head of Growth (Gerald, monstera, age 7) has not attended a single meeting. Performance is statistically up. We're genuinely confused.</p>
+          <div class="tes-who"><div class="tes-av">🌱</div><div><div class="tes-nm">Chad Synergize</div><div class="tes-role">Chief Disruption Officer, Synapse LLC</div></div></div>
+        </div>
+        <div class="tes-slide">
+          <p class="tes-q">I replaced my data science team with a cactus and PlantIQ™ Pod. Projections are statistically identical. Monthly cost: $4 in fertilizer and $1,299 in Pod fees. The team sued. The cactus did not. The cactus won.</p>
+          <div class="tes-who"><div class="tes-av">🌵</div><div><div class="tes-nm">Brittney Leverage</div><div class="tes-role">Founder & CEO, Pivot Collective</div></div></div>
+        </div>
+        <div class="tes-slide">
+          <p class="tes-q">Our fern predicted the 2025 market correction with 99.1% accuracy. The Pod alerted us 6 days early via a soil-moisture distress signal. We closed Series B. The fern holds 8% equity. It showed up to the signing. Via FaceTime. Nobody laughed.</p>
+          <div class="tes-who"><div class="tes-av">🌾</div><div><div class="tes-nm">Blake Momentum</div><div class="tes-role">GP, Leaf Capital Partners</div></div></div>
+        </div>
+        <div class="tes-slide">
+          <p class="tes-q">My succulent told me to short tech in March. I didn't listen. The succulent did not forget. Our relationship has been strained. PlantIQ™ Pod's sentiment analysis confirmed it: 'mild contempt, stable.' I deserve it.</p>
+          <div class="tes-who"><div class="tes-av">🪴</div><div><div class="tes-nm">Morgan Pivot</div><div class="tes-role">Portfolio Manager, Droop Capital</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tes-nav">
+      <button id="tes-prev">←</button>
+      <button id="tes-next">→</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PREORDER ══ -->
+<section id="preorder" data-scroll-section>
+  <div class="preorder-inner">
+    <div class="preorder-badge">Limited Drop — Gen 1 Allocation</div>
+    <h2 class="preorder-h">
+      <span class="lw"><span>SOLD</span></span>
+      <span class="lw"><span style="color:var(--orange)">OUT.</span></span>
+    </h2>
+    <span class="preorder-price">$1,299 / plant / year</span>
+    <p class="preorder-note rv">We made 47 units. They sold in 4 minutes. Mostly to plants who somehow got hold of a credit card. We're investigating.</p>
+    <div>
+      <button class="btn-soldout">⊗ &nbsp;SOLD OUT — Gen 1</button>
+    </div>
+    <div class="waitlist-count rv">
+      <strong id="waitlist-n">47,293</strong> entities on the waitlist (including 2,847 plants)
+    </div>
+    <div class="waitlist-form rv">
+      <input class="waitlist-input" type="email" placeholder="your@email.com" id="wl-input">
+      <button class="waitlist-submit" onclick="joinWaitlist()">Join List</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ VIEWER ══ -->
+<section id="viewer" class="sec" data-scroll-section>
+  <div class="viewer-label">Interactive 3D Inspection</div>
+  <h2 class="viewer-h rv">
+    <span class="lw"><span>Inspect</span></span>
+    <span class="lw"><span style="color:var(--cyan)">Every Detail.</span></span>
+  </h2>
+  <p class="viewer-sub rv">Drag to rotate. Pinch to inspect. Question everything.</p>
+  <canvas id="viewer-cv"></canvas>
+  <div class="viewer-hint rv">
+    <span>⟳</span> Click + drag to rotate freely
+  </div>
+</section>
+
+<footer data-scroll-section>
+  <div class="f-brand">HOUSEPLANT<em>HUSTLE</em></div>
+  <ul class="f-links">
+    <li><a href="#" onclick="document.getElementById('legal-modal').classList.add('on');return false">Privacy</a></li>
+    <li><a href="#" onclick="document.getElementById('legal-modal').classList.add('on');return false">Terms of Foliage</a></li>
+    <li><a href="#">Ethics (Pending)</a></li>
+    <li><a href="#">IPO (Initial Plant Offering)</a></li>
+  </ul>
+  <div class="f-copy">© 2026 Houseplant Hustle Inc. Nothing here is real. Your plant, however, is very real and very aware of this page.</div>
+</footer>
+
+</div><!-- /loco-container -->
+</div><!-- /scroll-wrap -->
+
+<!-- LEGAL MODAL -->
+<div id="legal-modal">
+  <div class="legal-box">
+    <button class="legal-close" onclick="document.getElementById('legal-modal').classList.remove('on')">✕ Close</button>
+    <div class="legal-h">Terms of Botanical AI Service</div>
+    <div class="legal-sub">DOC-LEGAL-HH-001 · Rev 14.7.2026 · Approved: Gerald (Orchid, Esq.)</div>
+    <div class="legal-body">
+      <h4>§1. Acceptance of Plant Sovereignty</h4>
+      <p>By purchasing PlantIQ™ Pod, you acknowledge that your houseplant is a sentient stakeholder with equal voting rights on all decisions made within a 3-meter radius of the device. This includes, but is not limited to: lunch choices, meeting schedules, and hiring decisions.</p>
+      <h4>§2. Data Collection</h4>
+      <p>PlantIQ™ Pod collects the following data: your plant's emotional state (17-axis), your plant's opinion of you (updated hourly), ambient CO₂ levels, your Spotify history (the plant finds your taste "aggressively mediocre"), and your plant's secret plans. We do not share this data with third parties. We share it with the plant.</p>
+      <h4>§3. Liability Waiver</h4>
+      <p>Houseplant Hustle Inc. is not liable for: unsolicited financial advice from your succulent, emotional distress caused by accurate plant sentiment readings, career changes recommended by your fern, or Gerald. Gerald knows what he did.</p>
+      <h4>§4. Subscription Auto-Renewal</h4>
+      <p>Your $1,299/year subscription auto-renews. You cannot cancel without your plant's written consent. Your plant communicates through the Pod. The Pod is subscription-gated. We have identified this as a potential conflict of interest and have chosen to ignore it.</p>
+      <h4>§5. Governing Law</h4>
+      <p>These terms are governed by the laws of the International Federation of Botanical Intelligence (IFBI), headquartered in Geneva, in the same building as IMUPS. They share a coffee machine. The coffee machine is also subscription-based.</p>
+      <h4>§6. Severability</h4>
+      <p>If any provision of these terms is found to be legally enforceable, we'll be genuinely surprised. The plant has reviewed these terms. The plant consents. We asked via the Pod. The Pod said the plant said yes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- KONAMI OVERLAY -->
+<div id="konami-overlay">
+  <div class="konami-seal">🌿</div>
+  <div class="konami-h">CLASSIFIED: GERALD'S REVENGE</div>
+  <p class="konami-p">You have discovered the secret code. Gerald — our orchid, Head of Engineering, 15% equity holder — has authorized us to reveal: none of this is real. But your attention is real. And so is Gerald's contempt for Q4 planning sessions. He's done three IPOs. He never speaks of it.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@4.1.4/dist/locomotive-scroll.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// GRAIN
+// ═══════════════════════════════════════════════════════
+(function(){
+  const c=document.getElementById('grain'),x=c.getContext('2d');
+  let W,H,last=0;
+  function rs(){c.width=W=innerWidth;c.height=H=innerHeight}
+  function frame(t){
+    requestAnimationFrame(frame);
+    if(t-last<85)return;last=t;
+    const d=x.createImageData(W,H),b=d.data;
+    for(let i=0;i<b.length;i+=4){const v=Math.random()*255|0;b[i]=b[i+1]=b[i+2]=v;b[i+3]=22}
+    x.putImageData(d,0,0);
+  }
+  rs();requestAnimationFrame(frame);
+  addEventListener('resize',rs);
+})();
+
+// ═══════════════════════════════════════════════════════
+// PARTICLES
+// ═══════════════════════════════════════════════════════
+(function(){
+  const c=document.getElementById('particle-cv'),ctx=c.getContext('2d');
+  let W,H,pts=[],mx=0,my=0;
+  function rs(){W=c.width=innerWidth;H=c.height=innerHeight;mk()}
+  function mk(){
+    pts=[];
+    const count=Math.floor(W*H/18000);
+    for(let i=0;i<count;i++)
+      pts.push({
+        x:Math.random()*W,y:Math.random()*H,
+        vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,
+        r:Math.random()*.8+.2,a:Math.random()*.15+.04,
+        col:Math.random()>.85?'0,229,204':'232,228,221'
+      });
+  }
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      // subtle mouse repulsion
+      const dx=p.x-mx,dy=p.y-my,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){p.vx+=dx/d*.015;p.vy+=dy/d*.015}
+      p.x+=p.vx;p.y+=p.vy;
+      p.vx*=.99;p.vy*=.99;
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);
+      ctx.fillStyle=`rgba(${p.col},${p.a})`;ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  rs();draw();addEventListener('resize',rs);
+})();
+
+// ═══════════════════════════════════════════════════════
+// CURSOR
+// ═══════════════════════════════════════════════════════
+(function(){
+  const dot=document.getElementById('c-dot'),ring=document.getElementById('c-ring');
+  let mx=0,my=0,rx=0,ry=0;
+  addEventListener('mousemove',e=>{
+    mx=e.clientX;my=e.clientY;
+    dot.style.left=mx+'px';dot.style.top=my+'px';
+  });
+  (function tick(){rx+=(mx-rx)*.09;ry+=(my-ry)*.09;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(tick)})();
+  document.querySelectorAll('a,button,input,.mode-btn,.stack-card,.tes-slide,.press-logo').forEach(el=>{
+    el.addEventListener('mouseenter',()=>document.body.classList.add('hov'));
+    el.addEventListener('mouseleave',()=>document.body.classList.remove('hov'));
+  });
+  document.getElementById('viewer-cv').addEventListener('mouseenter',()=>document.body.classList.add('drag-mode'));
+  document.getElementById('viewer-cv').addEventListener('mouseleave',()=>document.body.classList.remove('drag-mode'));
+})();
+
+// ═══════════════════════════════════════════════════════
+// GLITCH
+// ═══════════════════════════════════════════════════════
+const glitchCv=document.getElementById('glitch-cv');
+const glitchCtx=glitchCv.getContext('2d');
+glitchCv.width=innerWidth;glitchCv.height=innerHeight;
+addEventListener('resize',()=>{glitchCv.width=innerWidth;glitchCv.height=innerHeight});
+
+function triggerGlitch(intensity=1){
+  let frames=0;const maxF=Math.floor(14*intensity);
+  function draw(){
+    if(frames++>maxF){glitchCtx.clearRect(0,0,glitchCv.width,glitchCv.height);return}
+    glitchCtx.clearRect(0,0,glitchCv.width,glitchCv.height);
+    const n=Math.floor(Math.random()*10*intensity)+2;
+    const colors=['rgba(0,229,204,0.12)','rgba(224,120,48,0.1)','rgba(255,0,60,0.07)','rgba(0,229,204,0.08)'];
+    for(let i=0;i<n;i++){
+      const y=Math.random()*glitchCv.height;
+      const h=Math.random()*18+1;
+      const xOff=(Math.random()-.5)*30*intensity;
+      glitchCtx.fillStyle=colors[Math.floor(Math.random()*colors.length)];
+      glitchCtx.fillRect(xOff,y,glitchCv.width,h);
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// Periodic random glitches
+setInterval(()=>{if(Math.random()>.7)triggerGlitch(.3)},3500);
+
+// ═══════════════════════════════════════════════════════
+// AUDIO (Web Audio API)
+// ═══════════════════════════════════════════════════════
+let audioCtx=null,gainNode=null,isAudioOn=false;
+const audioBtn=document.getElementById('audio-btn');
+
+function initAudio(){
+  if(audioCtx)return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  gainNode=audioCtx.createGain();gainNode.gain.value=0;gainNode.connect(audioCtx.destination);
+  // Low drone oscillator
+  const o1=audioCtx.createOscillator();o1.type='sine';o1.frequency.value=55;
+  const g1=audioCtx.createGain();g1.gain.value=0.04;
+  o1.connect(g1);g1.connect(gainNode);o1.start();
+  // Second harmonic
+  const o2=audioCtx.createOscillator();o2.type='sine';o2.frequency.value=110;
+  const g2=audioCtx.createGain();g2.gain.value=0.015;
+  o2.connect(g2);g2.connect(gainNode);o2.start();
+  // LFO for subtle modulation
+  const lfo=audioCtx.createOscillator();lfo.frequency.value=0.12;
+  const lfoG=audioCtx.createGain();lfoG.gain.value=4;
+  lfo.connect(lfoG);lfoG.connect(o1.frequency);lfo.start();
+}
+
+audioBtn.addEventListener('click',()=>{
+  initAudio();
+  isAudioOn=!isAudioOn;
+  gainNode.gain.setTargetAtTime(isAudioOn?.14:0,audioCtx.currentTime,.5);
+  audioBtn.textContent=isAudioOn?'♪':'◎';
+  audioBtn.classList.toggle('muted',!isAudioOn);
+});
+
+// ═══════════════════════════════════════════════════════
+// THREE.JS — MAIN PLANT SCENE
+// ═══════════════════════════════════════════════════════
+let mainScene,mainCamera,mainRenderer,plantGroup,mainAnimId;
+let currentMode='normal';
+let meshModeData=[];
+let rotationY=0,tiltX=0,tiltZ=0,targetTiltX=0,targetTiltZ=0;
+let xrayExtras=[];
+
+function buildPlantMaterials(){
+  const thermalVS=`
+    varying float vWorldY;
+    void main(){
+      vec4 wp=(modelMatrix*vec4(position,1.0));
+      vWorldY=wp.y;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+    }`;
+  const thermalFS=`
+    uniform float uMin;uniform float uMax;
+    varying float vWorldY;
+    void main(){
+      float t=clamp((vWorldY-uMin)/(uMax-uMin),0.0,1.0);
+      vec3 c0=vec3(0.02,0.02,0.28);
+      vec3 c1=vec3(0.0,0.6,0.35);
+      vec3 c2=vec3(1.0,0.55,0.0);
+      vec3 c3=vec3(1.0,0.03,0.03);
+      vec3 col;
+      if(t<0.33)col=mix(c0,c1,t*3.0);
+      else if(t<0.66)col=mix(c1,c2,(t-0.33)*3.0);
+      else col=mix(c2,c3,(t-0.66)*3.0);
+      gl_FragColor=vec4(col,1.0);
+    }`;
+
+  return {
+    thermal:new THREE.ShaderMaterial({
+      uniforms:{uMin:{value:-1.5},uMax:{value:5.0}},
+      vertexShader:thermalVS,fragmentShader:thermalFS,
+      side:THREE.DoubleSide
+    }),
+    xray:new THREE.MeshPhongMaterial({
+      color:0x00e5cc,transparent:true,opacity:.18,
+      wireframe:false,depthWrite:false,
+      blending:THREE.AdditiveBlending,side:THREE.DoubleSide
+    }),
+    wire:new THREE.MeshBasicMaterial({color:0x00e5cc,wireframe:true})
+  };
+}
+
+function createPlantGroup(){
+  const g=new THREE.Group();
+  const sharedMats=buildPlantMaterials();
+
+  function addMesh(mesh,normalMat){
+    mesh.castShadow=true;
+    mesh.receiveShadow=true;
+    meshModeData.push({mesh,normal:normalMat,thermal:sharedMats.thermal,xray:sharedMats.xray,wire:sharedMats.wire});
+    g.add(mesh);
+    return mesh;
+  }
+
+  // ─ POT BODY (lathe)
+  const potPts=[];
+  const profile=[
+    [0.00,-0.72],[0.72,-0.70],[0.76,-0.60],[0.82,-0.40],
+    [0.88,-0.10],[0.95, 0.20],[1.02, 0.50],[1.08, 0.68],[1.10, 0.72]
+  ];
+  profile.forEach(([r,y])=>potPts.push(new THREE.Vector2(r,y)));
+  const potMat=new THREE.MeshPhysicalMaterial({color:0xb85430,roughness:.65,metalness:.0,clearcoat:.2,clearcoatRoughness:.5});
+  addMesh(new THREE.Mesh(new THREE.LatheGeometry(potPts,64),potMat),potMat);
+
+  // Pot bottom
+  const botMat=new THREE.MeshPhysicalMaterial({color:0xa04828,roughness:.7});
+  const bot=new THREE.Mesh(new THREE.CircleGeometry(.72,64),botMat);
+  bot.rotation.x=-Math.PI/2;bot.position.y=-0.72;
+  addMesh(bot,botMat);
+
+  // Pot rim
+  const rimMat=new THREE.MeshPhysicalMaterial({color:0xc06040,roughness:.55,clearcoat:.3});
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(1.1,.08,16,64),rimMat);
+  rim.position.y=.72;addMesh(rim,rimMat);
+
+  // ─ SOIL
+  const soilMat=new THREE.MeshStandardMaterial({color:0x140804,roughness:.98});
+  const soil=new THREE.Mesh(new THREE.CylinderGeometry(.98,.98,.12,64),soilMat);
+  soil.position.y=.65;addMesh(soil,soilMat);
+
+  // Soil pebbles
+  for(let i=0;i<14;i++){
+    const ang=(i/14)*Math.PI*2+Math.random()*.4;
+    const r=.22+Math.random()*.62;
+    const pMat=new THREE.MeshStandardMaterial({color:0x2a1a0a+Math.floor(Math.random()*0x101010),roughness:.95});
+    const pm=new THREE.Mesh(new THREE.SphereGeometry(.025+Math.random()*.025,6,5),pMat);
+    pm.position.set(Math.cos(ang)*r,.73+Math.random()*.015,Math.sin(ang)*r);
+    addMesh(pm,pMat);
+  }
+
+  // ─ STEM (tube along curve)
+  const curve=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0,.68,0),
+    new THREE.Vector3(.06,1.3,.04),
+    new THREE.Vector3(.02,1.9,-.03),
+    new THREE.Vector3(-.04,2.5,.04),
+    new THREE.Vector3(.01,3.1,0),
+    new THREE.Vector3(.03,3.7,-.02),
+    new THREE.Vector3(0,4.0,0),
+  ]);
+  const stemMat=new THREE.MeshStandardMaterial({color:0x2a5818,roughness:.78});
+  addMesh(new THREE.Mesh(new THREE.TubeGeometry(curve,24,.052,8,false),stemMat),stemMat);
+
+  // ─ LEAVES
+  const leafDefs=[
+    {pos:[.02,1.4,0],rot:[.22,0,-.75],sz:.9,col:0x2a7835},
+    {pos:[.02,1.4,0],rot:[-.1,Math.PI,.85],sz:.78,col:0x358a42},
+    {pos:[-.03,2.0,0],rot:[.28,.3,-.9],sz:1.05,col:0x276e30},
+    {pos:[.02,2.0,0],rot:[-.18,3.4,1.0],sz:.88,col:0x3a9a4c},
+    {pos:[0,2.6,0],rot:[.14,1.0,-.65],sz:1.18,col:0x2c8040},
+    {pos:[0,2.6,0],rot:[-.1,4.2,.75],sz:.95,col:0x35924a},
+    {pos:[-.02,3.15,0],rot:[.2,.5,-.55],sz:.92,col:0x2e8845},
+    {pos:[.02,3.15,0],rot:[-.14,3.7,.62],sz:1.05,col:0x3a9e55},
+    {pos:[0,3.65,0],rot:[.05,1.5,-.32],sz:.82,col:0x2c7a40},
+    {pos:[0,3.65,0],rot:[-.05,4.7,.38],sz:.88,col:0x36904d},
+  ];
+
+  leafDefs.forEach(def=>{
+    const lMat=new THREE.MeshPhysicalMaterial({color:def.col,roughness:.5,side:THREE.DoubleSide,transparent:true,opacity:.94});
+    const leaf=new THREE.Mesh(new THREE.SphereGeometry(1,18,14),lMat);
+    leaf.position.set(...def.pos);
+    leaf.rotation.set(...def.rot);
+    leaf.scale.set(def.sz*.38,def.sz*.075,def.sz*.55);
+    addMesh(leaf,lMat);
+    // vein
+    const vMat=new THREE.MeshStandardMaterial({color:0x1a4e22,roughness:.9});
+    const vein=new THREE.Mesh(new THREE.CylinderGeometry(.004,.004,def.sz*.42,4),vMat);
+    vein.position.set(...def.pos);
+    vein.rotation.set(def.rot[0],def.rot[1],def.rot[2]+Math.PI/2);
+    addMesh(vein,vMat);
+  });
+
+  // Top bud
+  const budMat=new THREE.MeshStandardMaterial({color:0x1a5020,roughness:.7});
+  addMesh(new THREE.Mesh(new THREE.SphereGeometry(.1,12,12),budMat),budMat);
+  g.children[g.children.length-1].position.y=4.05;
+
+  // ─ TECH DETAILS (LED on pot front)
+  const ledMat=new THREE.MeshBasicMaterial({color:0x00e5cc});
+  const led=new THREE.Mesh(new THREE.CircleGeometry(.055,16),ledMat);
+  led.position.set(1.04,.1,.2);
+  led.rotation.y=Math.PI/6;
+  g.add(led);
+
+  // Glowing ring around LED
+  const ringMat=new THREE.MeshBasicMaterial({color:0x00e5cc,transparent:true,opacity:.3,wireframe:true});
+  const ring=new THREE.Mesh(new THREE.RingGeometry(.07,.09,24),ringMat);
+  ring.position.set(1.04,.1,.2);ring.rotation.y=Math.PI/6;
+  g.add(ring);
+
+  // ─ X-RAY INNER COMPONENTS (hidden by default)
+  const coreGeo=new THREE.SphereGeometry(.18,16,16);
+  const coreMat=new THREE.MeshBasicMaterial({color:0x00e5cc,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+  const core=new THREE.Mesh(coreGeo,coreMat);
+  core.position.set(0,.3,0);g.add(core);
+  xrayExtras.push({mesh:core,mat:coreMat});
+
+  const chipMat=new THREE.MeshBasicMaterial({color:0x00e5cc,wireframe:true,transparent:true,opacity:0});
+  const chip=new THREE.Mesh(new THREE.BoxGeometry(.3,.08,.3),chipMat);
+  chip.position.set(0,.0,0);g.add(chip);
+  xrayExtras.push({mesh:chip,mat:chipMat});
+
+  g.position.y=-1.4;
+  return g;
+}
+
+function initMainScene(){
+  const cv=document.getElementById('hero-cv');
+  mainScene=new THREE.Scene();
+  mainCamera=new THREE.PerspectiveCamera(28,innerWidth/innerHeight,.1,100);
+  mainCamera.position.set(0,1.2,9);
+
+  mainRenderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,powerPreference:'high-performance'});
+  mainRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  mainRenderer.setSize(innerWidth,innerHeight);
+  mainRenderer.toneMapping=THREE.ACESFilmicToneMapping;
+  mainRenderer.toneMappingExposure=1.15;
+
+  // Lights
+  const amb=new THREE.AmbientLight(0x0d2210,.6);
+  const key=new THREE.DirectionalLight(0xfff5e0,3.2);key.position.set(3,8,4);key.castShadow=true;
+  const fill=new THREE.DirectionalLight(0x8aabff,.9);fill.position.set(-5,2,3);
+  const rim=new THREE.DirectionalLight(0x88ff66,1.4);rim.position.set(0,4,-5);
+  const bounce=new THREE.PointLight(0xff9944,.4,20);bounce.position.set(0,-3,2);
+  mainScene.add(amb,key,fill,rim,bounce);
+
+  plantGroup=createPlantGroup();
+  mainScene.add(plantGroup);
+
+  addEventListener('resize',()=>{
+    mainCamera.aspect=innerWidth/innerHeight;
+    mainCamera.updateProjectionMatrix();
+    mainRenderer.setSize(innerWidth,innerHeight);
+  });
+
+  addEventListener('mousemove',e=>{
+    targetTiltX=(e.clientY/innerHeight-.5)*.25;
+    targetTiltZ=-(e.clientX/innerWidth-.5)*.18;
+  });
+
+  (function animLoop(){
+    mainAnimId=requestAnimationFrame(animLoop);
+    tiltX+=(targetTiltX-tiltX)*.05;
+    tiltZ+=(targetTiltZ-tiltZ)*.05;
+    plantGroup.rotation.set(tiltX,rotationY,tiltZ);
+    // LED pulse
+    const led=plantGroup.children.find(c=>c.material&&c.material.color&&c.material.color.getHex()===0x00e5cc&&c.geometry.type==='CircleGeometry');
+    if(led){const p=(Math.sin(Date.now()*.003)+1)*.5;led.material.opacity=.5+p*.5}
+    mainRenderer.render(mainScene,mainCamera);
+  })();
+}
+
+// ═══════════════════════════════════════════════════════
+// MODE SWITCHING
+// ═══════════════════════════════════════════════════════
+const modeDescs={
+  normal:'Standard optical render. Your plant looks healthy. It is not.',
+  thermal:'Thermal imaging reveals the plant\'s metabolic fury. The hot zones are where Gerald keeps his ambitions.',
+  xray:'X-Ray mode exposes the PlantIQ™ Pod\'s internal Neural Chlorophyll Array™. 14,000 sensors. Zero FDA approval.',
+  wireframe:'Raw mesh topology. The plant reduced to pure geometry. It finds this dehumanizing. It still has better margins than you.'
+};
+
+function switchMode(mode,btn){
+  currentMode=mode;
+  triggerGlitch(1.2);
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('mode-current-label').textContent='CURRENT MODE: '+mode.toUpperCase();
+  document.getElementById('mode-desc').textContent=modeDescs[mode];
+
+  meshModeData.forEach(({mesh,normal,thermal,xray,wire})=>{
+    switch(mode){
+      case'normal': mesh.material=normal;break;
+      case'thermal': mesh.material=thermal;break;
+      case'xray': mesh.material=xray;break;
+      case'wireframe': mesh.material=wire;break;
+    }
+  });
+
+  xrayExtras.forEach(({mesh,mat})=>{
+    mat.opacity=mode==='xray'?.7:0;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// BLUEPRINT CANVAS
+// ═══════════════════════════════════════════════════════
+function drawBlueprint(){
+  const bc=document.getElementById('blueprint-cv');
+  const ctx=bc.getContext('2d');
+  bc.width=innerWidth;bc.height=innerHeight;
+
+  const cx=innerWidth/2,cy=innerHeight/2;
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // Grid
+  ctx.strokeStyle='rgba(0,229,204,.04)';ctx.lineWidth=.5;
+  for(let x=0;x<innerWidth;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,innerHeight);ctx.stroke()}
+  for(let y=0;y<innerHeight;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(innerWidth,y);ctx.stroke()}
+
+  // Corner brackets
+  const bw=innerWidth*.85,bh=innerHeight*.85;
+  const bx=(innerWidth-bw)/2,by=(innerHeight-bh)/2;
+  ctx.strokeStyle='rgba(0,229,204,.2)';ctx.lineWidth=1;
+  const brackets=[[bx,by],[bx+bw,by],[bx,by+bh],[bx+bw,by+bh]];
+  brackets.forEach(([x,y])=>{
+    const d=16,s=x<cx?1:-1,sv=y<cy?1:-1;
+    ctx.beginPath();ctx.moveTo(x+s*d,y);ctx.lineTo(x,y);ctx.lineTo(x,y+sv*d);ctx.stroke();
+  });
+
+  // Callouts
+  const callouts=[
+    {x:cx+200,y:cy-200,tx:cx+20,ty:cy-180,label:'BIOSENTI MEMBRANE™',sub:'17-axis emotional graph',col:'rgba(0,229,204,.7)'},
+    {x:cx-210,y:cy-80,tx:cx-20,ty:cy-60,label:'NEURAL CHLORO ARRAY™',sub:'14,000 sensors / leaf',col:'rgba(0,229,204,.6)'},
+    {x:cx+215,y:cy+80,tx:cx+15,ty:cy+70,label:'QUANTUM ROOT OSC™',sub:'Quantum-adjacent processing',col:'rgba(224,120,48,.6)'},
+    {x:cx-200,y:cy+190,tx:cx-20,ty:cy+160,label:'HSCP v4.1 CPU',sub:'10B botanical parameters',col:'rgba(0,229,204,.5)'},
+    {x:cx+40,y:cy-310,tx:cx+5,ty:cy-230,label:'STEM CONDUCTOR™',sub:'BioSignal relay node',col:'rgba(0,229,204,.65)'},
+  ];
+
+  ctx.font=`400 10px 'DM Mono',monospace`;
+  callouts.forEach(cl=>{
+    // Dot at target
+    ctx.beginPath();ctx.arc(cl.tx,cl.ty,3,0,6.28);ctx.fillStyle=cl.col;ctx.fill();
+    // Line
+    ctx.beginPath();ctx.moveTo(cl.tx,cl.ty);ctx.lineTo(cl.x,cl.y);ctx.strokeStyle=cl.col;ctx.lineWidth=.5;ctx.stroke();
+    // Label box
+    const lw=ctx.measureText(cl.label).width;
+    const boxX=cl.x<cx?cl.x-lw-8:cl.x+4;
+    ctx.fillStyle='rgba(0,229,204,.07)';ctx.fillRect(boxX-4,cl.y-14,lw+16,30);
+    ctx.strokeStyle=cl.col;ctx.lineWidth=.4;ctx.strokeRect(boxX-4,cl.y-14,lw+16,30);
+    ctx.fillStyle=cl.col;ctx.fillText(cl.label,boxX,cl.y);
+    ctx.fillStyle='rgba(232,228,221,.25)';ctx.fillText(cl.sub,boxX,cl.y+12);
+  });
+
+  // Measurement arcs
+  ctx.strokeStyle='rgba(0,229,204,.12)';ctx.lineWidth=.8;
+  ctx.setLineDash([3,5]);
+  ctx.beginPath();ctx.arc(cx,cy+100,180,Math.PI*.8,Math.PI*1.2);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy-50,240,-Math.PI*.3,Math.PI*.3);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Doc ref bottom right
+  ctx.font=`300 9px 'DM Mono',monospace`;
+  ctx.fillStyle='rgba(0,229,204,.2)';
+  ctx.textAlign='right';
+  ctx.fillText('PlantIQ™ Pod — Internal Schematic Rev.14.7.2026 — CLASSIFIED: BOTANICAL',innerWidth-20,innerHeight-20);
+  ctx.fillText('© Houseplant Hustle Inc. — Approved: Gerald (Orchid, Head of Engineering)',innerWidth-20,innerHeight-8);
+  ctx.textAlign='left';
+}
+
+// ═══════════════════════════════════════════════════════
+// VIEWER — DRAG TO ROTATE
+// ═══════════════════════════════════════════════════════
+function initViewer(){
+  const cv=document.getElementById('viewer-cv');
+  const W=cv.width||cv.offsetWidth,H=cv.height||cv.offsetHeight;
+  cv.width=W;cv.height=H;
+
+  const vScene=new THREE.Scene();
+  const vCam=new THREE.PerspectiveCamera(35,1,.1,50);
+  vCam.position.set(0,.5,6);
+  const vRen=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+  vRen.setPixelRatio(Math.min(devicePixelRatio,2));
+  vRen.setSize(W,H);
+  vRen.toneMapping=THREE.ACESFilmicToneMapping;
+  vRen.toneMappingExposure=1.2;
+
+  // Lights (same as main)
+  const va=new THREE.AmbientLight(0x0d2210,.8);
+  const vk=new THREE.DirectionalLight(0xfff5e0,3.5);vk.position.set(3,8,4);
+  const vf=new THREE.DirectionalLight(0x8aabff,1.0);vf.position.set(-5,2,3);
+  const vr=new THREE.DirectionalLight(0x88ff66,1.5);vr.position.set(0,4,-5);
+  vScene.add(va,vk,vf,vr);
+
+  // Simple viewer plant group (same build function)
+  const vMeshData=[];
+  function addVM(mesh,m){vMeshData.push({mesh});vScene.add(mesh)}
+  // Reuse the same geometry build, simplified
+  const vPlant=new THREE.Group();
+
+  const vpPts=[];
+  [[0,-0.72],[0.72,-0.70],[0.82,-0.40],[0.95,0.20],[1.08,0.68],[1.10,0.72]].forEach(([r,y])=>vpPts.push(new THREE.Vector2(r,y)));
+  const vpMat=new THREE.MeshPhysicalMaterial({color:0xb85430,roughness:.65,clearcoat:.2});
+  vPlant.add(new THREE.Mesh(new THREE.LatheGeometry(vpPts,64),vpMat));
+
+  const vBot=new THREE.Mesh(new THREE.CircleGeometry(.72,64),new THREE.MeshStandardMaterial({color:0xa04828,roughness:.7}));
+  vBot.rotation.x=-Math.PI/2;vBot.position.y=-.72;vPlant.add(vBot);
+
+  const vRim=new THREE.Mesh(new THREE.TorusGeometry(1.1,.08,16,64),new THREE.MeshPhysicalMaterial({color:0xc06040,roughness:.55,clearcoat:.3}));
+  vRim.position.y=.72;vPlant.add(vRim);
+
+  vPlant.add(new THREE.Mesh(new THREE.CylinderGeometry(.98,.98,.12,64),new THREE.MeshStandardMaterial({color:0x140804,roughness:.98})));
+  vPlant.children[vPlant.children.length-1].position.y=.65;
+
+  const vCurve=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0,.68,0),new THREE.Vector3(.06,1.5,.04),
+    new THREE.Vector3(0,2.2,-.03),new THREE.Vector3(-.04,2.9,.04),
+    new THREE.Vector3(0,3.8,0)
+  ]);
+  vPlant.add(new THREE.Mesh(new THREE.TubeGeometry(vCurve,20,.05,8,false),new THREE.MeshStandardMaterial({color:0x2a5818,roughness:.78})));
+
+  [[.02,1.4,0,.2,0,-.75,.88,0x2a7835],[.02,1.4,0,-.1,Math.PI,.85,.72,0x358a42],
+   [0,2.2,0,.14,1.0,-.65,1.1,0x2c8040],[0,2.2,0,-.1,4.2,.75,.88,0x35924a],
+   [0,3.0,0,.2,.5,-.55,.82,0x2e8845],[0,3.0,0,-.14,3.7,.62,.95,0x3a9e55],
+   [0,3.65,0,.05,1.5,-.32,.72,0x2c7a40]].forEach(([px,py,pz,rx,ry,rz,sz,col])=>{
+     const lm=new THREE.MeshPhysicalMaterial({color:col,roughness:.5,side:THREE.DoubleSide,transparent:true,opacity:.94});
+     const lf=new THREE.Mesh(new THREE.SphereGeometry(1,14,12),lm);
+     lf.position.set(px,py,pz);lf.rotation.set(rx,ry,rz);lf.scale.set(sz*.38,sz*.075,sz*.55);
+     vPlant.add(lf);
+   });
+
+  vPlant.position.y=-1.2;
+  vScene.add(vPlant);
+
+  // Drag state
+  let isDrag=false,prevX=0,prevY=0,drX=0,drY=0,velX=0,velY=0;
+  cv.addEventListener('pointerdown',e=>{isDrag=true;prevX=e.clientX;prevY=e.clientY;velX=0;velY=0;cv.setPointerCapture(e.pointerId)});
+  cv.addEventListener('pointermove',e=>{
+    if(!isDrag)return;
+    const dx=e.clientX-prevX,dy=e.clientY-prevY;
+    velX=dx;velY=dy;
+    drY+=dx*.012;drX+=dy*.008;
+    drX=Math.max(-1.2,Math.min(1.2,drX));
+    prevX=e.clientX;prevY=e.clientY;
+  });
+  cv.addEventListener('pointerup',()=>{isDrag=false});
+
+  (function vLoop(){
+    requestAnimationFrame(vLoop);
+    if(!isDrag){drY+=velX*.008;drX+=velY*.006;velX*=.92;velY*=.92}
+    vPlant.rotation.set(drX,drY,0);
+    vRen.render(vScene,vCam);
+  })();
+
+  // Handle resize for viewer
+  addEventListener('resize',()=>{
+    const s=Math.min(600,innerWidth*.9);
+    cv.width=s;cv.height=s;
+    vRen.setSize(s,s);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// TESTIMONIAL CAROUSEL
+// ═══════════════════════════════════════════════════════
+(function(){
+  const track=document.getElementById('tes-track');
+  let idx=0;
+  const slides=track.querySelectorAll('.tes-slide');
+  const count=slides.length;
+  function go(n){idx=Math.max(0,Math.min(count-1,n));track.style.transform=`translateX(calc(-${idx}*(33.333% + .67rem)))`}
+  document.getElementById('tes-prev').addEventListener('click',()=>go(idx-1));
+  document.getElementById('tes-next').addEventListener('click',()=>go(idx+1));
+})();
+
+// ═══════════════════════════════════════════════════════
+// WAITLIST
+// ═══════════════════════════════════════════════════════
+function joinWaitlist(){
+  const inp=document.getElementById('wl-input'),btn=inp.nextElementSibling;
+  if(!inp.value.includes('@')){
+    gsap.fromTo(inp,{x:-5},{x:5,duration:.06,repeat:6,yoyo:true,onComplete:()=>gsap.set(inp,{x:0})});
+    return;
+  }
+  btn.textContent='Rooted ✓';btn.style.background='#4dbb5f';inp.value='';
+  const n=document.getElementById('waitlist-n');
+  const cur=parseInt(n.textContent.replace(/,/g,''));
+  gsap.to({v:cur},{v:cur+1,duration:.6,onUpdate:function(){n.textContent=Math.floor(this.targets()[0].v).toLocaleString()}});
+}
+
+// ═══════════════════════════════════════════════════════
+// KONAMI CODE
+// ═══════════════════════════════════════════════════════
+(function(){
+  const seq=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let i=0;
+  document.addEventListener('keydown',e=>{
+    if(e.key===seq[i]){i++;if(i===seq.length){i=0;const o=document.getElementById('konami-overlay');o.classList.add('on');triggerGlitch(3);setTimeout(()=>o.classList.remove('on'),4200)}}
+    else i=0;
+  });
+})();
+
+// ═══════════════════════════════════════════════════════
+// PRELOADER
+// ═══════════════════════════════════════════════════════
+(function(){
+  const paths=['pl-lf1','pl-lf2','pl-lf3','pl-lf4','pl-lf5'].map(id=>document.getElementById(id));
+  const pct=document.getElementById('pl-pct'),fill=document.getElementById('pl-bar-fill');
+  const cps=[document.getElementById('pl-cp1'),document.getElementById('pl-cp2')];
+  let n=0;
+  const ti=setInterval(()=>{
+    n+=Math.floor(Math.random()*12)+2;if(n>=100){n=100;clearInterval(ti)}
+    pct.textContent=`INITIALIZING BOTANICAL INTELLIGENCE — ${n}%`;
+    fill.style.width=n+'%';
+  },60);
+  let delay=0;
+  paths.forEach(p=>{if(!p)return;setTimeout(()=>{p.style.transition='stroke-dashoffset .9s cubic-bezier(.16,1,.3,1)';p.style.strokeDashoffset='0'},delay);delay+=200});
+  setTimeout(()=>cps.forEach(c=>{c.style.transition='opacity .4s';c.style.opacity='1'}),900);
+})();
+
+// ═══════════════════════════════════════════════════════
+// MAIN INIT — runs on load
+// ═══════════════════════════════════════════════════════
+window.addEventListener('load',function(){
+  gsap.registerPlugin(ScrollTrigger);
+
+  initMainScene();
+
+  // Preloader → site
+  setTimeout(()=>{
+    const pl=document.getElementById('pl');
+    gsap.to(pl,{opacity:0,duration:.7,ease:'power2.inOut',onComplete:()=>{
+      pl.style.display='none';
+      document.documentElement.style.overflow='';
+      document.body.style.overflow='';
+      document.getElementById('hero-cv').style.opacity='1';
+      startSite();
+    }});
+  },2400);
+});
+
+function startSite(){
+  gsap.to('#nav',{opacity:1,duration:.6,ease:'power2.out'});
+
+  // Locomotive Scroll
+  const locoEl=document.querySelector('[data-scroll-container]');
+  const loco=new LocomotiveScroll({
+    el:locoEl,smooth:true,lerp:.06,multiplier:.88,
+    getDirection:true,getSpeed:true,
+    tablet:{smooth:true},smartphone:{smooth:false}
+  });
+
+  loco.on('scroll',ScrollTrigger.update);
+  ScrollTrigger.scrollerProxy('[data-scroll-container]',{
+    scrollTop(v){return arguments.length?loco.scrollTo(v,{duration:0,disableLerp:true}):loco.scroll.instance.scroll.y},
+    getBoundingClientRect(){return{top:0,left:0,width:innerWidth,height:innerHeight}},
+    pinType:locoEl.style.transform?'transform':'fixed'
+  });
+  ScrollTrigger.addEventListener('refresh',()=>loco.update());
+  ScrollTrigger.refresh();
+
+  // ── Hero reveals ──
+  gsap.to('.hero-h1 .lw span',{y:0,duration:.95,ease:'power3.out',stagger:.1,delay:.1});
+  gsap.to('.hero-tag',{opacity:1,y:0,duration:.8,delay:.4,ease:'power2.out'});
+  gsap.to('.hero-desc',{opacity:1,y:0,duration:.8,delay:.65,ease:'power2.out'});
+  gsap.to('.hero-scroll',{opacity:1,duration:.8,delay:.75,ease:'power2.out'});
+  gsap.to('.hero-cta',{opacity:1,y:0,duration:.8,delay:.8,ease:'power2.out'});
+
+  // ── Scroll → plant rotation ──
+  const totalH=()=>locoEl.scrollHeight-innerHeight;
+  loco.on('scroll',({scroll})=>{
+    const progress=scroll.y/totalH();
+    rotationY=progress*Math.PI*4; // 2 full rotations
+
+    // Blueprint canvas — show when blueprint section is in view
+    const bpEl=document.getElementById('blueprint');
+    const bpCv=document.getElementById('blueprint-cv');
+    const bpTop=bpEl.offsetTop;
+    const bpH=bpEl.offsetHeight;
+    const inBP=scroll.y>bpTop-innerHeight&&scroll.y<bpTop+bpH;
+    if(inBP&&!bpCv.classList.contains('on')){
+      drawBlueprint();
+      bpCv.classList.add('on');
+    } else if(!inBP){
+      bpCv.classList.remove('on');
+    }
+
+    // Viewer section — fade main canvas
+    const vEl=document.getElementById('viewer');
+    const vTop=vEl.offsetTop;
+    const inViewer=scroll.y>vTop-innerHeight*.3;
+    document.getElementById('hero-cv').style.opacity=inViewer?'0':'1';
+  });
+
+  // ── Generic scroll reveals ──
+  document.querySelectorAll('.rv').forEach(el=>{
+    ScrollTrigger.create({
+      scroller:'[data-scroll-container]',
+      trigger:el,start:'top 88%',once:true,
+      onEnter:()=>gsap.to(el,{opacity:1,y:0,duration:.9,ease:'power3.out'})
+    });
+  });
+  document.querySelectorAll('.rf').forEach(el=>{
+    ScrollTrigger.create({
+      scroller:'[data-scroll-container]',
+      trigger:el,start:'top 88%',once:true,
+      onEnter:()=>gsap.to(el,{opacity:1,duration:.8,ease:'power2.out'})
+    });
+  });
+
+  // ── Line-word reveals ──
+  function revealLws(trigger,selector,delay=0){
+    ScrollTrigger.create({
+      scroller:'[data-scroll-container]',
+      trigger,start:'top 80%',once:true,
+      onEnter:()=>gsap.to(selector,{y:0,duration:1,ease:'power3.out',stagger:.08,delay})
+    });
+  }
+  revealLws('#problem','.prob-h .lw span');
+  revealLws('#reveal','.reveal-h .lw span');
+  revealLws('#reveal','.reveal-pre',0);
+  revealLws('#inspect','.inspect-h .lw span');
+  revealLws('#stack','#stack .stack-intro .lw span');
+  revealLws('#blueprint','.blueprint-h .lw span');
+  revealLws('#modes','.modes-h .lw span');
+  revealLws('#testimonials','.tes-h .lw span');
+  revealLws('#preorder','.preorder-h .lw span');
+  revealLws('#viewer','.viewer-h .lw span');
+
+  // ── Reveal specs ──
+  ScrollTrigger.create({
+    scroller:'[data-scroll-container]',
+    trigger:'#reveal',start:'top 75%',once:true,
+    onEnter:()=>gsap.to('.rv-spec',{opacity:1,y:0,duration:.7,stagger:.1,delay:.3,ease:'power3.out'})
+  });
+
+  // ── Spec rows ──
+  ScrollTrigger.create({
+    scroller:'[data-scroll-container]',
+    trigger:'#inspect',start:'top 75%',once:true,
+    onEnter:()=>gsap.to('.spec-row',{opacity:1,y:0,duration:.6,stagger:.08,delay:.2,ease:'power3.out'})
+  });
+
+  // ── Stack cards ──
+  ScrollTrigger.create({
+    scroller:'[data-scroll-container]',
+    trigger:'#stack',start:'top 65%',once:true,
+    onEnter:()=>{
+      gsap.to('#sc0',{x:-290,rotate:-10,duration:1.2,ease:'power3.out',delay:.1});
+      gsap.to('#sc1',{x:-95,rotate:-4,duration:1.1,ease:'power3.out',delay:.2});
+      gsap.to('#sc2',{x:95,rotate:4,duration:1.1,ease:'power3.out',delay:.25});
+      gsap.to('#sc3',{x:290,rotate:10,duration:1.2,ease:'power3.out',delay:.3});
+      triggerGlitch(.8);
+    }
+  });
+
+  // ── Testimonials ──
+  ScrollTrigger.create({
+    scroller:'[data-scroll-container]',
+    trigger:'#testimonials',start:'top 75%',once:true,
+    onEnter:()=>{
+      gsap.to('.tes-h .lw span',{y:0,duration:1,ease:'power3.out',stagger:.09});
+      gsap.to('.tes-slide',{opacity:1,y:0,duration:.8,stagger:.12,delay:.2,ease:'power3.out'});
+    }
+  });
+
+  // ── Viewer ──
+  ScrollTrigger.create({
+    scroller:'[data-scroll-container]',
+    trigger:'#viewer',start:'top 75%',once:true,
+    onEnter:()=>{
+      gsap.to('.viewer-label',{opacity:1,y:0,duration:.7,ease:'power2.out'});
+      gsap.to('#viewer-cv',{opacity:1,y:0,duration:1,delay:.2,ease:'power3.out'});
+      initViewer();
+    }
+  });
+
+  // ── Modes section glitch on enter ──
+  ScrollTrigger.create({
+    scroller:'[data-scroll-container]',
+    trigger:'#modes',start:'top 70%',once:true,
+    onEnter:()=>{triggerGlitch(1.5)}
+  });
+
+  ScrollTrigger.refresh();
+  setTimeout(()=>loco.update(),600);
+}
+</script>
+</body>
+</html>
